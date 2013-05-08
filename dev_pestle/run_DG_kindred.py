@@ -14,7 +14,9 @@ from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.util.progress as progress
 import cmap.analytics.dgo as dgo
 
-work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/7May2013'
+work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013'
+if not os.path.exists(work_dir):
+	os.mkdir(work_dir)
 
 targetSheetF = '/xchip/cogs/hogstrom/analysis/informer_CTD/Informer_JDannot_v1.txt'
 targetSheetXLS = '/xchip/cogs/hogstrom/analysis/informer_CTD/Informer_JDannot_v1.xlsx'
@@ -124,6 +126,7 @@ for cell1 in uniqueLines:
 			for cell2 in pertSigIDs[pert][target]:
 				if cell2 == cell1:
 					sigIDlist.extend(pertSigIDs[pert][target][cell2])
+	sigIDlist = list(set(sigIDlist))
 	#write drug signatures by cell line to a file
 	outdir = os.path.join(work_dir,cell1)
 	if not os.path.exists(outdir):
@@ -164,33 +167,112 @@ for cell1 in uniqueLines:
 	# sigF = os.path.join(cellDir, cell1 + '_all_CGS_sig_ids_n' + str(nCGS) + '.grp')
 	cidF = glob.glob(cellDir + '/' + cell1 + '_all_CGS_sig_ids_n*.grp')[0]
 	sigF = os.path.join(cellDir,cell1 + '_cp_sig_ids.grp')
-	cmd = ' '.join(
-			['rum -q local sig_query_tool',
+	cmd = ' '.join(['rum -q local sig_query_tool',
 			 '--sig_id ' + sigF,
 			 '--metric wtcs',
 			 '--column_space custom',
 			 '--cid ' + cidF,
-			 '--outdir ' + outdir,
+			 '--out ' + outdir,
 			 '--mkdir false',
- 			 '--mkdir save_tail',
-			 '--score2rank_direc'])
-	# os.system(cmd)
+			 '--save_tail false'])
+	os.system(cmd)
 
 
+### load in query result
+for cell1 in uniqueLines:
+	cellDir = os.path.join(work_dir,cell1) 
+	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+	file_rslt = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+	# file_rank = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+	rslt = gct.GCT()
+	rslt.read(file_rslt)
 
-# work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD'
-# #load each CGS file and find geneIDs that have a CGS
-# CGSdir = '/xchip/cogs/projects/rnai_analysis/collapsed_signatures/Collapsed_Signatures_Landmark_978'
-# CGSfiles = glob.glob(CGSdir + '/*_*_modz_by_pert_desc_signatures_any_target_n*x978.gctx')
-# cellList = []
-# for path1 in CGSfiles:
-# 	name1 = path1.split('/')[-1]
-# 	cell1 = name1.split('_')[0]
-# 	cellList.append(cell1)
-# geneIDdict = {} #save gene ids tested in each cell line
-# for cell1 in cellList:
-# 	gctFile = glob.glob(CGSdir + '/' + cell1 + '_*_modz_by_pert_desc_signatures_any_target_n*x978.gctx')
-# 	cgs = gct.GCT()
-# 	cgs.read(gctFile[0])
-# 	geneIDdict[cell1] = cgs.get_column_meta('id')
 
+prog = progress.DeterminateProgressBar('Drug-target')
+for icell, cell1 in enumerate(cellList):
+	celldir = os.path.join(work_dir,cell1) 
+	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]:
+		print cell1 + 'no query result file'
+		continue #if no results file, skip loop
+	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+	rslt = gct.GCT()
+	rslt.read(rsltF)
+	prog.update('analyzing {0}',icell,len(cell1))
+	queryRids = rslt.get_rids()
+	queryGenes = [x.split(':')[1] for x in queryRids]
+	resCids = rslt.get_cids()
+	resPerts = [x.split(':')[1] for x in resCids]
+	#build rank matrix
+	sortMatrix = np.argsort(rslt.matrix,axis=0)[::-1]
+	rankMatrix = np.argsort(sortMatrix,axis=0) + 1
+	#pandas rank
+	pRslt = rslt.frame
+	rankFrame = pRslt.rank(ascending=False)
+	### find the indices of each query
+	queryInd = {}
+	for pert in pertSigIDs:
+		iQuery = []
+		iQuery = [i for i,x in enumerate(resPerts) if x[:13] == pert]
+		if iQuery:
+			queryInd[pert] = iQuery
+	targetRanks = {}
+	targetPvals = {}
+	targetCS = {}
+	for pert in queryInd:
+		targets = pertSigIDs[pert].keys()
+		targetRanks[pert] = {}
+		targetPvals[pert] = {}
+		targetCS[pert] = {}
+		for target in targets:
+			iTarget = []
+			iTarget = [i for i,x in enumerate(queryGenes) if x == target]
+			if iTarget:
+				queryGenes.index(target) #find the indices of the target in the query result
+				iQuery = queryInd[pert]
+				tarCS = rslt.matrix[iTarget,iQuery]
+				tarRanks = rankMatrix[iTarget,iQuery]
+				tarPvals = tarRanks/float(rslt.matrix.shape[0])
+				targetCS[pert][target] = tarCS
+				targetPvals[pert][target] = tarPvals
+				targetRanks[pert][target] = tarRanks
+	### put pvals into a vector, test for FDR
+	pVec = []
+	for pert in targetPvals:
+		pvals = targetPvals[pert].values()
+		for pval in pvals:
+			pVec.extend(pval)
+	#perform FDR on pVec
+	[pBoolean, pCorrected] = fdr(pVec, alpha=0.1, method='indep')
+	nPassFDR = sum(pBoolean)
+	if nPassFDR:
+		iPassFDR = [i for i,x in enumerate(pBoolean) if x == True]
+		pPass = [pVec[i] for i in iPassFDR]
+		pMaxThresh = max(pPass) #what is the largest pval that passed FDR
+		#flag connections which pass FDR
+		outF = os.path.join(celldir,cell1 + '_drug-target_connection_summary.txt')
+		headers = ['query_sig','target_KD_cgs','cs', 'query_rank', 'pval']
+		with open(outF,'w') as f:
+			f.write('\t'.join(headers) + '\n')
+			for pert in targetPvals:
+				qInds = queryInd[pert]
+				for target in targetPvals[pert]:
+					pvals = targetPvals[pert][target]
+					for i,pval in enumerate(pvals):
+						if pval <= pMaxThresh:
+							query = resCids[qInds[i]]
+							cs = targetCS[pert][target][i]
+							rank = targetRanks[pert][target][i]
+							#query, target gene, cs, rank, pval
+							f.write('\t'.join([query,target,str(cs),str(rank),str(pval)[:7]]) + '\n')
+## check to see that the sig ids are in mongo
+# sigF = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013/HT29/HT29_cp_sig_ids.grp'
+sigF = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013/HT29/HT29_all_CGS_sig_ids_n3302.grp'
+with open(sigF, 'rt') as f:
+	for sig in f:
+		CM = mutil.CMapMongo()
+		res = CM.find({'sig_id':'CPC006_HT29_6H:BRD-K99696746-004-03-9:10'},{'sig_id':True,'cell_id':True})
+		if res:
+			print 'its all good'
+		else:
+			print sig + ' got nothin'

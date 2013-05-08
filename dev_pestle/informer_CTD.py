@@ -127,6 +127,7 @@ outdir = os.path.join(work_dir,'6May2013')
 for icell, cell1 in enumerate(cellList):
 	if not glob.glob(os.path.join(work_dir,cell1,'sig_query_out','result_WTCS.LM.COMBINED_n*.gctx')):
 		continue #if no results file, skip loop
+		print cell1 + 'no query result file'
 	rsltF = glob.glob(os.path.join(work_dir,cell1,'sig_query_out','result_WTCS.LM.COMBINED_n*.gctx'))[0]
 	rslt = gct.GCT()
 	rslt.read(rsltF)
@@ -229,7 +230,7 @@ for icell, cell1 in enumerate(cellList):
 	plt.xlabel('query rank')
 	plt.ylabel('freq')
 	plt.title('connection of drug and target gene knockdown')
-	plt.savefig(os.path.join(outdir,cell1 + '_drug_target_rank_dist.png'))
+	plt.savefig(os.path.join(celldir,cell1 + '_drug_target_rank_dist.png'))
 	plt.close()
 	#plot CS scores
 	flat = randMtrxCS.flatten()
@@ -239,7 +240,7 @@ for icell, cell1 in enumerate(cellList):
 	plt.xlabel('cs score')
 	plt.ylabel('freq')
 	plt.title(cell1 + ' - connection of drug and target gene knockdown')
-	plt.savefig(os.path.join(outdir,cell1 + '_drug_target_CS_dist.png'))
+	plt.savefig(os.path.join(celldir,cell1 + '_drug_target_CS_dist.png'))
 	plt.close()
 
 ### make html summary page
