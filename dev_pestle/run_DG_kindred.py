@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.util.progress as progress
 import cmap.analytics.dgo as dgo
+import HTML
 
 work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013'
 if not os.path.exists(work_dir):
@@ -228,11 +229,13 @@ for icell, cell1 in enumerate(cellList):
 			iTarget = []
 			iTarget = [i for i,x in enumerate(queryGenes) if x == target]
 			if iTarget:
-				queryGenes.index(target) #find the indices of the target in the query result
-				iQuery = queryInd[pert]
-				tarCS = rslt.matrix[iTarget,iQuery]
-				tarRanks = rankMatrix[iTarget,iQuery]
-				tarPvals = tarRanks/float(rslt.matrix.shape[0])
+				for iTar in iTarget:
+					tarRanks = []
+					tarCS = []
+					iQuery = queryInd[pert]
+					tarCS.extend(rslt.matrix[iTar,iQuery])
+					tarRanks.extend(rankMatrix[iTar,iQuery])
+				tarPvals = np.array(tarRanks)/float(rslt.matrix.shape[0])
 				targetCS[pert][target] = tarCS
 				targetPvals[pert][target] = tarPvals
 				targetRanks[pert][target] = tarRanks
@@ -265,14 +268,86 @@ for icell, cell1 in enumerate(cellList):
 							rank = targetRanks[pert][target][i]
 							#query, target gene, cs, rank, pval
 							f.write('\t'.join([query,target,str(cs),str(rank),str(pval)[:7]]) + '\n')
-## check to see that the sig ids are in mongo
-# sigF = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013/HT29/HT29_cp_sig_ids.grp'
-sigF = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013/HT29/HT29_all_CGS_sig_ids_n3302.grp'
-with open(sigF, 'rt') as f:
-	for sig in f:
-		CM = mutil.CMapMongo()
-		res = CM.find({'sig_id':'CPC006_HT29_6H:BRD-K99696746-004-03-9:10'},{'sig_id':True,'cell_id':True})
-		if res:
-			print 'its all good'
-		else:
-			print sig + ' got nothin'
+	### check observed drug-target connections compared to null-distribution
+	# of connections between drug and random gene knockdowns
+	observedRanks = []
+	observedCS = []
+	for pert in targetRanks:
+		for target in targetRanks[pert]:
+			observedRanks.extend(targetRanks[pert][target][:]) #create list of observed ranks
+			observedCS.extend(targetCS[pert][target][:]) #create list of observed ranks
+	n_rand = 1000
+	randMtrxRank = np.zeros((len(observedRanks),n_rand))
+	randMtrxCS = np.zeros((len(observedRanks),n_rand))
+	for perm in range(n_rand):
+		randRnkList = []
+		randCSList = []
+		for pert in targetRanks:
+			iQuery = queryInd[pert]
+			for target in targetRanks[pert]:
+				iRand = np.random.randint(rslt.matrix.shape[0], size=1)
+				tarRanks = rankMatrix[iRand,iQuery]
+				tarCS = rslt.matrix[iRand,iQuery]
+				randRnkList.extend(tarRanks) 
+				randCSList.extend(tarCS) 
+		randMtrxRank[:,perm] = randRnkList
+		randMtrxCS[:,perm] = randCSList
+	#plot ranks
+	flat = randMtrxRank.flatten()
+	h1 = plt.hist(flat,30,color='b',range=[0,max(flat)],label=['drug-random gene'],normed=True,alpha=0.5)
+	h2 = plt.hist(observedRanks,30,color='r',range=[0,max(flat)],label='drug-target gene',normed=True,alpha=0.5)
+	plt.legend()
+	plt.xlabel('query rank')
+	plt.ylabel('freq')
+	plt.title('connection of drug and target gene knockdown')
+	plt.savefig(os.path.join(celldir,cell1 + '_drug_target_rank_dist.png'))
+	plt.close()
+	#plot CS scores
+	flat = randMtrxCS.flatten()
+	h1 = plt.hist(flat,50,color='b',range=[min(flat),max(flat)],label=['drug-random gene'],normed=True,alpha=0.5)
+	h2 = plt.hist(observedCS,50,color='r',range=[min(flat),max(flat)],label='drug-target gene',normed=True,alpha=0.5)
+	plt.legend()
+	plt.xlabel('cs score')
+	plt.ylabel('freq')
+	plt.title(cell1 + ' - connection of drug and target gene knockdown')
+	plt.savefig(os.path.join(celldir,cell1 + '_drug_target_CS_dist.png'))
+	plt.close()
+
+### make html summary page
+indexF = os.path.join(work_dir,'index.html')
+with open(indexF,'w') as f:
+	lineWrite = '<h2><CENTER>Connection between a drug and the knockdown of its gene target by cell line <CENTER></h2>'
+	f.write(lineWrite + '\n')
+	for cell1 in cellList:
+		cellDir = os.path.join(work_dir,cell1)
+		if os.path.exists(cellDir):
+			lineWrite =  '<a href="' + cell1 + '/' + cell1 + '.html">' + cell1 + '</a> <BR>'
+			f.write(lineWrite + '\n')
+### make individual pages for each cell line
+for cell1 in cellList:
+	outdir = os.path.join(work_dir,cell1)
+	if os.path.exists(outdir):
+		pageF = os.path.join(outdir,cell1+ '.html')
+		with open(pageF,'w') as f:
+			csF = os.path.join(outdir,cell1 + '_drug_target_CS_dist.png')
+			lineWrite = '<BR>' + '<tr><td><img src=' + csF + '></td></tr>'
+			f.write(lineWrite + '\n')
+			rankF = os.path.join(outdir,cell1 + '_drug_target_rank_dist.png')
+			lineWrite = '<BR>' + '<tr><td><img src=' + rankF + '></td></tr>'
+			f.write(lineWrite + '\n')
+			#generate and write summary table
+			lineWrite = '<h2><CENTER>Connections which pass FDR (based on query rank) <CENTER></h2>'
+			f.write(lineWrite + '\n')
+			sigF = os.path.join(outdir,cell1 + '_drug-target_connection_summary.txt')
+			if os.path.exists(sigF):
+				table_data = []
+				with open(sigF,'rt') as Fread:
+					for line in Fread:
+						table_data.append(line.split('\t'))
+				htmlcode = HTML.table(table_data)
+				f.write(htmlcode)
+			else:
+				f.write('<TD>No tested connections pass FDR</TD>')
+			lineWrite = '<h2><CENTER>All connections tested <CENTER></h2>'
+			f.write(lineWrite + '\n')
+			### write connections tested
