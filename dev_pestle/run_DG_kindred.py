@@ -14,8 +14,9 @@ from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.util.progress as progress
 import cmap.analytics.dgo as dgo
 import HTML
+import pandas as pd
 
-work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/8May2013'
+work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/9May2013'
 if not os.path.exists(work_dir):
 	os.mkdir(work_dir)
 
@@ -135,29 +136,6 @@ for cell1 in uniqueLines:
 	sigF = os.path.join(outdir,cell1 + '_cp_sig_ids.grp')
 	with open(sigF, 'w') as f:
 		[f.write(x + '\n') for x in sigIDlist]
-	# #write a gmt of the signatures
-	# outdir = os.path.join(work_dir,cell1)
-	# if not os.path.exists(outdir):
-	# 	os.mkdir(outdir)
-	# fup = os.path.join(work_dir,cell1,cell1 + '_sig_CPC_with_gene_target_up.gmt')
-	# fdn = os.path.join(work_dir,cell1,cell1 + '_sig_CPC_with_gene_target_dn.gmt')
-	# for sig in sigIDlist:
-	# 	CM = mutil.CMapMongo()
-	# 	mtchLst = CM.find({'sig_id':sig},{})
-	# 	for match in mtchLst:
-	# 		sig_id = str(match['sig_id'])
-	# 		up50 = match['up50_lm']
-	# 		dn50 = match['dn50_lm']
-	# 		with open(fup,'a') as f:
-	# 			f.write(sig_id + '\t' + sig_id + '\t')
-	# 			for pt in up50:
-	# 				f.write(pt + '\t')
-	# 			f.write('\n')
-	# 		with open(fdn,'a') as f:
-	# 			f.write(sig_id + '\t' + sig_id + '\t')
-	# 			for pt in dn50:
-	# 				f.write(pt + '\t')
-	# 			f.write('\n')
 
 # generate the query command
 for cell1 in uniqueLines:
@@ -220,25 +198,36 @@ for icell, cell1 in enumerate(cellList):
 	targetRanks = {}
 	targetPvals = {}
 	targetCS = {}
-	for pert in queryInd:
-		targets = pertSigIDs[pert].keys()
-		targetRanks[pert] = {}
-		targetPvals[pert] = {}
-		targetCS[pert] = {}
-		for target in targets:
-			iTarget = []
-			iTarget = [i for i,x in enumerate(queryGenes) if x == target]
-			if iTarget:
-				for iTar in iTarget:
+	sumF = os.path.join(celldir,cell1 + '_drug-target_connection_summary.txt')
+	headers = ['query_sig','target_KD_cgs','cs', 'query_rank', 'pval']
+	with open(sumF,'w') as f:
+		f.write('\t'.join(headers) + '\n')
+		for pert in queryInd:
+			targets = pertSigIDs[pert].keys()
+			targetRanks[pert] = {}
+			targetPvals[pert] = {}
+			targetCS[pert] = {}
+			for target in targets:
+				iTarget = [i for i,x in enumerate(queryGenes) if x == target]
+				if iTarget:
 					tarRanks = []
 					tarCS = []
-					iQuery = queryInd[pert]
-					tarCS.extend(rslt.matrix[iTar,iQuery])
-					tarRanks.extend(rankMatrix[iTar,iQuery])
-				tarPvals = np.array(tarRanks)/float(rslt.matrix.shape[0])
-				targetCS[pert][target] = tarCS
-				targetPvals[pert][target] = tarPvals
-				targetRanks[pert][target] = tarRanks
+					tarPvals = []
+					for iTar in iTarget:
+						iQuery = queryInd[pert]
+						for iq in iQuery:
+							cs = rslt.matrix[iTar,iq]
+							rnk = rankMatrix[iTar,iq]
+							pval = rnk/float(rslt.matrix.shape[0])
+							tarCS.append(cs)
+							tarRanks.append(rnk)
+							tarPvals.append(pval)
+							#write summary table
+							sig = resCids[iq]
+							f.write('\t'.join([sig,target,str(cs),str(rnk),str(pval)[:7]]) + '\n')
+					targetCS[pert][target] = tarCS
+					targetPvals[pert][target] = tarPvals
+					targetRanks[pert][target] = tarRanks
 	### put pvals into a vector, test for FDR
 	pVec = []
 	for pert in targetPvals:
@@ -253,7 +242,7 @@ for icell, cell1 in enumerate(cellList):
 		pPass = [pVec[i] for i in iPassFDR]
 		pMaxThresh = max(pPass) #what is the largest pval that passed FDR
 		#flag connections which pass FDR
-		outF = os.path.join(celldir,cell1 + '_drug-target_connection_summary.txt')
+		outF = os.path.join(celldir,cell1 + '_drug-target_FDR_summary.txt')
 		headers = ['query_sig','target_KD_cgs','cs', 'query_rank', 'pval']
 		with open(outF,'w') as f:
 			f.write('\t'.join(headers) + '\n')
@@ -338,16 +327,46 @@ for cell1 in cellList:
 			#generate and write summary table
 			lineWrite = '<h2><CENTER>Connections which pass FDR (based on query rank) <CENTER></h2>'
 			f.write(lineWrite + '\n')
-			sigF = os.path.join(outdir,cell1 + '_drug-target_connection_summary.txt')
+			sigF = os.path.join(outdir,cell1 + '_drug-target_FDR_summary.txt')
 			if os.path.exists(sigF):
 				table_data = []
 				with open(sigF,'rt') as Fread:
 					for line in Fread:
 						table_data.append(line.split('\t'))
-				htmlcode = HTML.table(table_data)
-				f.write(htmlcode)
+				htmlcodeFDR = HTML.table(table_data)
+				f.write(htmlcodeFDR + '\n')
 			else:
 				f.write('<TD>No tested connections pass FDR</TD>')
 			lineWrite = '<h2><CENTER>All connections tested <CENTER></h2>'
 			f.write(lineWrite + '\n')
 			### write connections tested
+			sumF = os.path.join(outdir,cell1 + '_drug-target_connection_summary.txt')
+			sumFrame = pd.read_table(sumF)
+			sortSumFr = sumFrame.sort(columns='cs',ascending=False)
+			sortSumFr = sortSumFr.set_index([range(len(sortSumFr))])
+			table_data = []
+			for i in range(len(sortSumFr)):
+				line = [sortSumFr.query_sig[i],
+						sortSumFr.target_KD_cgs[i],
+						str(sortSumFr.cs[i]),
+						str(sortSumFr.query_rank[i]),
+						str(sortSumFr.pval[i])]
+				table_data.append(line[:])
+			htmlcode = HTML.table(table_data)
+			f.write(htmlcode + '\n')
+
+
+
+### write connections not found in mongo
+
+
+
+# check rank results
+cids = rslt.get_cids()
+rids = rslt.get_rids()
+iARF = rids.index('CGS001_MCF7_96H:ARF1:2')
+i743 = cids.index('CPC006_MCF7_24H:BRD-A31107743-001-01-3:0.09')
+rslt.matrix[iARF,i743]
+rankMatrix[iARF,i743]
+### get ranks to work correctly
+
