@@ -13,10 +13,11 @@ import matplotlib.pyplot as plt
 from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.util.progress as progress
 import cmap.analytics.dgo as dgo
+import cmap.io.rnk as rnk
 import HTML
 import pandas as pd
 
-work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/9May2013'
+work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/10May2013'
 if not os.path.exists(work_dir):
 	os.mkdir(work_dir)
 
@@ -138,36 +139,39 @@ for cell1 in uniqueLines:
 		[f.write(x + '\n') for x in sigIDlist]
 
 # generate the query command
-for cell1 in uniqueLines:
-	cellDir = os.path.join(work_dir,cell1) 
-	outdir = os.path.join(work_dir,cell1,'sig_query_out')
-	if not os.path.exists(outdir):
-		os.mkdir(outdir)
-	# sigF = os.path.join(cellDir, cell1 + '_all_CGS_sig_ids_n' + str(nCGS) + '.grp')
-	cidF = glob.glob(cellDir + '/' + cell1 + '_all_CGS_sig_ids_n*.grp')[0]
-	sigF = os.path.join(cellDir,cell1 + '_cp_sig_ids.grp')
-	cmd = ' '.join(['rum -q local sig_query_tool',
-			 '--sig_id ' + sigF,
-			 '--metric wtcs',
-			 '--column_space custom',
-			 '--cid ' + cidF,
-			 '--out ' + outdir,
-			 '--mkdir false',
-			 '--save_tail false'])
-	os.system(cmd)
+# for cell1 in uniqueLines:
+# 	cellDir = os.path.join(work_dir,cell1) 
+# 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+# 	if not os.path.exists(outdir):
+# 		os.mkdir(outdir)
+# 	# sigF = os.path.join(cellDir, cell1 + '_all_CGS_sig_ids_n' + str(nCGS) + '.grp')
+# 	cidF = glob.glob(cellDir + '/' + cell1 + '_all_CGS_sig_ids_n*.grp')[0]
+# 	sigF = os.path.join(cellDir,cell1 + '_cp_sig_ids.grp')
+# 	cmd = ' '.join(['rum -q local sig_query_tool',
+# 			 '--sig_id ' + sigF,
+# 			 '--metric wtcs',
+# 			 '--column_space custom',
+# 			 '--cid ' + cidF,
+# 			 '--out ' + outdir,
+# 			 '--mkdir false',
+# 			 '--save_tail false'])
+# 	os.system(cmd)
 
 
-### load in query result
-for cell1 in uniqueLines:
-	cellDir = os.path.join(work_dir,cell1) 
-	outdir = os.path.join(work_dir,cell1,'sig_query_out')
-	file_rslt = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
-	# file_rank = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
-	rslt = gct.GCT()
-	rslt.read(file_rslt)
+# ### load in query result
+# for cell1 in uniqueLines:
+# 	cellDir = os.path.join(work_dir,cell1) 
+# 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+# 	file_rslt = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+# 	# file_rank = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+# 	rslt = gct.GCT()
+# 	rslt.read(file_rslt)
 
 
 prog = progress.DeterminateProgressBar('Drug-target')
+targetRanks = {}
+targetPvals = {}
+targetCS = {}
 for icell, cell1 in enumerate(cellList):
 	celldir = os.path.join(work_dir,cell1) 
 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
@@ -177,14 +181,16 @@ for icell, cell1 in enumerate(cellList):
 	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
 	rslt = gct.GCT()
 	rslt.read(rsltF)
-	prog.update('analyzing {0}',icell,len(cell1))
+	prog.update('analyzing {0}',icell,len(cellList))
 	queryRids = rslt.get_rids()
 	queryGenes = [x.split(':')[1] for x in queryRids]
 	resCids = rslt.get_cids()
 	resPerts = [x.split(':')[1] for x in resCids]
 	#build rank matrix
-	sortMatrix = np.argsort(rslt.matrix,axis=0)[::-1]
-	rankMatrix = np.argsort(sortMatrix,axis=0) + 1
+	# sortMatrix = np.argsort(rslt.matrix,axis=0)[::-1]
+	# rankMatrix = np.argsort(sortMatrix,axis=0) + 1
+	rnkRslt = rnk.rnk_objects_from_gctx(str(rsltF))
+	rankMatrix = rnkRslt.matrix
 	#pandas rank
 	pRslt = rslt.frame
 	rankFrame = pRslt.rank(ascending=False)
@@ -195,18 +201,18 @@ for icell, cell1 in enumerate(cellList):
 		iQuery = [i for i,x in enumerate(resPerts) if x[:13] == pert]
 		if iQuery:
 			queryInd[pert] = iQuery
-	targetRanks = {}
-	targetPvals = {}
-	targetCS = {}
+	targetRanks[cell1] = {}
+	targetPvals[cell1] = {}
+	targetCS[cell1] = {}
 	sumF = os.path.join(celldir,cell1 + '_drug-target_connection_summary.txt')
 	headers = ['query_sig','target_KD_cgs','cs', 'query_rank', 'pval']
 	with open(sumF,'w') as f:
 		f.write('\t'.join(headers) + '\n')
 		for pert in queryInd:
 			targets = pertSigIDs[pert].keys()
-			targetRanks[pert] = {}
-			targetPvals[pert] = {}
-			targetCS[pert] = {}
+			targetRanks[cell1][pert] = {}
+			targetPvals[cell1][pert] = {}
+			targetCS[cell1][pert] = {}
 			for target in targets:
 				iTarget = [i for i,x in enumerate(queryGenes) if x == target]
 				if iTarget:
@@ -225,13 +231,13 @@ for icell, cell1 in enumerate(cellList):
 							#write summary table
 							sig = resCids[iq]
 							f.write('\t'.join([sig,target,str(cs),str(rnk),str(pval)[:7]]) + '\n')
-					targetCS[pert][target] = tarCS
-					targetPvals[pert][target] = tarPvals
-					targetRanks[pert][target] = tarRanks
+					targetCS[cell1][pert][target] = tarCS
+					targetPvals[cell1][pert][target] = tarPvals
+					targetRanks[cell1][pert][target] = tarRanks
 	### put pvals into a vector, test for FDR
 	pVec = []
-	for pert in targetPvals:
-		pvals = targetPvals[pert].values()
+	for pert in targetPvals[cell1]:
+		pvals = targetPvals[cell1][pert].values()
 		for pval in pvals:
 			pVec.extend(pval)
 	#perform FDR on pVec
@@ -246,39 +252,63 @@ for icell, cell1 in enumerate(cellList):
 		headers = ['query_sig','target_KD_cgs','cs', 'query_rank', 'pval']
 		with open(outF,'w') as f:
 			f.write('\t'.join(headers) + '\n')
-			for pert in targetPvals:
+			for pert in targetPvals[cell1]:
 				qInds = queryInd[pert]
-				for target in targetPvals[pert]:
-					pvals = targetPvals[pert][target]
+				for target in targetPvals[cell1][pert]:
+					pvals = targetPvals[cell1][pert][target]
 					for i,pval in enumerate(pvals):
 						if pval <= pMaxThresh:
 							query = resCids[qInds[i]]
-							cs = targetCS[pert][target][i]
-							rank = targetRanks[pert][target][i]
+							cs = targetCS[cell1][pert][target][i]
+							rank = targetRanks[cell1][pert][target][i]
 							#query, target gene, cs, rank, pval
 							f.write('\t'.join([query,target,str(cs),str(rank),str(pval)[:7]]) + '\n')
 	### check observed drug-target connections compared to null-distribution
 	# of connections between drug and random gene knockdowns
 	observedRanks = []
 	observedCS = []
-	for pert in targetRanks:
-		for target in targetRanks[pert]:
-			observedRanks.extend(targetRanks[pert][target][:]) #create list of observed ranks
-			observedCS.extend(targetCS[pert][target][:]) #create list of observed ranks
+	for pert in targetRanks[cell1]:
+		for target in targetRanks[cell1][pert]:
+			observedRanks.extend(targetRanks[cell1][pert][target][:]) #create list of observed ranks
+			observedCS.extend(targetCS[cell1][pert][target][:]) #create list of observed ranks
 	n_rand = 1000
 	randMtrxRank = np.zeros((len(observedRanks),n_rand))
 	randMtrxCS = np.zeros((len(observedRanks),n_rand))
 	for perm in range(n_rand):
+	# 	randRnkList = []
+	# 	randCSList = []
+	# 	for pert in targetRanks:
+	# 		iQuery = queryInd[pert]
+	# 		for target in targetRanks[pert]:
+	# 			iRand = np.random.randint(rslt.matrix.shape[0], size=1)
+	# 			tarRanks = rankMatrix[iRand,iQuery]
+	# 			tarCS = rslt.matrix[iRand,iQuery]
+	# 			randRnkList.extend(tarRanks) 
+	# 			randCSList.extend(tarCS) 
+	# 	randMtrxRank[:,perm] = randRnkList
+	# 	randMtrxCS[:,perm] = randCSList
 		randRnkList = []
 		randCSList = []
-		for pert in targetRanks:
-			iQuery = queryInd[pert]
-			for target in targetRanks[pert]:
-				iRand = np.random.randint(rslt.matrix.shape[0], size=1)
-				tarRanks = rankMatrix[iRand,iQuery]
-				tarCS = rslt.matrix[iRand,iQuery]
-				randRnkList.extend(tarRanks) 
-				randCSList.extend(tarCS) 
+		for pert in queryInd:
+			for target in targetRanks[cell1][pert]:
+				nTargs = queryGenes.count(target)
+				iRand = np.random.randint(rslt.matrix.shape[0], size=nTargs)
+				for iTar in iRand:
+					iQuery = queryInd[pert]
+					cs = rslt.matrix[iTar,iQuery]
+					rnk = rankMatrix[iTar,iQuery]
+					randCSList.extend(cs)
+					randRnkList.extend(rnk)
+					# for iq in iQuery:
+					# 	cs = rslt.matrix[iTar,iq]
+					# 	rnk = rankMatrix[iTar,iq]
+					# 	randCSList.append(cs)
+					# 	randRnkList.append(rnk)
+						# tarPvals.append(pval)
+						#write summary table
+				# targetCS[pert][target] = tarCS
+				# targetPvals[pert][target] = tarPvals
+				# targetRanks[pert][target] = tarRanks
 		randMtrxRank[:,perm] = randRnkList
 		randMtrxCS[:,perm] = randCSList
 	#plot ranks
@@ -352,6 +382,23 @@ for cell1 in cellList:
 						str(sortSumFr.query_rank[i]),
 						str(sortSumFr.pval[i])]
 				table_data.append(line[:])
+			htmlcode = HTML.table(table_data)
+			f.write(htmlcode + '\n')
+			### write connections not found in mongo
+			lineWrite = '<h2><CENTER>Perturbations not found in CMAP database <CENTER></h2>'
+			f.write(lineWrite + '\n')
+			tblNoFind = []
+			for pert in noCMAPmatch['compound']:
+				tblNoFind.append([pert])
+			lineWrite = '<h3>Compounds </h3>'
+			f.write(lineWrite + '\n')
+			htmlcode = HTML.table(tblNoFind)
+			f.write(htmlcode + '\n')
+			lineWrite = '<h3>collapsed gene signatures </h3>'
+			f.write(lineWrite + '\n')
+			tblNoFind = []
+			for pert in noCMAPmatch['gene']:
+				tblNoFind.append([pert])
 			htmlcode = HTML.table(table_data)
 			f.write(htmlcode + '\n')
 
