@@ -17,7 +17,7 @@ import cmap.io.rnk as rnk
 import HTML
 import pandas as pd
 
-work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/14May2013'
+work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/OE-14May2013'
 if not os.path.exists(work_dir):
 	os.mkdir(work_dir)
 
@@ -47,7 +47,8 @@ dgo.add_dictionary(targetDict)
 # question, how to know which cell lines they pair with
 #grab all genetic perturbations - find which cell lines they occured in
 CM = mutil.CMapMongo()
-GPlist = CM.find({'pert_type':'trt_sh.cgs'},{'sig_id':True,'cell_id':True})
+# GPlist = CM.find({'pert_type':'trt_sh.cgs'},{'sig_id':True,'cell_id':True})
+GPlist = CM.find({'pert_type':'trt_oe'},{'sig_id':True,'cell_id':True})
 cellList = [x['cell_id'] for x in GPlist]
 uniqueLines = list(set(cellList))
 
@@ -62,7 +63,8 @@ for cell in uniqueLines:
 	if not os.path.exists(outdir):
 		os.mkdir(outdir)
 	CM = mutil.CMapMongo()
-	CGSbyCell = CM.find({'pert_type':'trt_sh.cgs','cell_id':cell},{'sig_id':True,'pert_iname':True})
+	# CGSbyCell = CM.find({'pert_type':'trt_sh.cgs','cell_id':cell},{'sig_id':True,'pert_iname':True})
+	CGSbyCell = CM.find({'pert_type':'trt_oe','cell_id':cell},{'sig_id':True,'pert_iname':True})
 	# CGSbyCell = CM.find({'pert_type':'trt_oe','cell_id':cell},{'sig_id':True})
 	nCGS = len(CGSbyCell)
 	sigF = os.path.join(outdir, cell+ '_all_CGS_sig_ids_n' + str(nCGS) + '.grp')
@@ -124,6 +126,62 @@ for pert in dgo.targetDict:
 							cellSigs = [pertSigList[i] for i in iperts]
 						pertSigIDs[pert][target][cell] = cellSigs
 
+
+### make mongo query to establish cell lines with the apropriate pairs
+#first check the cell lines which the hairpin are in
+# PlateLim = 'CPC'
+# pertSigIDs = {}
+# CGSlines = {}
+# CGSsigID = {}
+# noCMAPmatch = {}
+# noCMAPmatch['compound'] = []
+# noCMAPmatch['gene'] = []
+# for pert in dgo.targetDict:
+# 	pertSigIDs[pert] = {}
+# 	CGSlines[pert] = {}
+# 	CGSsigID[pert] = {}
+# 	#get cell lines tested for each pert_id
+# 	CM = mutil.CMapMongo()
+# 	pert_List = CM.find({'pert_id':{'$regex':pert}},{'sig_id':True,'cell_id':True})
+# 	if not pert_List:
+# 		print 'no query result for ' + pert
+# 		noCMAPmatch['compound'].append(pert)
+# 	else:
+# 		pertCellList = []
+# 		pertSigList = []
+# 		for sig in pert_List:
+# 			pertCellList.append(sig['cell_id'])
+# 			pertSigList.append(sig['sig_id'])
+# 		for target in dgo.targetDict[pert]:
+# 			CM = mutil.CMapMongo()
+# 			#get cell lines tested for each KD CGS
+# 			# target_CGS_List = CM.find({'pert_iname':target,'pert_type':'trt_sh.cgs'},{'sig_id':True,'cell_id':True})
+# 			#get cell lines tested for each OE sig
+# 			target_CGS_List = CM.find({'pert_iname':target,'pert_type':'trt_oe'},{'sig_id':True,'cell_id':True})
+# 			if not target_CGS_List:
+# 				print 'no query result for ' + target
+# 				noCMAPmatch['gene'].append(target)
+# 			else:
+# 				cellList = []
+# 				sigList = []
+# 				for sig in target_CGS_List:
+# 					cellList.append(sig['cell_id'])
+# 					sigList.append(sig['sig_id'])
+# 				cellSet = list(set(cellList))
+# 				CGSlines[pert][target] = cellSet
+# 				CGSsigID[pert][target] = sigList
+# 				pertSigIDs[pert][target] = {}
+# 				#check when a drug and target have both been tested in the same cell line
+# 				for cell in cellSet:
+# 					if cell in pertCellList:
+# 						iperts = [i for i,x in enumerate(pertCellList) if x ==cell]
+# 						if PlateLim:
+# 							cellSigs = [pertSigList[i] for i in iperts if pertSigList[i][:3] == PlateLim]
+# 						else:
+# 							cellSigs = [pertSigList[i] for i in iperts]
+# 						pertSigIDs[pert][target][cell] = cellSigs
+
+
 ### combine info on queries
 cellLines = []
 allSigIDsPert = []
@@ -137,6 +195,19 @@ allSigIDsCGS = []
 for pert in CGSsigID:
 	for target in CGSsigID[pert]:
 		allSigIDsCGS.extend(CGSsigID[pert][target])
+
+# ### write CGS sig_ids to grp file
+# for cell in uniqueLines:
+# 	outdir = os.path.join(work_dir,cell)
+# 	if not os.path.exists(outdir):
+# 		os.mkdir(outdir)
+# 	CM = mutil.CMapMongo()
+# 	# CGSbyCell = CM.find({'pert_type':'trt_sh.cgs','cell_id':cell},{'sig_id':True})
+# 	CGSbyCell = CM.find({'pert_type':'trt_oe','cell_id':cell},{'sig_id':True,'pert_iname':True})
+# 	nCGS = len(CGSbyCell)
+# 	sigF = os.path.join(outdir, cell+ '_all_CGS_sig_ids_n' + str(nCGS) + '.grp')
+# 	with open(sigF, 'w') as f:
+# 		[f.write(x + '\n') for x in CGSbyCell]
 
 ### make gmt signature of drugs of interest
 for cell1 in uniqueLines:
@@ -178,7 +249,7 @@ prog = progress.DeterminateProgressBar('Drug-target')
 targetRanks = {}
 targetRnkPercs = {}
 targetCS = {}
-for icell, cell1 in enumerate(uniqueLines):
+for icell, cell1 in enumerate(cellList):
 	celldir = os.path.join(work_dir,cell1) 
 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
 	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
@@ -190,8 +261,9 @@ for icell, cell1 in enumerate(uniqueLines):
 	prog.update('analyzing {0}',icell,len(cellList))
 	queryRids = rslt.get_rids()
 	# for KD:
-	queryGenes = [x.split(':')[1] for x in queryRids]
+	# queryGenes = [x.split(':')[1] for x in queryRids]
 	# for OE:
+	queryGenes = [sigGeneDict[cell1][x] for x in queryRids]
 	# queryGenes = [x.split('_')[1] for x in queryRids]
 	resCids = rslt.get_cids()
 	resPerts = [x.split(':')[1] for x in resCids]
@@ -215,7 +287,7 @@ for icell, cell1 in enumerate(uniqueLines):
 	targetRnkPercs[cell1] = {}
 	targetCS[cell1] = {}
 	sumF = os.path.join(celldir,cell1 + '_drug-target_connection_summary.txt')
-	headers = ['query_sig','cp_pert_desc','target_KD_cgs','cs', 'query_rank', 'RnkPerc']
+	headers = ['query_sig','cp_pert_desc','target_OE','cs', 'query_rank', 'RnkPerc']
 	with open(sumF,'w') as f:
 		f.write('\t'.join(headers) + '\n')
 		for pert in queryInd:
@@ -369,7 +441,7 @@ with open(indexF,'w') as f:
 			lineWrite =  '<a href="' + cell1 + '/' + cell1 + '.html">' + cell1 + '</a> <BR>'
 			f.write(lineWrite + '\n')
 ### make individual pages for each cell line
-for cell1 in uniqueLines:
+for cell1 in cellList:
 	outdir = os.path.join(work_dir,cell1)
 	if os.path.exists(outdir):
 		pageF = os.path.join(outdir,cell1+ '.html')
@@ -397,26 +469,20 @@ for cell1 in uniqueLines:
 			f.write(lineWrite + '\n')
 			### write connections tested
 			sumF = os.path.join(outdir,cell1 + '_drug-target_connection_summary.txt')
-			#write header file \
-			if os.path.exists(sumF):
-				table_data = []
-				with open(sumF,'rt') as Fread:
-					for i,line in enumerate(Fread):
-						if i == 0:
-							table_data.append(line.split('\t'))
-				sumFrame = pd.read_table(sumF)
-				sortSumFr = sumFrame.sort(columns='RnkPerc',ascending=True)
-				sortSumFr = sortSumFr.set_index([range(len(sortSumFr))])
-				for i in range(len(sortSumFr)):
-					line = [sortSumFr.query_sig[i],
-							sortSumFr.cp_pert_desc[i],
-							sortSumFr.target_KD_cgs[i],
-							str(sortSumFr.cs[i]),
-							str(sortSumFr.query_rank[i]),
-							str(sortSumFr.RnkPerc[i])]
-					table_data.append(line[:])
-				htmlcode = HTML.table(table_data)
-				f.write(htmlcode + '\n')
+			sumFrame = pd.read_table(sumF)
+			sortSumFr = sumFrame.sort(columns='RnkPerc',ascending=True)
+			sortSumFr = sortSumFr.set_index([range(len(sortSumFr))])
+			table_data = []
+			for i in range(len(sortSumFr)):
+				line = [sortSumFr.query_sig[i],
+						sortSumFr.cp_pert_desc[i],
+						sortSumFr.target_KD_cgs[i],
+						str(sortSumFr.cs[i]),
+						str(sortSumFr.query_rank[i]),
+						str(sortSumFr.RnkPerc[i])]
+				table_data.append(line[:])
+			htmlcode = HTML.table(table_data)
+			f.write(htmlcode + '\n')
 			### write connections not found in mongo
 			lineWrite = '<h2><CENTER>Perturbations not found in CMAP database <CENTER></h2>'
 			f.write(lineWrite + '\n')
