@@ -501,6 +501,57 @@ for cell1 in cellList:
 			htmlcode = HTML.table(tblNoFind)
 			f.write(htmlcode + '\n')
 
+### get disrribution cs scores for compound-targets that 'work':
+# brefeldinA-ARF1 - BRD-A31107743
+# linsitinib - IGF1R - BRD-K08589866
+# BEZ235-MTOR - BRD-K12184916
+# gemcitabine-RRM1 - BRD-K15108141
+# PP-30 - MTOR - BRD-K30677119
+# MK-2206 - AKT1 - BRD-K68065987
+# MK-2206 - AKT2
+# MK-2206 - AKT3
+# vorinostat - HDAC6 - BRD-K81418486
+# tozasertib - AURKA - BRD-K87947369
+# GW-843682X - PLK1 - BRD-K90382497
+# PIK-90 - MTOR - BRD-K99818283
+
+# goodConnLst = ['BRD-A31107743', 'BRD-K08589866', 'BRD-K12184916', 'BRD-K15108141', 'BRD-K81418486', 'BRD-K87947369', 'BRD-K90382497', 'BRD-K99818283']
+# goodTargetLst = ['ARF1', 'IGF1R', 'MTOR','RRM1','MTOR','AKT1','AKT2','AKT3','HDAC6','AURKA','PLK1']
+goodConn = {}
+connFile = '/xchip/cogs/hogstrom/analysis/informer_CTD/strong_drug_target_connections.txt'
+with open(connFile,'rt') as f:
+	for string in f:
+		splt = string.split('\r')
+		for i,line in enumerate(splt):
+			splt2 = line.split('\t')
+			brd = splt2[0]
+			target = splt2[2]
+			cells = splt2[3:]
+			cells2 = []
+			if '\n' in cells:
+				cells.remove('\n')
+			for cell in cells:
+				if cell[-1:] == '\n':
+					cell = cell[:-1]
+					cells2.append(cell)
+				else:
+					cells2.append(cell)
+			## add to dictionary
+			if not goodConn.has_key(brd):
+				goodConn[brd] = {}
+			goodConn[brd][target] = cells2
+
+csLst = []
+for pert in goodConn:
+	if pert == 'BRD':
+		continue
+	else:
+		for target in goodConn[pert]:
+			for cell in goodConn[pert][target]:
+				if targetCS[cell].has_key(pert):
+							csLst.extend(targetCS[cell][pert][target])
+
+
 
 ### scratch ### 
 
