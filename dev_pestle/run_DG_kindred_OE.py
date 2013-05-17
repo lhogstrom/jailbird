@@ -544,12 +544,12 @@ with open(connFile,'rt') as f:
 csLst = []
 for pert in goodConn:
 	if pert == 'BRD':
-		continue
+		continue:
 	else:
-		for target in goodConn[pert]:
-			for cell in goodConn[pert][target]:
-				if targetCS[cell].has_key(pert):
-							csLst.extend(targetCS[cell][pert][target])
+	for target in goodConn[pert]:
+		for cell in goodConn[pert][target]:
+			if targetCS[cell].has_key(pert):
+						csLst.extend(targetCS[cell][pert][target])
 
 
 
