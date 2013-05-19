@@ -42,7 +42,7 @@ with open(targetSheetF,'rt') as f:
 				pDescDict[pID] = pDesc
 
 dgo = dgo.DGO()
-dgo.add_dictionary(targetDict)
+dgo.add_dictionary(targetDict,pDescDict)
 
 # question, how to know which cell lines they pair with
 #grab all genetic perturbations - find which cell lines they occured in

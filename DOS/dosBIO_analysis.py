@@ -11,6 +11,7 @@ import cmap.util.mongo_utils as mutil
 import cmap.util.progress as progress
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 plate = 'DOSBIO001'
 cellLine = 'PC3'
@@ -129,5 +130,152 @@ for icell, cell1 in enumerate(uniqCells):
 	pRslt = rslt.frame
 	rankFrame = pRslt.rank(ascending=False)
 
+	for gene in list(set(queryGenes)):
+		for pert in list(set(resPerts)):
+			iperts = [i for i,x in enumerate(resPerts) if x[:13] == pert]
+			for instance, ipert in enumerate(iperts):
+				instance = 
 
+rFrame = rankFrame
+
+geneList = []
+#build hierarchical index
+for rid in rankFrame.index:
+	gene = rid.split(':')[1]
+	geneList.append(gene)
+
+
+
+rFrame.ix['CGS001_A375_96H:A2M:1','DOS054_A375_24H:BRD-K42543764-001-01-8:5']
+hFrame.index.names = ['gene','cellLine','instance']
+
+### strategy 1 - every pairwise comparison is its own row
+df = pd.DataFrame()
+prog = progress.DeterminateProgressBar('Drug-target')
+for icell, cell1 in enumerate(uniqCells):
+	celldir = os.path.join(work_dir,cell1) 
+	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
+		print cell1 + 'no query result file'
+		continue #if no results file, skip loop
+	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+	rslt = gct.GCT()
+	rslt.read(rsltF)
+	prog.update('analyzing {0}',icell,len(uniqCells))
+	flatSeries = rslt.frame.unstack()
+	flatFrame = pd.DataFrame(flatSeries,columns=['wtcs'])
+	flatFrame.index.names = ['sig_id', 'cgs']
+	flatFrame['cell'] = cell1
+	indVals = flatFrame.index.values
+	pertVals = [ind[0].split(':')[1][:13] for ind in indVals]
+	geneVals = [ind[1].split(':')[1] for ind in indVals]
+	flatFrame['pert'] = pertVals
+	flatFrame['gene'] = geneVals
+	df.append(flatFrame)
+
+indLim1 = df['pert'] == 'BRD-K70875408'
+indLim2 = df['gene'] == 'BBS9'
+df[indLim1 & indLim2]
+
+### strategy 2:
+#index1 = BRD short
+#index2 = cp sig_id
+#each column - a unique gene ID - representing the CGS for that gene, matching cell line
+#cell line listed as a column
+df = pd.DataFrame()
+prog = progress.DeterminateProgressBar('Drug-target')
+# for icell, cell1 in enumerate(uniqCells):
+for icell, cell1 in enumerate(['PC3','MCF7']):
+	celldir = os.path.join(work_dir,cell1) 
+	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
+		print cell1 + 'no query result file'
+		continue #if no results file, skip loop
+	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+	rslt = gct.GCT()
+	rslt.read(rsltF)
+	prog.update('analyzing {0}',icell,len(uniqCells))
+	rsltF = rslt.frame
+	rsltF = rsltF.T
+	indVals = rsltF.index.values
+	pertVals = [ind.split(':')[1][:13] for ind in indVals]
+	# geneVals = [ind.split(':')[1] for ind in rsltF.columns]
+	#make the column name gene and pert time
+	geneVals = []
+	for ind in rsltF.columns:
+		gene = ind.split(':')[1]
+		tp = ind.split(':')[0].split('_')[-1]
+		gname = '_'.join([gene, tp])
+		geneVals.append(gname)
+	if len(geneVals) > len(set(geneVals)):
+		print 'duplicate CGS for this celline'
+	newF = rsltF
+	newF.index = [pertVals, rsltF.index.values]
+	newF.columns = geneVals
+	newF['pert'] = pertVals
+	newF['cell'] = cell1
+	if len(df) == 0:
+		df = newF
+	else:
+		df = pd.concat([df,newF],axis=0)
+
+## must deal with two time points
+
+
+#now loop through and add new rslt.frames from other cell lines
+#mimic df on a smaller scale:
+data1 = pd.Series(np.random.randn(10),index=[['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'd', 'd'],[1, 2, 3, 1, 2, 3, 1, 2, 2, 3]])
+data2 = pd.Series(np.random.randn(4),index=[['added1', 'jump', 'cap', 'blot'],[1, 2, 3, 1]])
+dd = pd.DataFrame(np.random.randn(10, 4),columns=['g','b','y','q'])
+d1 = dd[:3]
+d1.index=['a1','a2','a3']
+d1 = d1[['b','y']]
+d2 = dd[3:7]
+d2.index = ['b33', 'b34', 'b35','b36']
+pd.merge(d1,d2,how='outer')
+pd.concat([d1,d2],axis=0)
+pieces = [dd[:3], dd[3:7], dd[7:]]
+
+#make small frame
+#be sure to deal with duplicate columns
+g = df.ix[:3]
+g= g[['A2M_96H','ZRSR2_144H']]
+f = df.ix[5:7]
+# f= f[['A2M_96H','ZRSR2_144H']]
+f= f[['A2M_96H','ZRSR2_144H','A2M_96H']]
+# f= f[['ABCB1','ABCB4']]
+pd.concat([f,g],axis=0,join='outer')
+pd.concat([f,g],axis=0,join_axes)
+pd.merge(g,f,how='outer')
+
+#re-index
+g.index = ['BRD-K12683703','BRD-K03050720','BRD-K16625384']
+f.index = ['BRD-K79734497','BRD-K57200229']
+
+#find drug duplicates
+[x for i, x in enumerate(pertVals) if pertVals.count(x) > 1]
+[x for i, x in enumerate(geneVals) if geneVals.count(x) > 1]
+#get index of one CGS dup
+idup = [i for i, x in enumerate(geneVals) if x == 'ZNF134']
+rslt.frame.index[idup]
+#re-index a series
+k4Series = rFrame['DOS054_A375_24H:BRD-K42543764-001-01-8:5']
+newInd = []
+for ind in k4Series.index:
+	newInd.append(ind.split(':')[1])
+knew = k4Series.reindex(newInd)
+knew = pd.Series(k4Series.values)
+
+
+
+
+ind1 = []
+ind2 = []
+for cell1 in uniqCells:
+	for num in range(4):
+		ind1.append(cell1)
+		ind2.append(num)
+
+hSeriess = pd.Series(np.zeros_like(ind2),index=[ind1,ind2])
+hSeriess = pd.Series(range(len(uniqCells)),index=[uniqCells])
 

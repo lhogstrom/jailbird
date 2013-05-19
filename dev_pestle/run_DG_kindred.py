@@ -12,7 +12,7 @@ import glob
 import matplotlib.pyplot as plt
 from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.util.progress as progress
-import cmap.analytics.dgo as dgo
+# import cmap.analytics.dgo as dgo
 import cmap.io.rnk as rnk
 import HTML
 import pandas as pd
@@ -41,8 +41,8 @@ with open(targetSheetF,'rt') as f:
 				targetDict[pID] = targets
 				pDescDict[pID] = pDesc
 
-dgo = dgo.DGO()
-dgo.add_dictionary(targetDict)
+# dgo = dgo.DGO()
+# dgo.add_dictionary(targetDict)
 
 # question, how to know which cell lines they pair with
 #grab all genetic perturbations - find which cell lines they occured in
@@ -84,7 +84,7 @@ CGSsigID = {}
 noCMAPmatch = {}
 noCMAPmatch['compound'] = []
 noCMAPmatch['gene'] = []
-for pert in dgo.targetDict:
+for pert in targetDict:
 	pertSigIDs[pert] = {}
 	CGSlines[pert] = {}
 	CGSsigID[pert] = {}
@@ -100,7 +100,7 @@ for pert in dgo.targetDict:
 		for sig in pert_List:
 			pertCellList.append(sig['cell_id'])
 			pertSigList.append(sig['sig_id'])
-		for target in dgo.targetDict[pert]:
+		for target in targetDict[pert]:
 			if not geneIDDict.has_key(target):
 				print 'no query result for ' + target
 				noCMAPmatch['gene'].append(target)
@@ -138,22 +138,22 @@ for pert in CGSsigID:
 	for target in CGSsigID[pert]:
 		allSigIDsCGS.extend(CGSsigID[pert][target])
 
-### make gmt signature of drugs of interest
-for cell1 in uniqueLines:
-	sigIDlist = []
-	for pert in pertSigIDs:
-		for target in pertSigIDs[pert]:
-			for cell2 in pertSigIDs[pert][target]:
-				if cell2 == cell1:
-					sigIDlist.extend(pertSigIDs[pert][target][cell2])
-	sigIDlist = list(set(sigIDlist))
-	#write drug signatures by cell line to a file
-	outdir = os.path.join(work_dir,cell1)
-	if not os.path.exists(outdir):
-		os.mkdir(outdir)
-	sigF = os.path.join(outdir,cell1 + '_cp_sig_ids.grp')
-	with open(sigF, 'w') as f:
-		[f.write(x + '\n') for x in sigIDlist]
+# ### make gmt signature of drugs of interest
+# for cell1 in uniqueLines:
+# 	sigIDlist = []
+# 	for pert in pertSigIDs:
+# 		for target in pertSigIDs[pert]:
+# 			for cell2 in pertSigIDs[pert][target]:
+# 				if cell2 == cell1:
+# 					sigIDlist.extend(pertSigIDs[pert][target][cell2])
+# 	sigIDlist = list(set(sigIDlist))
+# 	#write drug signatures by cell line to a file
+# 	outdir = os.path.join(work_dir,cell1)
+# 	if not os.path.exists(outdir):
+# 		os.mkdir(outdir)
+# 	sigF = os.path.join(outdir,cell1 + '_cp_sig_ids.grp')
+# 	with open(sigF, 'w') as f:
+# 		[f.write(x + '\n') for x in sigIDlist]
 
 # generate the query command
 for cell1 in uniqueLines:
