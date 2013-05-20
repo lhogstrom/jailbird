@@ -177,15 +177,24 @@ indLim1 = df['pert'] == 'BRD-K70875408'
 indLim2 = df['gene'] == 'BBS9'
 df[indLim1 & indLim2]
 
+
+
+
 ### strategy 2:
-#index1 = BRD short
-#index2 = cp sig_id
-#each column - a unique gene ID - representing the CGS for that gene, matching cell line
-#cell line listed as a column
-df = pd.DataFrame()
+# Create a pandas dataframe that lets you see connection results across 
+# cell lines it is structured as follows:
+# 	index1 = BRD short
+# 	index2 = perurbation sig_id
+# 	each column - a unique gene ID/ time point - representing the CGS for that gene, matching cell line
+# 	cell line listed as a column
+work_dir = '/xchip/cogs/projects/DOS/DOSBIO'
+#which cell lines have a result dir
+cellDirs = [f for f in os.listdir(work_dir) if os.path.isdir(work_dir+'/'+f)]
 prog = progress.DeterminateProgressBar('Drug-target')
-# for icell, cell1 in enumerate(uniqCells):
-for icell, cell1 in enumerate(['PC3','MCF7']):
+df = pd.DataFrame()
+#loop through each cell line add to df
+for icell, cell1 in enumerate(cellDirs):
+	#define directories and load in outputs
 	celldir = os.path.join(work_dir,cell1) 
 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
 	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
@@ -194,12 +203,11 @@ for icell, cell1 in enumerate(['PC3','MCF7']):
 	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
 	rslt = gct.GCT()
 	rslt.read(rsltF)
-	prog.update('analyzing {0}',icell,len(uniqCells))
+	prog.update('analyzing {0}',icell,len(cellDirs))
 	rsltF = rslt.frame
 	rsltF = rsltF.T
 	indVals = rsltF.index.values
 	pertVals = [ind.split(':')[1][:13] for ind in indVals]
-	# geneVals = [ind.split(':')[1] for ind in rsltF.columns]
 	#make the column name gene and pert time
 	geneVals = []
 	for ind in rsltF.columns:
@@ -214,15 +222,88 @@ for icell, cell1 in enumerate(['PC3','MCF7']):
 	newF.columns = geneVals
 	newF['pert'] = pertVals
 	newF['cell'] = cell1
+	#add cell line result to combined df
 	if len(df) == 0:
 		df = newF
 	else:
 		df = pd.concat([df,newF],axis=0)
 
-## must deal with two time points
+#get unique brds with connection data
+fullBRDs = []
+for ind in df.index:
+	brd = ind[0]
+	fullBRDs.append(brd)
+uniqBRDs = list(set(fullBRDs))
+nCPs = []
+# for brd in uniqBRDs:
+iMany = [i for i,x in enumerate(nCPs) if x > 12]
+for ipert in iMany:
+	brd = uniqBRDs[ipert]
+	cpRes = df.ix[brd]
+	nCPs.append(cpRes.shape[0])
+	# cntList = []
+	# find the number of drug-target instances
+	# for col in df.columns:
+	# 	if col == 'pert' or col == 'cell':
+	# 		print col
+	# 		continue
+	# 	else:
+	# 		mtch = cpRes[col]
+	# 		mtchSum = mtch.sum()
+	# 		cnts = len(pd.value_counts(mtch))
+	# 		if type(cnts) == int:
+	# 			cntList.append(cnts)
+	meanSer = cpRes.mean()
+	# meanVals = meanSer.values
+	# ordMean = meanSer.order().index
+	# cpRes[ordMean]
+	nullCnt = pd.isnull(cpRes)
+	#how many cell lines were both the pert and target tested in
+	valCounts = nullCnt.shape[0] - nullCnt.sum(axis=0)
+	CS_thresh = .45 #theshold for mean ss
+	for ind in meanSer[meanSer > CS_thresh].index:
+		# print ind
+		if valCounts[ind] > 4:
+			print brd + ' ' + ind
+			#cs wadden gram
+			cpRes[ind]
+			sKeysStr = []
+			for i,cs in enumerate(cpRes[ind]):
+				if pd.isnull(cs):
+					continue
+				else:
+					sKeysStr.append(cpRes.index[i])
+					# percRanks = targetRnkPercs[cell1][pert][target]
+					# yVals = np.repeat(i+1,len(cs))
+					yVals = i+1
+					# plt.scatter(percRanks,yVals)
+					plt.scatter(cs,yVals)
+			plt.xlim((-1, 1))
+			plt.ylim((0,i+2))
+			plt.yticks(range(1, i + 2), sKeysStr, rotation = 0)
+			plt.xlabel('wtcs')
+			plt.ylabel('pert')
+			plt.title(brd + ' - ' + ind + ' connection')
+			plt.savefig(os.path.join(work_dir,brd +'_' + ind + '_connections.png'))
+			plt.close()
+
+for cs in cpRes[ind]:
+	if pd.isnull(cs):
+		continue
+	else:
+		print cs
+
+#get brds where we tested in a bunch of cell lines:
 
 
-#now loop through and add new rslt.frames from other cell lines
+
+
+	iSortmean = meanSer.argsort()
+	iSort = iSortmean.values
+	iSort = iSort.astype(int)
+	meanSer[iSort]
+
+
 #mimic df on a smaller scale:
 data1 = pd.Series(np.random.randn(10),index=[['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'd', 'd'],[1, 2, 3, 1, 2, 3, 1, 2, 2, 3]])
 data2 = pd.Series(np.random.randn(4),index=[['added1', 'jump', 'cap', 'blot'],[1, 2, 3, 1]])
