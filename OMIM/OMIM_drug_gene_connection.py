@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 '''
 analyze the DOSBIO plates - make sc plots etc
-
-use DOS signatures generate queries of the CGS data (cell line specific results)
 '''
 
 import os
@@ -14,6 +12,56 @@ import cmap.util.progress as progress
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+
+
+#load in OMIM genes. Which ones have a CGS in > 4 cell lines? which ones are LM?
+inFile = '/xchip/cogs/hogstrom/analysis/OMIM/OMIM_CGS.txt'
+omimGeneList = []
+with open(inFile,'rt') as f:
+	for string in f:
+		splt = string.split('\r')
+		for i,line in enumerate(splt):
+			if i == 0: # skip headder
+				continue
+			splt2 = line.split('\t')
+			geneID = splt2[0] #the pert_id listed the line
+			omimGeneList.append(geneID)
+
+CM = mutil.CMapMongo()
+# CGSall = CM.find({'pert_type':'trt_sh.cgs','cell_id':cell1},{'sig_id':True,'pert_iname':True})
+CGSall = CM.find({'pert_type':'trt_sh.cgs'},{'sig_id':True,'pert_iname':True,'cell_id':True})
+#which drugs to use --> informer set and HOG plate
+
+### which genes have a CGS in > 4 cell lines
+ominWithContext = []
+for geneID in omimGeneList:
+	cellLst = []
+	sigIDLst = []
+	for q in CGSall:
+		if q['pert_iname'] == geneID:
+			cellLst.append(q['cell_id'])
+			sigIDLst.append(q['sig_id'])
+	nCells = len(set(cellLst)) 
+	if nCells > 4:
+		ominWithContext.append(geneID)
+
+### in which cell lines do we have more than 500 CGS sigs
+cellFull = [q['cell_id'] for q in CGSall]
+cgsCellsLong = list(set(cellFull))
+cgsCells = []
+for cell in cgsCellsLong:
+	if cellFull.count(cell) > 500:
+		cgsCells.append(cell)
+
+### which drugs to test? use informer set/ HOG cps
+
+
+
+
+
+
+
+
 
 plate = 'DOSBIO001'
 cellLine = 'PC3'
