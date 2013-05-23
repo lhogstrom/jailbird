@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
+work_dir = '/xchip/cogs/hogstrom/analysis/OMIM/cp_KD_connection'
 #load in OMIM genes. Which ones have a CGS in > 4 cell lines? which ones are LM?
 inFile = '/xchip/cogs/hogstrom/analysis/OMIM/OMIM_CGS.txt'
 omimGeneList = []
@@ -28,8 +29,7 @@ with open(inFile,'rt') as f:
 			omimGeneList.append(geneID)
 
 CM = mutil.CMapMongo()
-# CGSall = CM.find({'pert_type':'trt_sh.cgs','cell_id':cell1},{'sig_id':True,'pert_iname':True})
-CGSall = CM.find({'pert_type':'trt_sh.cgs'},{'sig_id':True,'pert_iname':True,'cell_id':True})
+CGSall = CM.find({'pert_type':'trt_sh.cgs'},{'sig_id':True,'pert_iname':True,'cell_id':True,'pert_id':True})
 #which drugs to use --> informer set and HOG plate
 
 ### which genes have a CGS in > 4 cell lines
@@ -53,74 +53,55 @@ for cell in cgsCellsLong:
 	if cellFull.count(cell) > 500:
 		cgsCells.append(cell)
 
-### which drugs to test? use informer set/ HOG cps
+### which drugs to test? use CPC006 (CTD2)
+CM = mutil.CMapMongo()
+cpSigs = CM.find({'sig_id':{'$regex':'CPC006'},'pert_type':'trt_cp'},{'sig_id':True,'cell_id':True,'pert_iname':True,'pert_id':True})
+cpLst = [x['pert_iname'] for x in cpSigs]
+brdLst = [x['pert_id'] for x in cpSigs]
+cpSet = list(set(cpLst))
+cpSet.sort()
+brdSet = list(set(brdLst))
+
+### make dictionary of pert_descs
+pDescDict = {}
+for q in cpSigs:
+	if not pDescDict.has_key(q['pert_id']):
+		pDescDict[q['pert_id']] = q['pert_iname']
 
 
 
-
-
-
-
-
-
-plate = 'DOSBIO001'
-cellLine = 'PC3'
-refControl ='pc'
-timeP = '24H'
-dataDir = '/xchip/cogs/projects/DOS/data'
-gctfile = glob.glob(dataDir +'/%s/%s_%s_%s/by_pert_id_pert_dose/%s_%s_%s_COMPZ.MODZ_SCORE_LM_*x978.gctx' % (refControl,plate,cellLine,timeP,plate,cellLine,timeP))
-gctfile = gctfile[0]
-
-work_dir = '/xchip/cogs/projects/DOS/DOSBIO'
-# work_dir = '/xchip/cogs/hogstrom/analysis/scratch/prism/%s_%s_%s/fulcrum' % (cell,timeP,refControl)
-# if not os.path.exists(work_dir):
-# 	os.mkdir(work_dir)
-
-gcto=gct.GCT()
-gcto.read(gctfile)
-
-sco = sc.SC()
-sco.add_sc_from_gctx_meta(gctfile, verbose=False)
-sco.set_thresh_by_specificity(0.8)
-t1 = '%s_%s_%s' % (plate,cellLine,timeP)
-outF = os.path.join(work_dir,'_'.join([t1,'SC.png']))
-sco.plot(title=t1,out=outF)
-
-
-pDescs = gcto.get_column_meta('pert_desc')
-iBRDs = [i for i, x in enumerate(pDescs) if x[:3] == 'BRD']
-ss= gcto.get_column_meta('distil_ss')
-ssBRD = [ss[i] for i in iBRDs]
-maxSS = max(ssBRD) 
-iMaxSS = [i for i,x in enumerate(ss) if x == maxSS][0]
-maxBRD = pDescs[iMaxSS]
-
-brdCounts = []
-fullPertList = []
-for ipert in iBRDs:
-	pert = pDescs[ipert]
-	CM = mutil.CMapMongo()
-	pert_List = CM.find({'pert_id':{'$regex':pert}},{'sig_id':True,'cell_id':True})
-	if pert_List:
-		brdCounts.append(len(pert_List))
-		fullPertList.extend(pert_List)
-
-cellsAll = [sig['cell_id'] for sig in fullPertList]
-uniqCells = list(set(cellsAll))
-### make gmt signature of drugs of interest
-for cell1 in uniqCells:
+### organize sig ids by cell line
+for cell1 in cgsCells:
 	outdir = os.path.join(work_dir,cell1)
 	if not os.path.exists(outdir):
 		os.mkdir(outdir)
+	CM = mutil.CMapMongo()
+	cpByCell = CM.find({'cell_id':cell1,'pert_type':'trt_cp'},{'sig_id':True,'cell_id':True,'pert_iname':True,'pert_id':True})
 	sigIDlist = []
-	for sig in fullPertList:
-		if sig['cell_id'] == cell1:
+	pertIDlist = []
+	for sig in cpByCell:
+		if sig['pert_id'] in brdSet:
 			sigIDlist.append(sig['sig_id'])
-	sigIDlist = list(set(sigIDlist))
-	#write drug signatures by cell line to a file
-	sigF = os.path.join(outdir,cell1 + '_cp_sig_ids.grp')
+			pertIDlist.append(sig['pert_id'])
+	#count instances of pert in the cell line
+	counts = dict()
+	for i in pertIDlist:
+	  counts[i] = counts.get(i, 0) + 1
+	# cap at 10 signatures per compound per cell line
+	iRemove = []
+	for brd in counts:
+		if counts[brd] > 10:
+			icp = [i for i,x in enumerate(pertIDlist) if x == brd]
+			irm = icp[11:] 
+			iRemove.extend(irm)
+	iKeep = set(range(len(sigIDlist)))
+	iKeep = list(iKeep.difference(set(iRemove))) 
+	sigListShort = [sigIDlist[i] for i in iKeep]
+	### write pert and cgs sig IDs to file
+	nSigs = len(sigListShort)
+	sigF = os.path.join(outdir, cell1+ '_cp_sig_ids_n' + str(nSigs) + '.grp')
 	with open(sigF, 'w') as f:
-		[f.write(x + '\n') for x in sigIDlist]
+		[f.write(x + '\n') for x in sigListShort]
 	#get all CGS for a cell line
 	CM = mutil.CMapMongo()
 	CGSbyCell = CM.find({'pert_type':'trt_sh.cgs','cell_id':cell1},{'sig_id':True,'pert_iname':True})
@@ -131,7 +112,7 @@ for cell1 in uniqCells:
 			for sig in CGSbyCell:
 				f.write(sig['sig_id'] + '\n')
 
-for cell1 in uniqCells:
+for cell1 in cgsCells:
 	cellDir = os.path.join(work_dir,cell1) 
 	cidF = glob.glob(cellDir + '/' + cell1 + '_all_CGS_sig_ids_n*.grp')
 	if not cidF:
@@ -141,7 +122,7 @@ for cell1 in uniqCells:
 	if not os.path.exists(outdir):
 		os.mkdir(outdir)
 	# sigF = os.path.join(cellDir, cell1 + '_all_CGS_sig_ids_n' + str(nCGS) + '.grp')
-	sigF = os.path.join(cellDir,cell1 + '_cp_sig_ids.grp')
+	sigF = glob.glob(cellDir + '/' + cell1 + '_cp_sig_ids_n*.grp')[0]
 	cmd = ' '.join(['rum -q local sig_query_tool',
 			 '--sig_id ' + sigF,
 			 '--metric wtcs',
@@ -152,85 +133,6 @@ for cell1 in uniqCells:
 			 '--save_tail false'])
 	os.system(cmd)
 
-prog = progress.DeterminateProgressBar('Drug-target')
-for icell, cell1 in enumerate(uniqCells):
-	celldir = os.path.join(work_dir,cell1) 
-	outdir = os.path.join(work_dir,cell1,'sig_query_out')
-	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
-		print cell1 + 'no query result file'
-		continue #if no results file, skip loop
-	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
-	rslt = gct.GCT()
-	rslt.read(rsltF)
-	prog.update('analyzing {0}',icell,len(uniqCells))
-	queryRids = rslt.get_rids()
-	# for KD:
-	queryGenes = [x.split(':')[1] for x in queryRids]
-	# for OE:
-	# queryGenes = [x.split('_')[1] for x in queryRids]
-	resCids = rslt.get_cids()
-	resPerts = [x.split(':')[1] for x in resCids]
-	#build rank matrix
-	sortMatrix = np.argsort(rslt.matrix,axis=0)[::-1]
-	rankMatrix = np.zeros_like(sortMatrix)
-	for icol in range(rankMatrix.shape[1]):
-		col = sortMatrix[:,icol]
-		rankMatrix[col,icol] = np.arange(len(sortMatrix[:,icol])) + 1
-	#pandas rank
-	pRslt = rslt.frame
-	rankFrame = pRslt.rank(ascending=False)
-
-	for gene in list(set(queryGenes)):
-		for pert in list(set(resPerts)):
-			iperts = [i for i,x in enumerate(resPerts) if x[:13] == pert]
-			for instance, ipert in enumerate(iperts):
-				instance = 
-
-rFrame = rankFrame
-
-geneList = []
-#build hierarchical index
-for rid in rankFrame.index:
-	gene = rid.split(':')[1]
-	geneList.append(gene)
-
-
-
-rFrame.ix['CGS001_A375_96H:A2M:1','DOS054_A375_24H:BRD-K42543764-001-01-8:5']
-hFrame.index.names = ['gene','cellLine','instance']
-
-### strategy 1 - every pairwise comparison is its own row
-df = pd.DataFrame()
-prog = progress.DeterminateProgressBar('Drug-target')
-for icell, cell1 in enumerate(uniqCells):
-	celldir = os.path.join(work_dir,cell1) 
-	outdir = os.path.join(work_dir,cell1,'sig_query_out')
-	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
-		print cell1 + 'no query result file'
-		continue #if no results file, skip loop
-	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
-	rslt = gct.GCT()
-	rslt.read(rsltF)
-	prog.update('analyzing {0}',icell,len(uniqCells))
-	flatSeries = rslt.frame.unstack()
-	flatFrame = pd.DataFrame(flatSeries,columns=['wtcs'])
-	flatFrame.index.names = ['sig_id', 'cgs']
-	flatFrame['cell'] = cell1
-	indVals = flatFrame.index.values
-	pertVals = [ind[0].split(':')[1][:13] for ind in indVals]
-	geneVals = [ind[1].split(':')[1] for ind in indVals]
-	flatFrame['pert'] = pertVals
-	flatFrame['gene'] = geneVals
-	df.append(flatFrame)
-
-indLim1 = df['pert'] == 'BRD-K70875408'
-indLim2 = df['gene'] == 'BBS9'
-df[indLim1 & indLim2]
-
-
-
-
-### strategy 2:
 # Create a pandas dataframe that lets you see connection results across 
 # cell lines it is structured as follows:
 # 	index1 = BRD short
@@ -238,14 +140,13 @@ df[indLim1 & indLim2]
 # 	each column - a unique gene ID/ time point - representing the CGS for that gene, matching cell line
 # 	cell line listed as a column
 gp_type = 'KD' # genetic perturbation type
-work_dir = '/xchip/cogs/projects/DOS/DOSBIO'
 #which cell lines have a result dir
 cellDirs = [f for f in os.listdir(work_dir) if os.path.isdir(work_dir+'/'+f)]
 prog = progress.DeterminateProgressBar('Drug-target')
 df = pd.DataFrame()
 dfRank = pd.DataFrame()
 #loop through each cell line add to df
-for icell, cell1 in enumerate(cellDirs):
+for icell, cell1 in enumerate(cgsCells):
 	#define directories and load in outputs
 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
 	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
@@ -308,56 +209,68 @@ for brd in uniqBRDs:
 	valCounts = nullCnt.shape[0] - nullCnt.sum(axis=0)
 	# CS_thresh = .45 #theshold for mean ss
 	# for ind in meanSer[meanSer > CS_thresh].index:
-	rank_thresh = 5 #theshold for mean ss
+	rank_thresh = 10 #theshold for mean ss
 	for ind in meanRnk[meanRnk < rank_thresh].index:
 		# print ind
-		if valCounts[ind] > 4:
-			print brd + ' ' + ind
-			#cs wadden gram
-			sKeysStr = []
-			count = 0
-			for i,cs in enumerate(cpRes[ind]):
-				if pd.isnull(cs):
-					continue
-				else:
-					count = count + 1
-					sKeysStr.append(cpRes.index[i].split('_')[1])
-					yVals = count
-					plt.scatter(cs,yVals)
-			plt.xlim((-1, 1))
-			plt.ylim((0,count+1))
-			plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-			plt.xlabel('wtcs')
-			plt.ylabel('cell line')
-			plt.title(brd + ' - ' + ind + ' connection - ' + gp_type)
-			plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_connections.png'))
-			plt.close()
-			#rank wadden gram
-			sKeysStr = []
-			count = 0
-			rnkList = cpRank[ind]
-			for i,rnk in enumerate(cpRank[ind]):
-				if pd.isnull(rnk):
-					continue
-				else:
-					count = count + 1
-					sKeysStr.append(cpRes.index[i].split('_')[1])
-					yVals = count
-					plt.scatter(rnk,yVals)
-			plt.xlim((0, 100))
-			plt.ylim((0,count+1))
-			plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-			plt.xlabel('percent rank')
-			plt.ylabel('cell line')
-			plt.title(brd + ' - ' + ind + ' connection - ' + gp_type)
-			plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_percent_rank.png'))
-			plt.close()
+		rnkSer = cpRank[ind]
+		if min(rnkSer[rnkSer.notnull()]) < 1:
+			if valCounts[ind] > 9:
+				print brd + ' ' + ind
+				#cs wadden gram
+				sKeysStr = []
+				count = 0
+				for i,cs in enumerate(cpRes[ind]):
+					if pd.isnull(cs):
+						continue
+					else:
+						count = count + 1
+						sKeysStr.append(cpRes.index[i].split('_')[1])
+						yVals = count
+						plt.scatter(cs,yVals)
+				plt.xlim((-1, 1))
+				plt.ylim((0,count+1))
+				plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
+				plt.xlabel('wtcs')
+				plt.ylabel('cell line')
+				plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
+				plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_connections.png'))
+				plt.close()
+				#rank wadden gram
+				sKeysStr = []
+				count = 0
+				rnkList = cpRank[ind]
+				for i,rnk in enumerate(cpRank[ind]):
+					if pd.isnull(rnk):
+						continue
+					else:
+						count = count + 1
+						sKeysStr.append(cpRes.index[i].split('_')[1])
+						yVals = count
+						plt.scatter(rnk,yVals)
+				plt.xlim((0, 100))
+				plt.ylim((0,count+1))
+				plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
+				plt.xlabel('percent rank')
+				plt.ylabel('cell line')
+				plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
+				plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_percent_rank.png'))
+				plt.close()
 
 
 
-###plot one instance in log form 
-brd = 'BRD-K05756698'
-ind = 'PIK3CB_96H'
+###plot one instance in log form
+for x in pDescDict:
+	if pDescDict[x] == 'CD-1530':
+		print x
+
+for col in dfRank.columns:
+	if col[:4] == 'MUC1':
+		print col
+
+brd = 'BRD-K25737009'
+ind = 'MUC1_96H'
+cpRes = df.ix[brd]
+cpRank = dfRank.ix[brd]
 sKeysStr = []
 count = 0
 rnkList = cpRank[ind]
@@ -376,6 +289,29 @@ plt.xlabel('log10 (percent rank)')
 plt.ylabel('cell line')
 plt.title(brd + ' - ' + ind + ' connection - ' + gp_type)
 plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_log_rank.png'))
+plt.close()
+
+#raw percent rank
+brd = 'BRD-K25737009'
+ind = 'MUC1_96H'
+sKeysStr = []
+count = 0
+rnkList = cpRank[ind]
+for i,rnk in enumerate(cpRank[ind]):
+	if pd.isnull(rnk):
+		continue
+	else:
+		count = count + 1
+		sKeysStr.append(cpRes.index[i].split('_')[1])
+		yVals = count
+		plt.scatter(rnk,yVals)
+plt.xlim((0, 100))
+plt.ylim((0,count+1))
+plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
+plt.xlabel('percent rank')
+plt.ylabel('cell line')
+plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
+plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_percent_rank1.png'))
 plt.close()
 
 ### percent rank pvalues based on Navon et. al - Novel Rank-Based Statistical Methods Reveal MicroRNAs with Differential Expression in Multiple Cancer Types

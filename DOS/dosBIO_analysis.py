@@ -59,7 +59,7 @@ for ipert in iBRDs:
 
 cellsAll = [sig['cell_id'] for sig in fullPertList]
 uniqCells = list(set(cellsAll))
-### make gmt signature of drugs of interest
+### organize drug sig ids by cell line
 for cell1 in uniqCells:
 	outdir = os.path.join(work_dir,cell1)
 	if not os.path.exists(outdir):
@@ -104,80 +104,80 @@ for cell1 in uniqCells:
 			 '--save_tail false'])
 	os.system(cmd)
 
-prog = progress.DeterminateProgressBar('Drug-target')
-for icell, cell1 in enumerate(uniqCells):
-	celldir = os.path.join(work_dir,cell1) 
-	outdir = os.path.join(work_dir,cell1,'sig_query_out')
-	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
-		print cell1 + 'no query result file'
-		continue #if no results file, skip loop
-	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
-	rslt = gct.GCT()
-	rslt.read(rsltF)
-	prog.update('analyzing {0}',icell,len(uniqCells))
-	queryRids = rslt.get_rids()
-	# for KD:
-	queryGenes = [x.split(':')[1] for x in queryRids]
-	# for OE:
-	# queryGenes = [x.split('_')[1] for x in queryRids]
-	resCids = rslt.get_cids()
-	resPerts = [x.split(':')[1] for x in resCids]
-	#build rank matrix
-	sortMatrix = np.argsort(rslt.matrix,axis=0)[::-1]
-	rankMatrix = np.zeros_like(sortMatrix)
-	for icol in range(rankMatrix.shape[1]):
-		col = sortMatrix[:,icol]
-		rankMatrix[col,icol] = np.arange(len(sortMatrix[:,icol])) + 1
-	#pandas rank
-	pRslt = rslt.frame
-	rankFrame = pRslt.rank(ascending=False)
+# prog = progress.DeterminateProgressBar('Drug-target')
+# for icell, cell1 in enumerate(uniqCells):
+# 	celldir = os.path.join(work_dir,cell1) 
+# 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+# 	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
+# 		print cell1 + 'no query result file'
+# 		continue #if no results file, skip loop
+# 	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+# 	rslt = gct.GCT()
+# 	rslt.read(rsltF)
+# 	prog.update('analyzing {0}',icell,len(uniqCells))
+# 	queryRids = rslt.get_rids()
+# 	# for KD:
+# 	queryGenes = [x.split(':')[1] for x in queryRids]
+# 	# for OE:
+# 	# queryGenes = [x.split('_')[1] for x in queryRids]
+# 	resCids = rslt.get_cids()
+# 	resPerts = [x.split(':')[1] for x in resCids]
+# 	#build rank matrix
+# 	sortMatrix = np.argsort(rslt.matrix,axis=0)[::-1]
+# 	rankMatrix = np.zeros_like(sortMatrix)
+# 	for icol in range(rankMatrix.shape[1]):
+# 		col = sortMatrix[:,icol]
+# 		rankMatrix[col,icol] = np.arange(len(sortMatrix[:,icol])) + 1
+# 	#pandas rank
+# 	pRslt = rslt.frame
+# 	rankFrame = pRslt.rank(ascending=False)
 
-	for gene in list(set(queryGenes)):
-		for pert in list(set(resPerts)):
-			iperts = [i for i,x in enumerate(resPerts) if x[:13] == pert]
-			for instance, ipert in enumerate(iperts):
-				instance = 
+# 	for gene in list(set(queryGenes)):
+# 		for pert in list(set(resPerts)):
+# 			iperts = [i for i,x in enumerate(resPerts) if x[:13] == pert]
+# 			for instance, ipert in enumerate(iperts):
+# 				instance = 
 
-rFrame = rankFrame
+# rFrame = rankFrame
 
-geneList = []
-#build hierarchical index
-for rid in rankFrame.index:
-	gene = rid.split(':')[1]
-	geneList.append(gene)
+# geneList = []
+# #build hierarchical index
+# for rid in rankFrame.index:
+# 	gene = rid.split(':')[1]
+# 	geneList.append(gene)
 
 
 
-rFrame.ix['CGS001_A375_96H:A2M:1','DOS054_A375_24H:BRD-K42543764-001-01-8:5']
-hFrame.index.names = ['gene','cellLine','instance']
+# rFrame.ix['CGS001_A375_96H:A2M:1','DOS054_A375_24H:BRD-K42543764-001-01-8:5']
+# hFrame.index.names = ['gene','cellLine','instance']
 
-### strategy 1 - every pairwise comparison is its own row
-df = pd.DataFrame()
-prog = progress.DeterminateProgressBar('Drug-target')
-for icell, cell1 in enumerate(uniqCells):
-	celldir = os.path.join(work_dir,cell1) 
-	outdir = os.path.join(work_dir,cell1,'sig_query_out')
-	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
-		print cell1 + 'no query result file'
-		continue #if no results file, skip loop
-	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
-	rslt = gct.GCT()
-	rslt.read(rsltF)
-	prog.update('analyzing {0}',icell,len(uniqCells))
-	flatSeries = rslt.frame.unstack()
-	flatFrame = pd.DataFrame(flatSeries,columns=['wtcs'])
-	flatFrame.index.names = ['sig_id', 'cgs']
-	flatFrame['cell'] = cell1
-	indVals = flatFrame.index.values
-	pertVals = [ind[0].split(':')[1][:13] for ind in indVals]
-	geneVals = [ind[1].split(':')[1] for ind in indVals]
-	flatFrame['pert'] = pertVals
-	flatFrame['gene'] = geneVals
-	df.append(flatFrame)
+# ### strategy 1 - every pairwise comparison is its own row
+# df = pd.DataFrame()
+# prog = progress.DeterminateProgressBar('Drug-target')
+# for icell, cell1 in enumerate(uniqCells):
+# 	celldir = os.path.join(work_dir,cell1) 
+# 	outdir = os.path.join(work_dir,cell1,'sig_query_out')
+# 	if not glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx'):
+# 		print cell1 + 'no query result file'
+# 		continue #if no results file, skip loop
+# 	rsltF = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+# 	rslt = gct.GCT()
+# 	rslt.read(rsltF)
+# 	prog.update('analyzing {0}',icell,len(uniqCells))
+# 	flatSeries = rslt.frame.unstack()
+# 	flatFrame = pd.DataFrame(flatSeries,columns=['wtcs'])
+# 	flatFrame.index.names = ['sig_id', 'cgs']
+# 	flatFrame['cell'] = cell1
+# 	indVals = flatFrame.index.values
+# 	pertVals = [ind[0].split(':')[1][:13] for ind in indVals]
+# 	geneVals = [ind[1].split(':')[1] for ind in indVals]
+# 	flatFrame['pert'] = pertVals
+# 	flatFrame['gene'] = geneVals
+# 	df.append(flatFrame)
 
-indLim1 = df['pert'] == 'BRD-K70875408'
-indLim2 = df['gene'] == 'BBS9'
-df[indLim1 & indLim2]
+# indLim1 = df['pert'] == 'BRD-K70875408'
+# indLim2 = df['gene'] == 'BBS9'
+# df[indLim1 & indLim2]
 
 
 
