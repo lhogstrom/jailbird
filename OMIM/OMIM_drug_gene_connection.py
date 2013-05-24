@@ -325,60 +325,17 @@ for i,perRank in enumerate(rnkList):
 # pval=sum(np.power(rnkList,range(1,r+1))*np.power(1-rnkList,r-range(1,r+1)))
 pval=sum(tmpVec)
 
+### check result
+rFile = '/xchip/cogs/hogstrom/analysis/OMIM/cp_KD_connection/A549/sig_query_out/result_WTCS.LM.COMBINED_n1043x3620.gctx'
+rslt = gct.GCT()
+rslt.read(rFile)
+cids = rslt.get_cids()
+rids = rslt.get_rids()
+#BRD-A15079084_CHERP_96H_connections
+brd = 'BRD-A15079084'
+kd = 'CHERP_96H'
+ibrd = [i for i,x in enumerate(cids) if x.split(':')[1][:13] == brd]
+ikd = [i for i,x in enumerate(rids) if x.split(':')[1][:5] == 'CHERP']
+rslt.matrix[565,364]
 
-#mimic df on a smaller scale:
-data1 = pd.Series(np.random.randn(10),index=[['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'd', 'd'],[1, 2, 3, 1, 2, 3, 1, 2, 2, 3]])
-data2 = pd.Series(np.random.randn(4),index=[['added1', 'jump', 'cap', 'blot'],[1, 2, 3, 1]])
-dd = pd.DataFrame(np.random.randn(10, 4),columns=['g','b','y','q'])
-d1 = dd[:3]
-d1.index=['a1','a2','a3']
-d1 = d1[['b','y']]
-d2 = dd[3:7]
-d2.index = ['b33', 'b34', 'b35','b36']
-pd.merge(d1,d2,how='outer')
-pd.concat([d1,d2],axis=0)
-pieces = [dd[:3], dd[3:7], dd[7:]]
-
-#make small frame
-#be sure to deal with duplicate columns
-g = df.ix[:3]
-g= g[['A2M_96H','ZRSR2_144H']]
-f = df.ix[5:7]
-# f= f[['A2M_96H','ZRSR2_144H']]
-f= f[['A2M_96H','ZRSR2_144H','A2M_96H']]
-# f= f[['ABCB1','ABCB4']]
-pd.concat([f,g],axis=0,join='outer')
-pd.concat([f,g],axis=0,join_axes)
-pd.merge(g,f,how='outer')
-
-#re-index
-g.index = ['BRD-K12683703','BRD-K03050720','BRD-K16625384']
-f.index = ['BRD-K79734497','BRD-K57200229']
-
-#find drug duplicates
-[x for i, x in enumerate(pertVals) if pertVals.count(x) > 1]
-[x for i, x in enumerate(geneVals) if geneVals.count(x) > 1]
-#get index of one CGS dup
-idup = [i for i, x in enumerate(geneVals) if x == 'ZNF134']
-rslt.frame.index[idup]
-#re-index a series
-k4Series = rFrame['DOS054_A375_24H:BRD-K42543764-001-01-8:5']
-newInd = []
-for ind in k4Series.index:
-	newInd.append(ind.split(':')[1])
-knew = k4Series.reindex(newInd)
-knew = pd.Series(k4Series.values)
-
-
-
-
-ind1 = []
-ind2 = []
-for cell1 in uniqCells:
-	for num in range(4):
-		ind1.append(cell1)
-		ind2.append(num)
-
-hSeriess = pd.Series(np.zeros_like(ind2),index=[ind1,ind2])
-hSeriess = pd.Series(range(len(uniqCells)),index=[uniqCells])
 
