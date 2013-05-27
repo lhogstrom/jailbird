@@ -1,0 +1,46 @@
+------------------------------------------
+Setting up environment variables
+---
+LD_LIBRARY_PATH is .:/xchip/cogs/matlib/mcr/versions/v717/runtime/glnxa64:/xchip/cogs/matlib/mcr/versions/v717/bin/glnxa64:/xchip/cogs/matlib/mcr/versions/v717/sys/os/glnxa64:/xchip/cogs/matlib/mcr/versions/v717/sys/java/jre/glnxa64/jre/lib/amd64/native_threads:/xchip/cogs/matlib/mcr/versions/v717/sys/java/jre/glnxa64/jre/lib/amd64/server:/xchip/cogs/matlib/mcr/versions/v717/sys/java/jre/glnxa64/jre/lib/amd64/client:/xchip/cogs/matlib/mcr/versions/v717/sys/java/jre/glnxa64/jre/lib/amd64
+sig_query_tool: Parameters
+build_id: a2
+metric: wtcs
+row_space: lm
+column_space: gold
+score: /xchip/cogs/data/build/a2y13q1/modzs_n369564x22268.gctx
+rank: /xchip/cogs/data/build/a2y13q1/rank_lm_n369564x978.gctx
+rid: /xchip/cogs/data/vdb/spaces/lm_epsilon_n978.grp
+uptag: /xchip/cogs/projects/HOG/dose_plate_output-by_pert_id_pert_dose/MCF7/24H/pc//apr25/dose_plate_tool.1366908904964/HOG003_MCF7_24H_dose_tags_UP_small.gmt
+dntag: /xchip/cogs/projects/HOG/dose_plate_output-by_pert_id_pert_dose/MCF7/24H/pc//apr25/dose_plate_tool.1366908904964/HOG003_MCF7_24H_dose_tags_DN_small.gmt
+sig_id: 
+sig_score: 
+cid: 
+cid_filter: /xchip/cogs/data/build/a2y13q1/cid_gold_n206076.grp
+out: /xchip/cogs/projects/HOG/dose_plate_output-by_pert_id_pert_dose/MCF7/24H/pc//apr25/dose_plate_tool.1366908904964
+debug: 0
+gset_size: 100
+max_el: 2.5e+08
+save_tail: 1
+tail_size: 1000
+use_gctx: 1
+save_query: 1
+save_result: 1
+save_analysis: 1
+mongo_location: current
+mkdir: 1
+score2rank_direc: descend
+annotate_from_ds: 0
+Reading /xchip/cogs/data/build/a2y13q1/rank_lm_n369564x978.gctx Done [2.63 s].
+{Error using parse_geneset (line 36)
+File not found:
+/xchip/cogs/projects/HOG/dose_plate_output-by_pert_id_pert_dose/MCF7/24H/pc//apr25/dose_plate_tool.1366908904964/HOG003_MCF7_24H_dose_tags_UP_small.gmt
+
+Error in sig_query_tool>get_query (line 277)
+
+
+
+Error in sig_query_tool (line 82)
+
+
+} 
+

@@ -12,9 +12,12 @@ import cmap.util.progress as progress
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import cmap.analytics.dose as doseClass
+import subprocess
+import os
+import time
 
-
-work_dir = '/xchip/cogs/hogstrom/analysis/OMIM/cp_KD_connection'
+work_dir = '/xchip/cogs/projects/HOG/DG_connect'
 #load in OMIM genes. Which ones have a CGS in > 4 cell lines? which ones are LM?
 inFile = '/xchip/cogs/hogstrom/analysis/OMIM/OMIM_CGS.txt'
 omimGeneList = []
@@ -53,20 +56,49 @@ for cell in cgsCellsLong:
 	if cellFull.count(cell) > 500:
 		cgsCells.append(cell)
 
-### which drugs to test? use CPC006 (CTD2)
-CM = mutil.CMapMongo()
-cpSigs = CM.find({'sig_id':{'$regex':'CPC006'},'pert_type':'trt_cp'},{'sig_id':True,'cell_id':True,'pert_iname':True,'pert_id':True})
-cpLst = [x['pert_iname'] for x in cpSigs]
-brdLst = [x['pert_id'] for x in cpSigs]
-cpSet = list(set(cpLst))
-cpSet.sort()
-brdSet = list(set(brdLst))
+### get HOG brds
+file1 = '/xchip/obelix/pod/brew/pc/HOG001_A549_24H/by_pert_id_pert_dose/HOG001_A549_24H_COMPZ.MODZ_SCORE_LM_n288x978.gctx'
+file2 = '/xchip/obelix/pod/brew/pc/HOG002_A549_24H/by_pert_id_pert_dose/HOG002_A549_24H_COMPZ.MODZ_SCORE_LM_n288x978.gctx'
+hogPerts = []
+#plate 1
+dp = doseClass.DosePlate()
+dp.add_from_gct(file1)
+dp.examine_doses_tested()
+hogPerts.extend(dp.perts_at_dose)
+#plaste 2
+dp = doseClass.DosePlate()
+dp.add_from_gct(file2)
+dp.examine_doses_tested()
+hogPerts.extend(dp.perts_at_dose)
+hogPertsShort = [x[:13] for x in hogPerts]
+
+### pull sigs of hog perts from mongo
+# for pert in hogPertsShort:
+# for cell in cgsCells:
+# 	CM = mutil.CMapMongo()
+# 	cpSigs = CM.find({'pert_id':pert,'pert_type':'trt_cp'},{'sig_id':True,'cell_id':True,'pert_iname':True,'pert_id':True})
+# 	sigLst = [x['sig_id'] for x in cpSigs]
+# 	brdLst = [x['pert_id'] for x in cpSigs]
+# 	cpSet = list(set(cpLst))
+# 	cpSet.sort()
+# 	brdSet = list(set(brdLst))
 
 ### make dictionary of pert_descs
 pDescDict = {}
-for q in cpSigs:
-	if not pDescDict.has_key(q['pert_id']):
-		pDescDict[q['pert_id']] = q['pert_iname']
+dp = doseClass.DosePlate()
+dp.add_from_gct(file1)
+for i,pert in enumerate(dp.pert_ids):
+	if not pDescDict.has_key(pert[:13]):
+		pDescDict[pert[:13]] = dp.pert_descs[i]
+dp = doseClass.DosePlate()
+dp.add_from_gct(file2)
+for i,pert in enumerate(dp.pert_ids):
+	if not pDescDict.has_key(pert[:13]):
+		pDescDict[pert[:13]] = dp.pert_descs[i]
+
+#plaste 2
+dp = doseClass.DosePlate()
+dp.add_from_gct(file2)
 
 ### organize sig ids by cell line
 for cell1 in cgsCells:
@@ -78,7 +110,7 @@ for cell1 in cgsCells:
 	sigIDlist = []
 	pertIDlist = []
 	for sig in cpByCell:
-		if sig['pert_id'] in brdSet:
+		if sig['pert_id'] in hogPertsShort:
 			sigIDlist.append(sig['sig_id'])
 			pertIDlist.append(sig['pert_id'])
 	#count instances of pert in the cell line
@@ -110,6 +142,8 @@ for cell1 in cgsCells:
 			for sig in CGSbyCell:
 				f.write(sig['sig_id'] + '\n')
 
+processes = set()
+max_processes = 11
 for cell1 in cgsCells:
 	cellDir = os.path.join(work_dir,cell1) 
 	cidF = glob.glob(cellDir + '/' + cell1 + '_all_CGS_sig_ids_n*.grp')
@@ -129,7 +163,12 @@ for cell1 in cgsCells:
 			 '--out ' + outdir,
 			 '--mkdir false',
 			 '--save_tail false'])
-	os.system(cmd)
+	# os.system(cmd)
+	processes.add(subprocess.Popen(cmd,shell=True))
+	if len(processes) >= max_processes:
+		os.wait()
+		processes.difference_update(
+			p for p in processes if p.poll() is not None)
 
 # Create a pandas dataframe that lets you see connection results across 
 # cell lines it is structured as follows:
@@ -213,7 +252,7 @@ for brd in uniqBRDs:
 		# print ind
 		rnkSer = cpRank[ind]
 		if min(rnkSer[rnkSer.notnull()]) < 1:
-			if valCounts[ind] > 9:
+			if valCounts[ind] > 6:
 				print brd + ' ' + ind
 				#cs wadden gram
 				sKeysStr = []
