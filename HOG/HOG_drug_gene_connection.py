@@ -5,7 +5,7 @@ analyze the DOSBIO plates - make sc plots etc
 
 import os
 import cmap.io.gct as gct
-import cmap.analytics.sc as sc
+# import cmap.analytics.sc as sc
 import glob as glob
 import cmap.util.mongo_utils as mutil
 import cmap.util.progress as progress
@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import cmap.analytics.dose as doseClass
 import subprocess
-import os
 import time
 
 work_dir = '/xchip/cogs/projects/HOG/DG_connect'
