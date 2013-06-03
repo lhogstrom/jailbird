@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 '''
-analyze the DOSBIO plates - make sc plots etc
+find drug perturnations that relate to the knockdown of OMIM genes
 '''
 
 import os
@@ -210,6 +210,8 @@ for brd in uniqBRDs:
 	# for ind in meanSer[meanSer > CS_thresh].index:
 	rank_thresh = 10 #theshold for mean ss
 	for ind in meanRnk[meanRnk < rank_thresh].index:
+		if ind.split('_')[0] not in ominWithContext: #skip if not in omim list
+			continue
 		# print ind
 		rnkSer = cpRank[ind]
 		if min(rnkSer[rnkSer.notnull()]) < 1:
@@ -229,10 +231,10 @@ for brd in uniqBRDs:
 				plt.xlim((-1, 1))
 				plt.ylim((0,count+1))
 				plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-				plt.xlabel('wtcs')
-				plt.ylabel('cell line')
-				plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
-				plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_connections.png'))
+				plt.xlabel('wtcs',fontsize=20,fontweight='bold')
+				plt.ylabel('cell line',fontsize=20,fontweight='bold')
+				plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type,fontsize=15,fontweight='bold')
+				plt.savefig(os.path.join(work_dir,'cherry_pick_omin',brd +'_' + ind + '_connections.png'))
 				plt.close()
 				#rank wadden gram
 				sKeysStr = []
@@ -249,10 +251,10 @@ for brd in uniqBRDs:
 				plt.xlim((0, 100))
 				plt.ylim((0,count+1))
 				plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-				plt.xlabel('percent rank')
-				plt.ylabel('cell line')
-				plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
-				plt.savefig(os.path.join(work_dir,'cherry_pick',brd +'_' + ind + '_percent_rank.png'))
+				plt.xlabel('percent rank',fontsize=20,fontweight='bold')
+				plt.ylabel('cell line',fontsize=20,fontweight='bold')
+				plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type,fontsize=15,fontweight='bold')
+				plt.savefig(os.path.join(work_dir,'cherry_pick_omin',brd +'_' + ind + '_percent_rank.png'))
 				plt.close()
 
 
@@ -353,3 +355,9 @@ geneFind = CM.find({'pert_type':'trt_sh.cgs','pert_iname':{'$regex':'TOP1'}},{'s
 # teniposide - 
 #TOP2A - maybe positive connection
 #TOP1 - maybe negative connection - PC3
+
+###check instances for john:
+# CM = mutil.CMapMongo()
+# #gsk
+# cpFind = CM.find({'pert_type':'trt_cp','pert_iname':{'$regex':'429286'}},{'sig_id':True,'pert_iname':True,'cell_id':True,'pert_id':True})
+# cpFind2 = CM.find({'pert_type':'trt_cp','pert_iname':{'$regex':'27632'}},{'sig_id':True,'pert_iname':True,'cell_id':True,'pert_id':True})
