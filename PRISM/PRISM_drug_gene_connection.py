@@ -173,60 +173,19 @@ for i,pert in enumerate(dp.pert_ids):
 	if not pDescDict.has_key(pert[:13]):
 		pDescDict[pert[:13]] = dp.pert_descs[i]	
 
-### check BEZ235-mtor connection
-# inds = dfRank.columns
-# # mtors = [ind for ind in inds if ind[:4] == 'MTOR']
-# brd = 'BRD-K12184916' #bez235
-# # brd = 'BRD-A75409952' #wortmanin
-# # BRD-A79768653 #sirolimus 
-# # ind = 'MTOR_144H'
-# # ind = 'MTOR_96H' #*
-# # ind = 'PDK1_96H'
-# # ind = 'PIK3CA_144H'
-# # ind = 'PIK3CA_96H' #*
-# # ind = 'RPTOR_144H'
-# ind = 'RPTOR_96H' #*
-
-#gemcitabine
-# brd = 'BRD-K15108141' #gemcitabine
-# # rrm1s = [ind for ind in inds if ind[:4] == 'RRM1']
-# # rrm1s = [ind for ind in inds if ind[:5] == 'ERCC1']
-# #check PTEN / ERCC1
-# # ind = 'RRM1_144H' #*
-# ind = 'RRM1_96H' #*
-# ind = 'PTEN_144H'
-# ind = 'PTEN_96H' #*
-# ind = 'ERCC1_144H'
-# ind = 'ERCC1_96H' #*
-#check RRM2 and RRM2B
-
-##vorinostat 
-# brd = 'BRD-K81418486' #vorinostat 
-# # # rrm1s = [ind for ind in inds if ind[:5] == 'HDAC3']
-# # # ind = 'HDAC6_144H' 
-# # # ind = 'HDAC6_96H'
-# # ind = 'HDAC3_144H' #*
-# ind = 'HDAC3_96H' 
-
-#teniposide 
-# brd = 'BRD-A35588707' #teniposide 
-# # rrm1s = [ind for ind in inds if ind[:5] == 'TOP2A']
-# ind = 'TOP2A_144H'
-# ind = 'TOP2A_96H'
-
 #vx-680
-brd = 'BRD-K59369769'
-brd = 'BRD-K36740062' #GSK-1070916
-brd = 'BRD-K01737880' # cp of interest 
-# rrm1s = [ind for ind in inds if ind[:4] == 'AURK']
-ind = 'AURKAIP1_144H'
-ind = 'AURKAIP1_96H' #maybe
-ind = 'AURKA_144H'
-ind = 'AURKA_96H' #*
-ind = 'AURKB_144H'
-ind = 'AURKB_96H'
+# brd = 'BRD-K59369769'
+# brd = 'BRD-K36740062' #GSK-1070916
+# brd = 'BRD-K01737880' # cp of interest 
+# # rrm1s = [ind for ind in inds if ind[:4] == 'AURK']
+# ind = 'AURKAIP1_144H'
+# ind = 'AURKAIP1_96H' #maybe
+# ind = 'AURKA_144H'
+# ind = 'AURKA_96H' #*
+# ind = 'AURKB_144H'
+# ind = 'AURKB_96H'
 
-inFile = '/Users/hogstrom/Desktop/dose_dg_targets.txt'
+inFile = '/xchip/cogs/projects/PRISM/DG_dose_connect/dose_dg_targets.txt'
 DrugList = []
 cgsList = []
 with open(inFile,'rt') as f:
@@ -241,53 +200,119 @@ with open(inFile,'rt') as f:
 			DrugList.append(drug1)
 			cgsList.append(cgs)
 
+# for i,x in enumerate(cgsList):
+# 	brd = DrugList[i]
+# 	if brd not in fullBRDs:
+# 		continue
+# 	ind = cgsList[i]
+# 	cpRank = dfRank.ix[brd]
+# 	cpRes = df.ix[brd]
+# 	rnks = cpRank[ind]
+# 	colName = [x for x in rnks.index]
+# 	doses = [x.split('_')[1][:-2] for x in colName]
+# 	tps = [x.split('_')[-1] for x in colName]
+# 	cells = [x.split('_')[-2] for x in colName]
+# 	fdose = [float(x) for x in dose]
+# 	logDose = [np.log10(x) for x in fdose]
+# 	#create a list where each dose value increases by 1
+# 	doseSpace = []
+# 	doseSpace.extend(range(1,8))
+# 	doseSpace.extend(range(1,8))
+# 	doseSpace.extend(range(1,8))
+# 	doseSpace.extend(range(1,8))
+# 	doseSpace.extend(range(1,8))
+# 	doseSpace.extend(range(1,8))
+# 	### graph rank
+# 	# plt.scatter(logDose,rnks.values)
+# 	# plt.scatter(fdose,rnks.values)
+# 	# plt.scatter(doseSpace,rnks.values)
+# 	fig1 = plt.figure(figsize = [12,10])
+# 	# ax1 = fig1.add_axes([0.1, 0.1, 0.1, 0.1])
+# 	# h1 = plt.scatter(doseSpace[:14],rnks.values[:14],label='PC3',color='green',s=60,alpha=.4)
+# 	h1 = plt.scatter(doseSpace[14:28],rnks.values[14:28],label='MCF7',color='blue',s=60,alpha=.4)
+# 	h1 = plt.scatter(doseSpace[28:],rnks.values[28:],label='A375',color='purple',s=60,alpha=.4)
+# 	plt.legend()
+# 	plt.ylim((-5,100))
+# 	plt.xlabel('dose um',fontsize=20,fontweight='bold')
+# 	plt.xticks(range(1,8), dose[:7], rotation = 45)
+# 	plt.ylabel('percent rank',fontsize=20,fontweight='bold')
+# 	plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type,fontweight='bold')
+# 	plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + ind + '_percent_rank.png'))
+# 	plt.close()
+# 	### graph wtcs
+# 	wtcs = cpRes[ind]
+# 	# plt.scatter(logDose,wtcs.values)
+# 	fig1 = plt.figure(figsize = [12,10])
+# 	# h1 = plt.scatter(doseSpace[:14],wtcs.values[:14],label='PC3',color='green',s=60,alpha=.4)
+# 	h1 = plt.scatter(doseSpace[14:28],wtcs.values[14:28],label='MCF7',color='blue',s=60,alpha=.4)
+# 	h1 = plt.scatter(doseSpace[28:],wtcs.values[28:],label='A375',color='purple',s=60,alpha=.4)
+# 	plt.legend()
+# 	plt.ylim((-1,1))
+# 	plt.xlabel('dose um',fontsize=20,fontweight='bold')
+# 	plt.xticks(range(1,8), dose[:7], rotation = 45)
+# 	plt.ylabel('wtcs',fontsize=20,fontweight='bold')
+# 	plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type,fontweight='bold')
+# 	plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + ind + '_wtcs.png'))
+# 	plt.close()
+
+
+### make cell specific graphs
 for i,x in enumerate(cgsList):
 	brd = DrugList[i]
+	if brd not in fullBRDs:
+		continue
 	ind = cgsList[i]
 	cpRank = dfRank.ix[brd]
 	cpRes = df.ix[brd]
 	rnks = cpRank[ind]
 	colName = [x for x in rnks.index]
-	dose = [x.split('_')[1][:-2] for x in colName]
+	doses = [x.split('_')[1][:-2] for x in colName]
+	tps = [x.split('_')[-1] for x in colName]
+	cells = [x.split('_')[-2] for x in colName]
 	fdose = [float(x) for x in dose]
 	logDose = [np.log10(x) for x in fdose]
 	#create a list where each dose value increases by 1
 	doseSpace = []
-	doseSpace.extend(range(1,8))
-	doseSpace.extend(range(1,8))
-	doseSpace.extend(range(1,8))
-	doseSpace.extend(range(1,8))
-	doseSpace.extend(range(1,8))
-	doseSpace.extend(range(1,8))
-	### graph rank
-	# plt.scatter(logDose,rnks.values)
-	# plt.scatter(fdose,rnks.values)
-	# plt.scatter(doseSpace,rnks.values)
-	fig1 = plt.figure(figsize = [12,10])
-	# ax1 = fig1.add_axes([0.1, 0.1, 0.1, 0.1])
-	# h1 = plt.scatter(doseSpace[:14],rnks.values[:14],label='PC3',color='green',s=60,alpha=.4)
-	h1 = plt.scatter(doseSpace[14:28],rnks.values[14:28],label='MCF7',color='blue',s=60,alpha=.4)
-	h1 = plt.scatter(doseSpace[28:],rnks.values[28:],label='A375',color='purple',s=60,alpha=.4)
-	plt.legend()
-	plt.ylim((-5,100))
-	plt.xlabel('dose um',fontsize=20,fontweight='bold')
-	plt.xticks(range(1,8), dose[:7], rotation = 45)
-	plt.ylabel('percent rank',fontsize=20,fontweight='bold')
-	plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type,fontweight='bold')
-	plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + ind + '_percent_rank.png'))
-	plt.close()
-	### graph wtcs
-	wtcs = cpRes[ind]
-	# plt.scatter(logDose,wtcs.values)
-	fig1 = plt.figure(figsize = [12,10])
-	# h1 = plt.scatter(doseSpace[:14],wtcs.values[:14],label='PC3',color='green',s=60,alpha=.4)
-	h1 = plt.scatter(doseSpace[14:28],wtcs.values[14:28],label='MCF7',color='blue',s=60,alpha=.4)
-	h1 = plt.scatter(doseSpace[28:],wtcs.values[28:],label='A375',color='purple',s=60,alpha=.4)
-	plt.legend()
-	plt.ylim((-1,1))
-	plt.xlabel('dose um',fontsize=20,fontweight='bold')
-	plt.xticks(range(1,8), dose[:7], rotation = 45)
-	plt.ylabel('wtcs',fontsize=20,fontweight='bold')
-	plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type,fontweight='bold')
-	plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + ind + '_wtcs.png'))
-	plt.close()
+	for cell in set(cells):
+		icell = [i for i,x in enumerate(cells) if x == cell]
+		tpDict = {}
+		#find indices of each tp
+		for tp in set(tps):
+			itp = [i for i,x in enumerate(tps) if x == tp]
+			itpSet = set(itp)
+			tpInter = itpSet.intersection(set(icell))
+			tpInter = list(tpInter)
+			#if contains null - skip
+			if rnks[tpInter].isnull().any():
+				continue
+			tpDict[tp] = list(tpInter)
+			doseSpace = range(1,(1+len(tpInter)))
+			### graph rank
+			fig1 = plt.figure(figsize = [12,10])
+			h1 = plt.scatter(doseSpace,rnks.values[tpInter],label=tp,color='green',s=60,alpha=.4)
+			# h1 = plt.scatter(doseSpace[14:28],rnks.values[14:28],label='MCF7',color='blue',s=60,alpha=.4)
+			# h1 = plt.scatter(doseSpace[28:],rnks.values[28:],label='A375',color='purple',s=60,alpha=.4)
+			plt.legend()
+			plt.ylim((-5,100))
+			plt.xlabel('dose um',fontsize=20,fontweight='bold')
+			plt.xticks(range(1,8), dose[:7], rotation = 45)
+			plt.ylabel('percent rank',fontsize=20,fontweight='bold')
+			plt.title(pDescDict[brd]+ '_' + tp + ' - ' + ind + '_' + cell  + ' connection - ' + gp_type,fontweight='bold')
+			plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + tp +'_' + ind +'_' + cell + '_percent_rank.png'))
+			plt.close()
+			### graph wtcs
+			wtcs = cpRes[ind]
+			# plt.scatter(logDose,wtcs.values)
+			fig1 = plt.figure(figsize = [12,10])
+			h1 = plt.scatter(doseSpace,wtcs.values[tpInter],label=tp,color='green',s=60,alpha=.4)
+			# h1 = plt.scatter(doseSpace[14:28],wtcs.values[14:28],label='MCF7',color='blue',s=60,alpha=.4)
+			# h1 = plt.scatter(doseSpace[28:],wtcs.values[28:],label='A375',color='purple',s=60,alpha=.4)
+			plt.legend()
+			plt.ylim((-1,1))
+			plt.xlabel('dose um',fontsize=20,fontweight='bold')
+			plt.xticks(range(1,8), dose[:7], rotation = 45)
+			plt.ylabel('wtcs',fontsize=20,fontweight='bold')
+			plt.title(pDescDict[brd] + '_' + tp + ' - ' + ind + '_' + cell + ' connection - ' + gp_type,fontweight='bold')
+			plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + tp +'_' + cell +'_' + ind + '_wtcs.png'))
+			plt.close()
+

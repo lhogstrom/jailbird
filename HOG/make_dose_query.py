@@ -246,9 +246,15 @@ with open(inFile,'rt') as f:
 			cgs = splt2[1]
 			DrugList.append(drug1)
 			cgsList.append(cgs)
-
+# what are the brds tested through the query
+fullBRDs = []
+for ind in df.index:
+	brd = ind[0]
+	fullBRDs.append(brd)
 for i,x in enumerate(cgsList):
 	brd = DrugList[i]
+	if brd not in fullBRDs:
+		continue
 	ind = cgsList[i]
 	cpRank = dfRank.ix[brd]
 	cpRes = df.ix[brd]
