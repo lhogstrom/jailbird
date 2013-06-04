@@ -17,7 +17,7 @@ import cmap.io.rnk as rnk
 import HTML
 import pandas as pd
 
-work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/14May2013'
+work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD/29May2013'
 if not os.path.exists(work_dir):
 	os.mkdir(work_dir)
 
