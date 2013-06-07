@@ -1,8 +1,5 @@
 %% create a rank file for each CGS gctx
 
-
-
-
 work_dir = '/xchip/cogs/hogstrom/analysis/informer_CTD'
 CGSdir = '/xchip/cogs/projects/rnai_analysis/collapsed_signatures/Collapsed_Signatures_Landmark_978'
 list_dir  =dir([CGSdir '/*_*_modz_by_pert_desc_signatures_any_target_n*x978.gctx'])

@@ -43,11 +43,13 @@ test2 = test2[1:10]
 reload(dgo)
 dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_gene')
 dg.add_dictionary(targetDict=targetDict)
-dg.get_drug_kd_sig_ids()
-dg.run_drug_gene_query()
+# dg.get_drug_kd_sig_ids()
+# dg.run_drug_gene_query()
 dg.make_result_frames()
-dg.test_known_connections(pDescDict=pDescDict)
-dg.FDR_correction()
+dg.test_known_connections(pDescDict=pDescDict,make_graphs=False)
+dg.FDR_correction(pDescDict=pDescDict)
+
+
 
 
 ### test rand vec time
