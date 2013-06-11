@@ -14,6 +14,7 @@ if not os.path.exists(work_dir):
 ### make target_dict
 # targetSheetF = '/xchip/cogs/projects/target_id/4June2013/Informer2_short.txt'
 targetSheetF = '/xchip/cogs/projects/target_id/4June2013/Informer2_drug_targets.txt'
+'/xchip/cogs/projects/target_id/7June2014/A2_DrugBank_targets_tab.txt'
 targetDict = {}
 pDescDict = {}
 with open(targetSheetF,'rt') as f:
