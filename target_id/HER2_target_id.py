@@ -13,7 +13,7 @@ import cmap.analytics.dgo as dgo
 import cmap.util.progress as progress
 import pandas as pd
 
-work_dir = '/xchip/cogs/projects/target_id/ERBB2_11June2013'
+work_dir = '/xchip/cogs/projects/target_id/ERBB2_12June2013'
 if not os.path.exists(work_dir):
     os.mkdir(work_dir)
 
@@ -38,189 +38,29 @@ test1 = 'OEB001_A375_96H:BRDN0000399163:-666' #set random sig_id to initialize d
 test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
 
 ## test OE
-reload(dgo)
+# reload(dgo)
 dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_OE_connection')
 dg.add_dictionary(targetDict=targetDict)
 dg.get_sig_ids(genomic_pert='OE')
-# dg.run_drug_gene_query(max_processes=10)
+dg.run_drug_gene_query(max_processes=10)
 #wait until queries finish
 dg.make_result_frames(gp_type='OE')
 dg.test_known_connections(pDescDict=pDescDict)
 dg.FDR_correction(pDescDict=pDescDict)
 
 ### test KD
-reload(dgo)
-dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
-dg.add_dictionary(targetDict=targetDict)
+# reload(dgo)
+# dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
+# dg.add_dictionary(targetDict=targetDict)
 # dg.get_sig_ids(genomic_pert='KD')
 # dg.run_drug_gene_query(max_processes=10)
-#wait until queries finish
-dg.make_result_frames(gp_type='KD')
-dg.test_known_connections(gp_type='KD',pDescDict=pDescDict)
-dg.FDR_correction(pDescDict=pDescDict)
+# #wait until queries finish
+# dg.make_result_frames(gp_type='KD')
+# dg.test_known_connections(gp_type='KD',pDescDict=pDescDict)
+# dg.FDR_correction(pDescDict=pDescDict)
 
 ## # do an umbiased search to see which drugs in CMAP best connect to HER2 CGS
 
-
-## make summary file
-csSer = cpRes[ind]
-csSer = csSer[csSer.notnull()]
-rnkSer = cpRank[ind]
-rnkSer = rnkSer[rnkSer.notnull()]
-
-
-if not list(rnkSer.index) == list(csSer.index):
-    print 'cs and rank series don\'t match'
-
-outF = os.path.join(graphDir + '_drug-target_FDR_summary.txt')    
-    self.make(brd,cell,rnkSer,csSer,outF)
-
-outF = os.path.join(graphDir,brd +'_' + ind + '_drug-target_summary.txt')
-cp = brd
-outfile = outF
-gp_type='KD'
-    def __make_CS_summary(self,cp,cp_desc,rnkSer,csSer,outfile,gp_type='KD'):
-        '''
-        make a summary file a given drug-gene pair across cell lines
-        inputs:
-        rnkSer = pandas series of percent ranks for connections
-        csSer = pandas series of cs scores for connections
-        '''
-        if gp_type == 'KD':
-            headers = ['query_sig','cp_pert_iname','CGS_KD','cell','cs', 'RnkPerc']
-        if gp_type == 'OE':
-            headers = ['query_sig','cp_pert_iname','OE_compared','cell','cs', 'percent_rank']
-        with open(outfile,'w') as f:
-            f.write('\t'.join(headers) + '\n')
-            for i,cs in enumerate(csSer):
-                query = rnkSer.index[i]
-                desc = pDescDict[cp]
-                rank = rnkSer[i]
-                #query, target gene, cs, rank, RnkPerc
-                f.write('\t'.join([query,cp_desc,rnkSer.name,query.split('_')[1],str(cs),str(rank)[:7]]) + '\n')
-
-        outF = os.path.join(celldir,cell1 + '_drug-target_FDR_summary.txt')
-        
-        with open(outF,'w') as f:
-            f.write('\t'.join(headers) + '\n')
-            for pert in targetRnkPercs[cell1]:
-                qInds = queryInd[pert]
-                for target in targetRnkPercs[cell1][pert]:
-                    RnkPercs = targetRnkPercs[cell1][pert][target]
-                    for i,RnkPerc in enumerate(RnkPercs):
-                        if RnkPerc <= pMaxThresh:
-                            query = resCids[qInds[i]]
-                            cs = targetCS[cell1][pert][target][i]
-                            rank = targetRanks[cell1][pert][target][i]
-                            #query, target gene, cs, rank, RnkPerc
-                            f.write('\t'.join([query,pDescDict[pert],target,str(cs),str(rank),str(RnkPerc)[:7]]) + '\n')
-
-
-        #set output dir
-        gp_type='KD'
-        n_rand=100000
-        make_graphs=True
-        graphDir = dg.outputdir + '/drug_target_graphs'
-        if not os.path.exists(graphDir):
-            os.mkdir(graphDir)
-        #get brds from result dataframe
-        brdSkipped = []
-        cgsSkipped = []
-        BRDsTested = []
-        for ind in dg.dfRank.index:
-            brd = ind[0]
-            BRDsTested.append(brd)
-        brdRsltSet = set(BRDsTested)
-        #get cgs tested 
-        cols = dg.dfRank.columns
-        pDict = {}
-        pVec = []
-        prog = progress.DeterminateProgressBar('Connection test')
-        for ibrd,brd in enumerate(dg.targetDict):
-            # skip pert if not in result file
-            prog.update(brd,ibrd,len(dg.targetDict))
-            if not brd in brdRsltSet:
-                brdSkipped.append(brd)
-                continue
-            targets = dg.targetDict[brd]
-            cpRes = dg.dfCS.ix[brd]
-            cpRank = dg.dfRank.ix[brd]
-            meanSer = cpRes.mean()
-            meanRnk = cpRank.mean()
-            nullCnt = pd.isnull(cpRes)
-            #how many cell lines were both the pert and target tested in
-            valCounts = nullCnt.shape[0] - nullCnt.sum(axis=0)
-            for target in targets:
-                tarList = [inst for inst in cols if inst.split('_')[0] == target]
-                if len(tarList) == 0: #skip if drug target not tested
-                    cgsSkipped.append(target)
-                    continue
-                for ind in tarList:
-                    rnkSer = cpRank[ind]/100
-                    rnkSer = rnkSer[rnkSer.notnull()]
-                    #skip if cgs not tested in the same cell line as cp
-                    if len(rnkSer) == 0:
-                        cgsSkipped.append(ind)
-                        continue
-                    ### calculate p-value - based on percent rank products
-                    testStat = rnkSer.prod()
-                    n_obs = rnkSer.shape[0]
-                    # theoretical null
-                    ### simulate random draws from percent rank list
-                    permMtrx = np.random.rand(n_obs,n_rand)
-                    nullDist = permMtrx.prod(axis=0)
-                    #number of null values more extreme than observed (one sided)
-                    exVals = nullDist[nullDist<testStat]
-                    nExtreme = len(exVals)
-                    pVal = (nExtreme+1)/float(len(nullDist))
-                    pVec.append(pVal)
-                    pDict[brd + '-' + ind] = pVal
-                    # if valCounts[ind] > 9:
-                    # if pVal < .01:
-                    if make_graphs:
-                        ### cs wadden gram
-                        sKeysStr = []
-                        count = 0
-                        for i,cs in enumerate(cpRes[ind]):
-                            if pd.isnull(cs):
-                                continue
-                            else:
-                                count = count + 1
-                                sKeysStr.append(cpRes.index[i].split('_')[1])
-                                yVals = count
-                                plt.scatter(cs,yVals)
-                        plt.xlim((-1, 1))
-                        plt.ylim((0,count+1))
-                        plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-                        plt.xlabel('wtcs')
-                        plt.ylabel('cell line')
-                        plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
-                        plt.savefig(os.path.join(graphDir,brd +'_' + ind + '_connections.png'))
-                        plt.close()
-                        #rank wadden gram
-                        sKeysStr = []
-                        count = 0
-                        rnkList = cpRank[ind]
-                        for i,rnk in enumerate(cpRank[ind]):
-                            if pd.isnull(rnk):
-                                continue
-                            else:
-                                count = count + 1
-                                sKeysStr.append(cpRes.index[i].split('_')[1])
-                                yVals = count
-                                plt.scatter(rnk,yVals)
-                        plt.xlim((0, 100))
-                        plt.ylim((0,count+1))
-                        plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-                        plt.xlabel('percent rank')
-                        plt.ylabel('cell line')
-                        plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
-                        plt.savefig(os.path.join(graphDir,brd +'_' + ind + '_percent_rank.png'))
-                        plt.close()
-        self.brdSkipped = brdSkipped
-        self.cgsSkipped = cgsSkipped
-        self.pDict = pDict
-        self.pVec = pVec
 
 
 
@@ -269,11 +109,42 @@ gp_type='KD'
                 df = newF
                 dfRank = perRankF
             else:
-                df = pd.concat([df,newF],axis=0,join='outer')
+                df = pd.concat([df,newF],axis=0)
                 dfRank = pd.concat([dfRank,perRankF],axis=0)
 
-df1 = df[:1]
-newF1 = newF[:1]
+### 
+h1 = df
+h1.index.names = ['cp','sig_id']
+p1 = newF
+p1.index.names = ['cp','sig_id']
+pc3Res = '/xchip/cogs/projects/target_id/ERBB2_12June2013/drug_OE_connection/PC3/sig_query_out/result_WTCS.LM.COMBINED_n4x2937.gctx'
+ha1eRes = '/xchip/cogs/projects/target_id/ERBB2_12June2013/drug_OE_connection/HA1E/sig_query_out/result_WTCS.LM.COMBINED_n4x2159.gctx'
+prslt = gct.GCT()
+prslt.read(pc3Res)
+hrslt = gct.GCT()
+hrslt.read(ha1eRes)
+zh = h1.ZRSR2_96H
+zp = p1.ZRSR2_96H
+ah = h1.ABAT_96H
+ap = p1.ABAT_96H
+
+g = pd.concat([zh,ph])
+f = pd.concat([ap,zp])
+
+zc = pd.concat([zh,ph],axis=0)
+
+#re-index series
+cpBRDs = zh.index.levels[0]
+
+# hF = pd.concat([ah,zh],axis=1)
+# pF = pd.concat([ap,zp],axis=1)
+hF = h1.ix[:,:3]
+pF = p1.ix[:,:3]
+Cnct = pd.concat([hF,pF],axis=0)
+
+
+df1 = df[1:3]
+newF1 = newF[1:3]
 
 df1 = df.ix['BRD-K41895714']
 newF1 = newF.ix['BRD-K41895714']
@@ -284,4 +155,11 @@ print [x for x in newF.columns if x == item]
 import collections
 print [x for x, y in collections.Counter(list(newF.columns)).items() if y > 1]
 
+#toy df
+dF = pd.DataFrame(np.random.randn(10, 4))
+pieces = [dF[:3], dF[3:7], dF[7:]]
+concatenated = pd.concat(pieces, keys=['first', 'second', 'third'])
+
+pieces = [dF.ix[:, [0, 1]], dF.ix[:, [2]], dF.ix[:, [3]]]
+result = pd.concat(pieces, axis=1, keys=['o','t','th'])
 
