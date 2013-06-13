@@ -169,7 +169,6 @@ dg = dgo.QueryTargetAnalysis(test1,test2,work_dir)
 # dg.run_drug_gene_query()
 dg.make_result_frames()
 dg.test_unknown_connections(make_graphs=True)
-
 dg.FDR_correction(pDescDict=pDescDict)
 
 ### scratch 

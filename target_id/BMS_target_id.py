@@ -31,7 +31,7 @@ test1 = 'OEB001_A375_96H:BRDN0000399163:-666' #set random sig_id to initialize d
 test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
 reload(dgo)
 dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
-# dg.add_dictionary(targetDict=targetDict)
+dg.add_dictionary(targetDict=targetDict)
 # dg.get_sig_ids(genomic_pert='KD',targetDict_loaded=False,pert_list=pert_list)
 # dg.run_drug_gene_query(max_processes=10)
 # #wait until queries finish
