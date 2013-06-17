@@ -6,7 +6,7 @@ import glob
 import matplotlib.pyplot as plt
 import cmap.analytics.dgo as dgo
 
-work_dir = '/xchip/cogs/projects/target_id/DrugBank_12June2013'
+work_dir = '/xchip/cogs/projects/target_id/DrugBank_14June2013'
 if not os.path.exists(work_dir):
     os.mkdir(work_dir)
 ### make target_dict
@@ -82,15 +82,25 @@ test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
 # dg.FDR_correction(pDescDict=pDescDict)
 
 ### test KD
-reload(dgo)
-dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
+# reload(dgo)
+# dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
+# dg.add_dictionary(targetDict=targetDict)
+# # dg.get_sig_ids(genomic_pert='KD')
+# # dg.run_drug_gene_query(max_processes=10)
+# # #wait until queries finish
+# dg.make_result_frames(gp_type='KD')
+# # dg.test_known_connections(gp_type='KD',pDescDict=pDescDict,make_graphs=False)
+# dg.test_unknown_rank_product(gp_type='KD')
+# dg.FDR_correction(pDescDict=pDescDict)
+
+### TEST OE
+dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_OE_connection')
 dg.add_dictionary(targetDict=targetDict)
-# dg.get_sig_ids(genomic_pert='KD')
-# dg.run_drug_gene_query(max_processes=10)
+dg.get_sig_ids(genomic_pert='OE')
+dg.run_drug_gene_query(max_processes=10)
 # #wait until queries finish
-dg.make_result_frames(gp_type='KD')
-# dg.test_known_connections(gp_type='KD',pDescDict=pDescDict,make_graphs=False)
-dg.test_unknown_rank_product(gp_type='KD')
+dg.make_result_frames(gp_type='OE')
+dg.test_known_OE_connections(pDescDict=pDescDict,gp_type='OE')
 dg.FDR_correction(pDescDict=pDescDict)
 
 

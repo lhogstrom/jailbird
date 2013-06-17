@@ -16,10 +16,15 @@ if not os.path.exists(work_dir):
 geneF = '/xchip/cogs/projects/PRISM/target_id/gene_targets.txt'
 geneList = [line.strip() for line in open(geneF)]
 ## make target dict 
-pDescDict = { "BRD-K59369769": "VX-680", "BRD-K36740062": "GSK-1070916","CMAP-AZD-1152HQPA": "AZD-1152HQPA","BRD-K29830875": "-666","BRD-K01737880": "-666","BRD-K83963101": "MLN8054"}
+pDescDict = { "BRD-K59369769": "VX-680", "BRD-K36740062": "GSK-1070916","CMAP-AZD-1152": "AZD-1152HQPA","BRD-K29830875": "-666","BRD-K01737880": "-666","BRD-K83963101": "MLN8054"}
 targetDict = {}
 for pert in pDescDict:
 	targetDict[pert] = geneList
+# Query instances of cps
+CM = mu.CMapMongo()
+pert_List = CM.find({'pert_iname':{'$regex':'AZD-1152HQPA'}},{'pert_id':True,})
+# erbb2Lst = CM.find({'pert_iname':{'$regex':'ERBB2'},'pert_type':'trt_sh.cgs'},{'sig_id':True,'pert_iname':True,'pert_id':True,})
+
 
 test1 = 'OEB001_A375_96H:BRDN0000399163:-666' #set random sig_id to initialize dgo object
 test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
