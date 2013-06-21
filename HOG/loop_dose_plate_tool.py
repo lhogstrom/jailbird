@@ -8,6 +8,7 @@ import subprocess
 import os
 import time
 
+#plate/data directory info
 baseDir = '/xchip/obelix/pod/brew'
 outBase = '/xchip/cogs/projects/HOG/dose_plate_output-by_pert_id_pert_dose'
 cellLst = ['A549','MCF7']
@@ -60,6 +61,3 @@ for cellL in cellLst:
 					 outpath,
 					 hyperLnkPath])
 			os.system(cmd)
-
-
-			

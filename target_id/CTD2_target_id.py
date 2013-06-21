@@ -10,7 +10,7 @@ import cmap.analytics.dgo as dgo
 import cmap.util.progress as progress
 import pandas as pd
 
-work_dir = '/xchip/cogs/projects/target_id/CTD2_17June2013b'
+work_dir = '/xchip/cogs/projects/target_id/CTD2_18June2013'
 if not os.path.exists(work_dir):
     os.mkdir(work_dir)
 
@@ -35,167 +35,59 @@ with open(targetSheetF,'rt') as f:
 				targetDict[pID] = targets
 				pDescDict[pID] = pDesc
 
-test1 = 'OEB001_A375_96H:BRDN0000399163:-666' #set random sig_id to initialize dgo object
-test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
 ### test KD
-# reload(dgo)
-# dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
-# dg.add_dictionary(targetDict=targetDict)
-# # dg.get_sig_ids(genomic_pert='KD')
-# # dg.run_drug_gene_query(max_processes=10)
-# # #wait until queries finish
-# dg.make_result_frames(gp_type='KD')
-# dg.test_known_connections(gp_type='KD',pDescDict=pDescDict)
-# dg.FDR_correction(pDescDict=pDescDict,outName='FDR_pass_apriori_connections')
-# dg.test_unknown_rank_product(gp_type='KD')
-# dg.FDR_correction(pDescDict=pDescDict,outName='FDR_pass_unknown')
-
-### TEST OE
 reload(dgo)
-dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_OE_connection')
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
 dg.add_dictionary(targetDict=targetDict)
-dg.get_sig_ids(genomic_pert='OE')
-dg.run_drug_gene_query(max_processes=10)
+# dg.get_sig_ids(genomic_pert='KD',is_gold=True)
+# dg.run_drug_gene_query(metric='spearman',max_processes=10)
 # #wait until queries finish
-dg.make_result_frames(gp_type='OE')
-dg.test_known_OE_connections(pDescDict=pDescDict,gp_type='OE')
-dg.FDR_correction(pDescDict=pDescDict)
+dg.make_result_frames(gp_type='KD',metric='spearman')
+dg.test_known_connections(gp_type='KD',metric='spearman',pDescDict=pDescDict,make_graphs=False)
+dg.FDR_correction(pDescDict=pDescDict,metric='spearman',outName='apriori_connections_pass_FDR',alpha=0.2,make_graphs=False)
+dg.fdr_html_summary(fdrDir='apriori_connections_pass_FDR')
+# dg.gene_to_drug_similarity(testGene='ABCB5',gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
+# # # dg.test_unknown_rank_product(gp_type='KD')
+# # # dg.FDR_correction(pDescDict=pDescDict,outName='FDR_pass_unknown')
+
+# #random
+# geneList = ['ERBB2','MUC1','PIK3CA','MTOR','PPARG']
+# for gene in geneList:
+# 	dg.gene_to_drug_similarity(testGene=gene,gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
+# #AURKA
+# geneList = ['AURKA','AURKB','AURKAIP1']
+# for gene in geneList:
+# 	dg.gene_to_drug_similarity(testGene=gene,gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
+# #drugbank connections
+# geneList = ['PPARG,', 'FKBP1A', 'KIF11', 'MTOR', 'HMGCR', 'RRM1', 'ESR1', 'NR3C1', 'HMGCR', 'NNR3C1', 'HMGCR', 'NR3C1', 'PSMB1', 'PSMB5', 'RAF1', 'BRAF', 'CDK4', 'ESR1', 'NR3C1', 'NR3C1', 'NR3C1', 'NR3C1', 'R3C1', 'EGFR', 'HMGCR','EGFR', 'RRM1']
 
 
-# ### debug creation of OE connection graphs
+# # ### TEST OE
+# # reload(dgo)
+# # dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_OE_connection')
+# # dg.add_dictionary(targetDict=targetDict)
+# # dg.get_sig_ids(genomic_pert='OE')
+# # # dg.run_drug_gene_query(max_processes=10)
+# # # #wait until queries finish
+# # dg.make_result_frames(gp_type='OE')
+# # dg.test_known_OE_connections(pDescDict=pDescDict,gp_type='OE',make_graphs=False)
+# # dg.FDR_correction(pDescDict=pDescDict,gp_type='OE',outName='FDR_pass_graphs_alpha2',alpha=0.2)
+# # dg.fdr_html_summary(fdrDir='FDR_pass_graphs_alpha2')
 
-#     def test_known_OE_connections(self,pDescDict,gp_type='OE',n_rand=100000,make_graphs=True):
-#         '''
-#         test known connections saved in targetDict across cell lines
-#         --> retrieve similarity scores
-#         --> calculate p-values (based on percent rank)
-#         --> generate graphs of connections
+# # #re-asign varabile so computation is not lost when reloading the class
+# # #dgCopy = dg
+reload(dgo)
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
+dg.add_dictionary(targetDict=targetDict)
+dg.dfRank = dgCopy.dfRank
+dg.dfCS = dgCopy.dfCS
+dg.pVec = dgCopy.pVec
+dg.pDict = dgCopy.pDict
+dg.connectionsPassFDR = dgCopy.connectionsPassFDR
 
-#         inputs:
-#         pDescDict = dictionary of common names for brds tested
-#         n_rand = number of permutations to calculate null distribution of test statistic
-        
-#         outputs:
-#         pDict = dictionary of p-values for each drug-gene relationship tested
-#         pVec = list of p-values for each drug-gene relationship tested
-#         countDict = dictionary of instances per drug-gene relationship
-#         brdSkipped = compounds skipped due to lack of data
-#         cgsSkipped = genomic perturbations skipped due to lack of data
-#         '''
-#         #set output dir
-#         gp_type='OE'
-#         n_rand=10000
-#         make_graphs=True
-#         graphDir = dg.outputdir + '/drug_target_graphs'
-#         if not os.path.exists(graphDir):
-#             os.mkdir(graphDir)
-#         #get brds from result dataframe
-#         brdSkipped = []
-#         cgsSkipped = []
-#         BRDsTested = []
-#         for ind in dg.dfRank.index:
-#             brd = ind[0]
-#             BRDsTested.append(brd)
-#         brdRsltSet = set(BRDsTested)
-#         #get cgs tested 
-#         # cols = dg.dfRank.columns
-#         cols = []
-#         for col in dg.dfRank.columns:
-#             cols.append(col[0])        
-#         countDict = {}
-#         pDict = {}
-#         pVec = []
-#         prog = progress.DeterminateProgressBar('Connection test')
-#         for ibrd,brd in enumerate(dg.targetDict):
-#             # skip pert if not in result file
-#             prog.update(brd,ibrd,len(dg.targetDict))
-#             if not brd in brdRsltSet:
-#                 brdSkipped.append(brd)
-#                 continue
-#             targets = dg.targetDict[brd]
-#             cpRes = dg.dfCS.ix[brd]
-#             cpRank = dg.dfRank.ix[brd]
-#             meanSer = cpRes.mean()
-#             meanRnk = cpRank.mean()
-#             nullCnt = pd.isnull(cpRes)
-#             #how many cell lines were both the pert and target tested in
-#             valCounts = nullCnt.shape[0] - nullCnt.sum(axis=0)
-#             for target in targets:
-#                 tarList = [inst for inst in cols if inst.split('_')[0] == target]
-#                 if len(tarList) == 0: #skip if drug target not tested
-#                     cgsSkipped.append(target)
-#                     continue
-#                 for ind in tarList:
-#                     rnkSer = cpRank[ind]
-#                     rnkSer = rnkSer.unstack()
-#                     rnkSer = rnkSer[rnkSer.notnull()]
-#                     csSer = cpRes[ind]
-#                     csSer = csSer.unstack()
-#                     csSer = csSer[csSer.notnull()]
-#                     #skip if cgs not tested in the same cell line as cp
-#                     if len(rnkSer) == 0:
-#                         cgsSkipped.append(ind)
-#                         continue
-#                     ### calculate p-value - based on percent rank products
-#                     rnkSmll = rnkSer/100
-#                     testStat = rnkSmll.prod()
-#                     n_obs = rnkSer.shape[0]
-#                     # theoretical null
-#                     ### simulate random draws from percent rank list
-#                     permMtrx = np.random.rand(n_obs,n_rand)
-#                     nullDist = permMtrx.prod(axis=0)
-#                     #number of null values more extreme than observed (one sided)
-#                     exVals = nullDist[nullDist<testStat]
-#                     nExtreme = len(exVals)
-#                     pVal = (nExtreme+1)/float(len(nullDist))
-#                     pVec.append(pVal)
-#                     pDict[brd + '-' + ind] = pVal
-#                     #make summary output
-#                     outF = os.path.join(graphDir,brd +'_' + ind + '_drug-target_summary.txt')
-#                     # dg.__make_CS_summary(brd,pDescDict[brd],rnkSer,csSer,pVal,outF,gp_type)
-#                     if make_graphs:
-#                         ### cs wadden gram
-#                         sKeysStr = []
-#                         count = 0
-#                         for i,cs in enumerate(csSer):
-#                             if pd.isnull(cs):
-#                                 continue
-#                             else:
-#                                 count = count + 1
-#                                 sKeysStr.append(csSer.index[i][1].split('_')[1])
-#                                 yVals = count
-#                                 plt.scatter(cs,yVals)
-#                         plt.xlim((-1, 1))
-#                         plt.ylim((0,count+1))
-#                         plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-#                         plt.xlabel('wtcs')
-#                         plt.ylabel('cell line')
-#                         plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
-#                         plt.savefig(os.path.join(graphDir,brd +'_' + ind + '_connections.png'))
-#                         plt.close()
-#                         #rank wadden gram
-#                         sKeysStr = []
-#                         count = 0
-#                         rnkList = cpRank[ind]
-#                         for i,rnk in enumerate(rnkSer):
-#                             if pd.isnull(rnk):
-#                                 continue
-#                             else:
-#                                 count = count + 1
-#                                 sKeysStr.append(csSer.index[i][1].split('_')[1])
-#                                 yVals = count
-#                                 plt.scatter(rnk,yVals)
-#                         plt.xlim((0, 100))
-#                         plt.ylim((0,count+1))
-#                         plt.yticks(range(1, count + 2), sKeysStr, rotation = 0)
-#                         plt.xlabel('percent rank')
-#                         plt.ylabel('cell line')
-#                         plt.title(pDescDict[brd] + ' - ' + ind + ' connection - ' + gp_type)
-#                         plt.savefig(os.path.join(graphDir,brd +'_' + ind + '_percent_rank.png'))
-#                         plt.close()
-#         dg.brdSkipped = brdSkipped
-#         dg.cgsSkipped = cgsSkipped
-#         dg.pDict = pDict
-#         dg.pVec = pVec
-
-
+# # #hyperlink cmd
+# outpath = '/'.join([dg.outputdir,'AURKA_gene_to_drug_connections'])
+# hyperLnkPath = '/xchip/cogs/web/icmap/hogstrom/AURKA_KD_to_CTD2_connections'
+# cmd = ' '.join(['ln -s',
+# 		 outpath,
+# 		 hyperLnkPath])

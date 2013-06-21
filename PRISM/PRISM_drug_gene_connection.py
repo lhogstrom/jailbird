@@ -14,6 +14,7 @@ import pandas as pd
 import cmap.analytics.dose as doseClass
 import subprocess
 import time
+import cmap.analytics.dgo as dgo
 
 work_dir = '/xchip/cogs/projects/PRISM/DG_dose_connect'
 baseDir = '/xchip/cogs/data/brew/a2y13q1' #where the brewed data lives
@@ -255,6 +256,16 @@ with open(inFile,'rt') as f:
 # 	plt.savefig(os.path.join(work_dir,'known_connections',brd +'_' + ind + '_wtcs.png'))
 # 	plt.close()
 
+reload(dgo)
+dg = dgo.QueryTargetAnalysis(out=work_dir)
+# dg.add_dictionary(targetDict=targetDict)
+# dg.get_sig_ids(genomic_pert='KD')
+# dg.run_drug_gene_query(max_processes=10)
+# #wait until queries finish
+dg.make_result_frames(gp_type='KD')
+# # dg.test_known_connections(gp_type='KD',pDescDict=pDescDict)
+# dg.test_unknown_rank_product(gp_type='KD')
+# dg.FDR_correction(pDescDict=pDescDict)
 
 ### make cell specific graphs
 for i,x in enumerate(cgsList):

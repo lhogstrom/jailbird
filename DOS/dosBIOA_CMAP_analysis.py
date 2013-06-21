@@ -23,6 +23,7 @@ import cmap.analytics.dgo as dgo
 ##concatonate gmts for each cell line
 work_dir = '/xchip/cogs/projects/DOS/6June2013b'
 cellDirs = [f for f in os.listdir(work_dir)]
+
 for cell in cellDirs:
 	cellPath = work_dir + '/' + cell
 	upFiles = glob.glob(cellPath + '/DOS*up50.gmt')
@@ -85,6 +86,13 @@ for cellLine in cellLst:
 			brdTested = [pID[i] for i in iBRDs]
 			allBrds.extend(brdTested)
 allBrds = list(set(allBrds))
+
+# get pert_iname for each compound
+pDescDict = {}
+for brd in allBrds:
+    CM = mutil.CMapMongo()
+    pert_List = CM.find({'sig_id':{'$regex':'DOS'},'cell_id':cell},{'sig_id':True,'pert_id':True,'up50_lm':True,'dn50_lm':True})
+
 
 #cell lines in which DOS were tested
 CM = mutil.CMapMongo()
@@ -159,17 +167,35 @@ for cell1 in cellsTested:
         processes.difference_update(
             p for p in processes if p.poll() is not None)
 
+#make empty pDescDict
+fullBRDs = []
+for ind in dg.dfCS.index:
+    brd = ind[0]
+    fullBRDs.append(brd)
+uniqBRDs = list(set(fullBRDs))
+pDescDict = {}
+for brd in uniqBRDs:
+    pDescDict[brd] = '-666'
 
-test1 = 'OEB001_A375_96H:BRDN0000399163:-666' #set random sig_id to initialize dgo object
-test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
-reload(dgo)
-dg = dgo.QueryTargetAnalysis(test1,test2,work_dir)
-# dg.add_dictionary(targetDict=targetDict)
-# dg.get_drug_kd_sig_ids()
-# dg.run_drug_gene_query()
-dg.make_result_frames()
-dg.test_unknown_connections(make_graphs=True)
-dg.FDR_correction(pDescDict=pDescDict)
+dg = dgo.QueryTargetAnalysis(out=work_dir)
+dg.add_dictionary(targetDict=targetDict)
+# dg.get_sig_ids(genomic_pert='KD',is_gold=True)
+# dg.run_drug_gene_query(metric='wtcs',max_processes=10)
+# #wait until queries finish
+dg.make_result_frames(gp_type='KD',metric='wtcs')
+# dg.test_known_connections(gp_type='KD',metric='wtcs',pDescDict=pDescDict,make_graphs=False)
+dg.test_unknown_rank_product(gp_type='KD',n_rand=10000)
+dg.FDR_correction(pDescDict=pDescDict,metric='wtcs',outName='unknown_connections_pass_FDR',alpha=0.2)
+dg.uncorrected_connection_sort(gp_type='KD',metric='wtcs',outName='uncorrected_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=50)
+dg.fdr_html_summary(fdrDir='apriori_connections_pass_FDR')
+dg.gene_to_drug_similarity(testGene='KRAS',gp_type='KD',metric='wtcs',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
+
+
+# dgCopy= dg
+dg.dfRank = dgCopy.dfRank
+dg.dfCS = dgCopy.dfCS
+# dg.pVec = dgCopy.pVec
+# dg.pDict = dgCopy.pDict
 
 ### scratch 
 #perform mongo query for each compound of interest
@@ -208,6 +234,16 @@ dg.FDR_correction(pDescDict=pDescDict)
 # 	print cell
 # 	print headerListUP == headerListDN
 
+# # #re-asign varabile so computation is not lost when reloading the class
+# # #dgCopy = dg
+reload(dgo)
+dg = dgo.QueryTargetAnalysis(out=work_dir)
+dg.add_dictionary(targetDict=targetDict)
+dg.dfRank = dgCopy.dfRank
+dg.dfCS = dgCopy.dfCS
+dg.pVec = dgCopy.pVec
+dg.pDict = dgCopy.pDict
+dg.connectionsPassFDR = dgCopy.connectionsPassFDR
 
 fig,ax = plt.subplots(1)
 ax.plot(range(10))

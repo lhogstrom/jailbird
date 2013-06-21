@@ -25,20 +25,17 @@ CM = mu.CMapMongo()
 pert_List = CM.find({'pert_iname':{'$regex':'AZD-1152HQPA'}},{'pert_id':True,})
 # erbb2Lst = CM.find({'pert_iname':{'$regex':'ERBB2'},'pert_type':'trt_sh.cgs'},{'sig_id':True,'pert_iname':True,'pert_id':True,})
 
-
-test1 = 'OEB001_A375_96H:BRDN0000399163:-666' #set random sig_id to initialize dgo object
-test2 = 'OEB001_A375_96H:BRDN0000400484:-666'
 ### test KD
 reload(dgo)
-dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_KD_connection')
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_connection')
 dg.add_dictionary(targetDict=targetDict)
-# dg.get_sig_ids(genomic_pert='KD')
-# dg.run_drug_gene_query(max_processes=10)
+dg.get_sig_ids(genomic_pert='KD')
+dg.run_drug_gene_query(max_processes=10)
 # #wait until queries finish
-dg.make_result_frames(gp_type='KD')
-# dg.test_known_connections(gp_type='KD',pDescDict=pDescDict)
-dg.test_unknown_rank_product(gp_type='KD')
-dg.FDR_correction(pDescDict=pDescDict)
+# dg.make_result_frames(gp_type='KD')
+# # dg.test_known_connections(gp_type='KD',pDescDict=pDescDict)
+# dg.test_unknown_rank_product(gp_type='KD')
+# dg.FDR_correction(pDescDict=pDescDict)
 
 ### TEST OE
 # dg = dgo.QueryTargetAnalysis(test1,test2,work_dir + '/drug_OE_connection')
