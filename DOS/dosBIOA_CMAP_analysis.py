@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+    #! /usr/bin/env python
 '''
 analyze the DOSBIO plates - combine with data in cmap database to perform query
 
