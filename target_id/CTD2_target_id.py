@@ -39,8 +39,8 @@ with open(targetSheetF,'rt') as f:
 reload(dgo)
 dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
 dg.add_dictionary(targetDict=targetDict)
-dg.get_sig_ids(genomic_pert='KD',is_gold=True)
-dg.run_drug_gene_query(metric='spearman',max_processes=10)
+# dg.get_sig_ids(genomic_pert='KD',is_gold=True)
+# dg.run_drug_gene_query(metric='spearman',max_processes=10)
 # #wait until queries finish
 dg.make_result_frames(gp_type='KD',metric='spearman')
 # dg.test_known_connections(gp_type='KD',metric='spearman',pDescDict=pDescDict,make_graphs=True)
@@ -48,22 +48,23 @@ dg.make_result_frames(gp_type='KD',metric='spearman')
 dg.test_known_connections(gp_type='KD',
                         metric='spearman',
                         pDescDict=pDescDict,
-                        outName='two_sided_dg_graphs_n10M',
-                        make_graphs=False,
-                        n_rand=10000000,
+                        outName='test_dg_graphs',
+                        conn_thresh=.05,
+                        make_graphs=True,
+                        n_rand=100000,
                         connection_test='two_sided')
 dg.FDR_correction(pDescDict=pDescDict,
                 gp_type='KD',
                 metric='spearman',
-                outName='apriori_two_sided_pass_FDR_n10M',
+                outName='test_FDR',
                 alpha=0.2,
                 make_graphs=True)
-dg.fdr_html_summary(fdrDir='apriori_two_sided_pass_FDR_n10M')
-dg.store_parameters_rpt()
+dg.fdr_html_summary(fdrDir='test_FDR')
+# dg.store_parameters_rpt()
 # # dg.gene_to_drug_similarity(testGene='ABCB5',gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
 # # # # dg.test_unknown_rank_product(gp_type='KD')
 # # # # dg.FDR_correction(pDescDict=pDescDict,outName='FDR_pass_unknown')
-outF = os.path.join(dg.outputdir,'drug-target_summary.txt')
+outF = os.path.join(dg.outputdir,'drug-target_summary_peyton.txt')
 dg.make_target_summary(outF,dir_loc='apriori_connections_pass_FDR')
 
 # #random
@@ -86,7 +87,8 @@ for gene in geneList:
                                 outName='gene_to_drug_connections',
                                 pDescDict=pDescDict,
                                 n_rand=10000,
-                                n_uncorrected=20)
+                                n_uncorrected=20,
+                                connection_test='two_sided')
 # #drugbank connections
 # geneList = ['PPARG,', 'FKBP1A', 'KIF11', 'MTOR', 'HMGCR', 'RRM1', 'ESR1', 'NR3C1', 'HMGCR', 'NNR3C1', 'HMGCR', 'NR3C1', 'PSMB1', 'PSMB5', 'RAF1', 'BRAF', 'CDK4', 'ESR1', 'NR3C1', 'NR3C1', 'NR3C1', 'NR3C1', 'R3C1', 'EGFR', 'HMGCR','EGFR', 'RRM1']
 
@@ -125,7 +127,7 @@ dg.store_parameters_rpt()
 # # #dgCopy = dg
 reload(dgo)
 # dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
-dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_OE_connection')
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
 dg.add_dictionary(targetDict=targetDict)
 dg.dfRank = dgCopy.dfRank
 dg.dfCS = dgCopy.dfCS
@@ -143,19 +145,6 @@ dg.pThreshFDR = dgCopy.pThreshFDR
 # cmd = ' '.join(['ln -s',
 # 		 outpath,
 # 		 hyperLnkPath])
-
-params = [] #list of tuples
-params.append(('metric',dg.metric))
-params.append(('connection_test',dg.connection_test))
-params.append(('genomic_perturbation_type',str(dg.gp_type)))
-params.append(('is_gold',str(dg.is_gold)))
-params.append(('n_permutation',str(dg.n_perm)))
-#affogato version
-#input target dictionary
-# which compounds were actually tested?
-# for which comparisons was there not data available?
-to.make_rpt(dg.outputdir,params) 
-
 
 
 ### make specificity graph
@@ -234,16 +223,18 @@ pSer = pd.Series(GTDpDict)
 pSer.sort()
 tmpDict = {'p_val':GTDpDict,
             'p_sign':GTDsignDict}
-            # 'n_connected_cells':self.n_connectedCells}
+            # 'n_connected_cells':dg.n_connectedCells}
 pFrame = pd.DataFrame(tmpDict)
 pFrame['p_log10'] = np.log10(pFrame['p_val'])
 pFrame['p_log10_sign'] = pFrame['p_log10'] * pFrame['p_sign']
 pFrame = pFrame.sort(columns='p_log10_sign')
+#make plot
 plt.plot(pFrame['p_log10_sign'],'.')
 plt.title(testGene + ' ' + gp_type)
 plt.ylabel('log(p-value)')
 plt.xlabel('connection to compounds')
-plt.show()
+plt.savefig(os.path.join(graphDir,testGene + '_specificity_rank_product_pValues.png'))
+plt.close()
 #chose top/ bottom connections to graph
 examine = pSer[:n_uncorrected]
 examine = examine.append(pSer[-n_uncorrected:])
@@ -255,16 +246,16 @@ for conn in examine.index:
     ind = conn.split(':')[-1]
     #copied from FDR mdule:
     ### cs wadden gram
-    csR = dg.dfCS.ix[brd][ind]
+    csR = self.dfCS.ix[brd][ind]
     if gp_type == "OE":
         csR = csR.unstack()
     csR = csR[csR.notnull()]
-    rnkR = dg.dfRank.ix[brd][ind]
+    rnkR = self.dfRank.ix[brd][ind]
     if gp_type == "OE":
         rnkR = rnkR.unstack()
     rnkR = rnkR[rnkR.notnull()]
     outF = os.path.join(graphDir,brd +'_' + ind + '_drug-target_summary.txt')
-    dg.__make_CS_summary(brd,pDescDict[brd],rnkR,csR,GTDpDict[conn],outF,gp_type,metric)
+    self.__make_CS_summary(brd,pDescDict[brd],rnkR,csR,GTDpDict[conn],outF,gp_type,metric)
     sKeysStr = []
     count = 0
     for i,cs in enumerate(csR):
@@ -329,8 +320,157 @@ with open(indexfile,'a') as f:
         lineWrite = '<p><a href="' + subName + '"><img src="' + prcRnkName + '"alt="' + brd + '"></a></p>'
         f.write(lineWrite + '\n')
         #make sub-page
-        dg.make_drug_gene_pages(brd,ind,subName,dir_loc=graphName)
+        self.make_drug_gene_pages(brd,ind,subName,dir_loc=graphName)
 
 
 
+pSer = pd.Series(GTDpDict)
+pSer.sort()
+tmpDict = {'p_val':GTDpDict,
+            'p_sign':GTDsignDict}
+            # 'n_connected_cells':self.n_connectedCells}
+pFrame = pd.DataFrame(tmpDict)
+pFrame['p_log10'] = np.log10(pFrame['p_val'])
+pFrame['p_log10_sign'] = pFrame['p_log10'] * pFrame['p_sign']
+pFrame = pFrame.sort(columns='p_log10_sign')
+#make plot
+plt.plot(pFrame['p_log10_sign'],'.')
+plt.title(testGene + ' ' + gp_type)
+plt.ylabel('log(p-value)')
+plt.xlabel('connection to compounds')
+# plt.show()
+combo = 'BRD-K03618428:MTOR_96H'
+pLogSer = pFrame['p_log10_sign']
+vcombo = pLogSer[combo]
+icombo = pLogSer.index.get_loc(combo)
+plt.plot(icombo,vcombo,'r.')
+plt.show()
+# plt.savefig(os.path.join(graphDir,testGene + '_specificity_rank_product_pValues.png'))
+# plt.close()
+
+
+gp_type='KD'
+metric='spearman'
+pDescDict=pDescDict
+outName='test_dg_graphs'
+make_graphs=False
+n_rand=100000
+connection_test='two_sided'
+conn_thresh=.01
+### cell dict
+graphDir = dg.outputdir + '/' + outName
+if not os.path.exists(graphDir):
+    os.mkdir(graphDir)
+#get brds from result dataframe
+brdSkipped = []
+cgsSkipped = []
+BRDsTested = []
+for ind in dg.dfRank.index:
+    brd = ind[0]
+    BRDsTested.append(brd)
+brdRsltSet = set(BRDsTested)
+#get cgs tested 
+if gp_type == 'KD':
+    cols = dg.dfRank.columns
+if gp_type == 'OE':
+    cols = [col[0] for col in dg.dfRank.columns]
+countDict = {}
+cellCountDict = {}
+nConnectionDict = {}
+connCellDict = {}
+pDict = {}
+pVec = []
+prog = progress.DeterminateProgressBar('Connection test')
+for ibrd,brd in enumerate(dg.targetDict):
+    # skip pert if not in result file
+    prog.update(brd,ibrd,len(dg.targetDict))
+    targets = dg.targetDict[brd]
+    if not brd in brdRsltSet:
+        brdSkipped.append(brd)
+        for target in targets:
+            countDict[brd + ':' + target] = 0
+        continue
+    cpRes = dg.dfCS.ix[brd]
+    cpRank = dg.dfRank.ix[brd]
+    meanSer = cpRes.mean()
+    meanRnk = cpRank.mean()
+    nullCnt = pd.isnull(cpRes)
+    #how many cell lines were both the pert and target tested in
+    valCounts = nullCnt.shape[0] - nullCnt.sum(axis=0)
+    for target in targets:
+        tarList = [inst for inst in cols if inst.split('_')[0] == target]
+        if len(tarList) == 0: #skip if drug target not tested
+            cgsSkipped.append(target)
+            continue
+        for ind in tarList:
+            rnkSer = cpRank[ind]
+            if gp_type == 'OE':
+                rnkSer = rnkSer.unstack()
+            rnkSer = rnkSer[rnkSer.notnull()]
+            csSer = cpRes[ind]
+            if gp_type == 'OE':
+                csSer = csSer.unstack()
+            csSer = csSer[csSer.notnull()]
+            #skip if cgs not tested in the same cell line as cp
+            if len(rnkSer) == 0:
+                cgsSkipped.append(ind)
+                continue
+            ### calculate p-value - based on percent rank products
+            rnkSmll = rnkSer/100 #return rank percent betweeen 0 and 1
+            testStat = rnkSmll.prod()
+            n_obs = rnkSer.shape[0]
+            ### simulate random draws from percent rank list
+            permMtrx = np.random.rand(n_obs,n_rand)
+            nullDist = permMtrx.prod(axis=0)
+            #number of null values more extreme than observed 
+            PosExVals = nullDist[nullDist<testStat] # positive connections
+            NegExVals = nullDist[nullDist>testStat] # negative connections
+            if connection_test == 'one_sided':
+                nExtreme = len(PosExVals)
+                pVal = (nExtreme+1)/float(len(nullDist))
+            if connection_test == 'two_sided':
+                NnExtreme = len(NegExVals)
+                PnExtreme = len(PosExVals)
+                #devide p-value by 2 since you are testing twice as many hypothesis
+                if PnExtreme <= NnExtreme:
+                    pVal = (PnExtreme+1)/(float(len(nullDist))/2)
+                else:
+                    pVal = (NnExtreme+1)/(float(len(nullDist))/2)
+            pVec.append(pVal)
+            pDict[brd + ':' + ind] = pVal
+            countDict[brd + ':' + ind] = len(rnkSer) # number of instances for the drug-target pair
+            if gp_type == 'KD':
+                cells =[in1.split('_')[1] for in1 in rnkSer.index]
+            if gp_type == 'OE':
+                cells =[in1[0].split('_')[1] for in1 in rnkSer.index]
+            cellSet = set(cells)
+            cellCountDict[brd + ':' + ind] = len(cellSet)
+            #describe connections which pass arbitrary threshold
+            n_connections = len(rnkSer[rnkSer < (conn_thresh*100)])
+            rnkSerThresh = rnkSer[rnkSer < (conn_thresh*100)]
+            if rnkSerThresh.any():
+                cells = [ind1.split('_')[1] for ind1 in rnkSerThresh.index]
+                cells = list(set(cells))
+                connCellDict[brd + ':' + ind] = cells
+            nConnectionDict[brd + ':' + ind] = n_connections
+            #make summary output
+            outF = os.path.join(graphDir,brd +'_' + ind + '_drug-target_summary.txt')
+            # dg.__make_CS_summary(brd,pDescDict[brd],rnkSer,csSer,pVal,outF,gp_type,metric)
+            if make_graphs:
+                ### cs wadden gram
+                csGraph = os.path.join(graphDir,brd +'_' + ind + '_connections.png')
+                dg.__connection_dot_plot(csSer,
+                                        pDescDict[brd],
+                                        ind,
+                                        csGraph,
+                                        gp_type='KD',
+                                        axis=metric)
+                ### percent rank wadden gram
+                csGraph = os.path.join(graphDir,brd +'_' + ind + '_percent_rank.png')
+                dg.__connection_dot_plot(rnkSer,
+                                        pDescDict[brd],
+                                        ind,
+                                        csGraph,
+                                        gp_type='KD',
+                                        axis='perc_rank')
 

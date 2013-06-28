@@ -71,7 +71,7 @@ OverlapTargets = [item for sublist in targetDictCGS.values() for item in sublist
 ### test KD - two sided
 reload(dgo)
 dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_connection')
-dg.add_dictionary(targetDict=targetDict)
+dg.add_dictionary(targetDict=targetDictCGS)
 # dg.get_sig_ids(genomic_pert='KD',is_gold=True)
 # dg.run_drug_gene_query(metric='spearman',max_processes=10)
 # #wait until queries finish
@@ -81,21 +81,21 @@ dg.make_result_frames(gp_type='KD',metric='spearman')
 dg.test_known_connections(gp_type='KD',
                         metric='spearman',
                         pDescDict=pDescDict,
-                        outName='one_sided_dg_graphs',
+                        outName='two_sided_dg_graphs',
                         make_graphs=False,
                         n_rand=1000000,
-                        connection_test='one_sided')
+                        connection_test='two_sided')
 dg.FDR_correction(pDescDict=pDescDict,
                 gp_type='KD',
                 metric='spearman',
-                outName='apriori_one_sided_pass_FDR',
+                outName='apriori_two_sided_pass_FDR',
                 alpha=0.2,
                 make_graphs=True)
-dg.fdr_html_summary(fdrDir='apriori_one_sided_pass_FDR')
+dg.fdr_html_summary(fdrDir='apriori_two_sided_pass_FDR')
 # # dg.gene_to_drug_similarity(testGene='ABCB5',gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
 # # # # dg.test_unknown_rank_product(gp_type='KD')
 # # # # dg.FDR_correction(pDescDict=pDescDict,outName='FDR_pass_unknown')
-outF = os.path.join(dg.outputdir,'drug-target_summary_one_sided.txt')
+outF = os.path.join(dg.outputdir,'drug-target_summary_two_sided.txt')
 dg.make_target_summary(outF,dir_loc='apriori_connections_pass_FDR')
 dg.store_parameters_rpt()
 

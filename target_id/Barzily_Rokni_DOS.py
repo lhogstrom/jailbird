@@ -109,3 +109,27 @@ dg.nConnectionDict = dgCopy.nConnectionDict
 # cmd = ' '.join(['ln -s',
 # 		 outpath,
 # 		 hyperLnkPath])
+
+
+### make a list of cell lines in which the cps were tested
+outfile = work_dir + '/drug_cell_lines_tested.txt'
+headers = ['brd','cell_lines']
+with open(outfile,'w') as f:
+	f.write('\t'.join(headers) + '\n')
+	prog = progress.DeterminateProgressBar('perturbation cid query')
+	for ibrd,brd in enumerate(targetDict):
+		prog.update('querying cps',ibrd,len(targetDict))
+		CM = mu.CMapMongo()
+		#is gold
+		# pert_query = CM.find({'pert_id':{'$regex':brd},'is_gold':True},{'sig_id':True,'cell_id':True,'pert_id':True,'is_gold':True})
+		# also return non is_golds
+		pert_query = CM.find({'pert_id':{'$regex':brd}},{'sig_id':True,'cell_id':True,'pert_id':True,'is_gold':True})
+		if pert_query:
+			cells = [q['cell_id'] for q in pert_query]
+			cells.insert(0,brd)
+			f.write('\t'.join(cells) + '\n')
+		else:
+			f.write(brd + '\n')
+
+
+

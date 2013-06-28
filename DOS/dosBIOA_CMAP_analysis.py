@@ -71,6 +71,7 @@ for cellLine in cellLst:
 			outF = os.path.join(scDir,'_'.join([t1,'SC.png']))
 			sco.plot(title=t1,out=outF)
 
+
 #get unique DOS compounds tested on plate
 allBrds = [] #brds from both dosbio plates
 for cellLine in cellLst:
