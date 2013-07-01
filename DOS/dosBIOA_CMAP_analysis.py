@@ -1,4 +1,4 @@
-    #! /usr/bin/env python
+#! /usr/bin/env python
 '''
 analyze the DOSBIO plates - combine with data in cmap database to perform query
 
@@ -178,6 +178,21 @@ pDescDict = {}
 for brd in uniqBRDs:
     pDescDict[brd] = '-666'
 
+#K05756698 - dictionary
+targetDict = {'BRD-K05756698':['PIK3CA','PIK3CB','PIK3CD','PIK3CG','MTOR','AKT1','AKT2','PTEN'],'BRD-K12184916':['PIK3CA','PIK3CB','PIK3CD','PIK3CG','MTOR','AKT1','AKT2','PTEN']}
+# targetDict = {'BRD-K12184916':['PIK3CA','PIK3CB','PIK3CD','PIK3CG','MTOR','AKT1','AKT2','PTEN']}
+pDescDict = {}
+for brd in targetDict:
+    pDescDict[brd] = '-666'
+dg.add_dictionary(targetDict=targetDict)
+dg.test_known_connections(gp_type='KD',
+                        metric='wtcs',
+                        pDescDict=pDescDict,
+                        outName='K05756698_dg_graphs',
+                        make_graphs=True,
+                        n_rand=1000000,
+                        connection_test='two_sided')
+
 dg = dgo.QueryTargetAnalysis(out=work_dir)
 dg.add_dictionary(targetDict=targetDict)
 # dg.get_sig_ids(genomic_pert='KD',is_gold=True)
@@ -191,12 +206,23 @@ dg.uncorrected_connection_sort(gp_type='KD',metric='wtcs',outName='uncorrected_c
 dg.fdr_html_summary(fdrDir='apriori_connections_pass_FDR')
 dg.gene_to_drug_similarity(testGene='KRAS',gp_type='KD',metric='wtcs',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
 
-
-# dgCopy= dg
-dg.dfRank = dgCopy.dfRank
-dg.dfCS = dgCopy.dfCS
-# dg.pVec = dgCopy.pVec
-# dg.pDict = dgCopy.pDict
+### compounds connnected to a given gene
+inFile = '/xchip/cogs/projects/target_id/CTD2_25June2013/genes_with_connections.txt'
+cgsList = []
+with open(inFile,'rt') as f:
+    for string in f:
+        splt = string[:-1]
+        cgsList.append(splt)
+geneList = set(cgsList)
+for gene in geneList:
+    dg.gene_to_drug_similarity(testGene=gene,
+                                gp_type='KD',
+                                metric='spearman',
+                                outName='gene_to_drug_connections',
+                                pDescDict=pDescDict,
+                                n_rand=10000,
+                                n_uncorrected=20,
+                                connection_test='two_sided')
 
 ### scratch 
 #perform mongo query for each compound of interest

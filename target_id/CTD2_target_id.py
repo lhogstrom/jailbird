@@ -56,10 +56,11 @@ dg.test_known_connections(gp_type='KD',
 dg.FDR_correction(pDescDict=pDescDict,
                 gp_type='KD',
                 metric='spearman',
-                outName='test_FDR',
+                outName='test_FDR2',
                 alpha=0.2,
-                make_graphs=True)
-dg.fdr_html_summary(fdrDir='test_FDR')
+                make_graphs=True,
+                specificity_graph=True)
+dg.fdr_html_summary(fdrDir='test_FDR2',specificity_graph=True)
 # dg.store_parameters_rpt()
 # # dg.gene_to_drug_similarity(testGene='ABCB5',gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
 # # # # dg.test_unknown_rank_product(gp_type='KD')
@@ -113,8 +114,9 @@ dg.FDR_correction(pDescDict=pDescDict,
                 metric='spearman',
                 outName='apriori_two_sided_pass_FDR_n10M',
                 alpha=0.2,
-                make_graphs=True)
-dg.fdr_html_summary(fdrDir='apriori_two_sided_pass_FDR_n10M')
+                make_graphs=True,
+                specificity_graph=True)
+dg.fdr_html_summary(fdrDir='apriori_two_sided_pass_FDR_n10M',specificity_graph=True)
 # dg.gene_to_drug_similarity(testGene='ABCB5',gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
 # # # dg.test_unknown_rank_product(gp_type='KD')
 # # # # dg.FDR_correction(pDe
@@ -138,6 +140,7 @@ dg.cellCountDict = dgCopy.cellCountDict
 dg.nConnectionDict = dgCopy.nConnectionDict
 dg.connectionsPassFDR = dgCopy.connectionsPassFDR
 dg.pThreshFDR = dgCopy.pThreshFDR
+dg.connection_test = dgCopy.connection_test
 
 # # #hyperlink cmd
 # outpath = '/'.join([dg.outputdir,'AURKA_gene_to_drug_connections'])

@@ -67,7 +67,6 @@ for pert in targetDict:
 #list of targets with CGS:
 OverlapTargets = [item for sublist in targetDictCGS.values() for item in sublist]
 
-
 ### test KD - two sided
 reload(dgo)
 dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_connection')
