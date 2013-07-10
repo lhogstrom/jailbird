@@ -12,6 +12,7 @@ from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.util.mongo_utils as mu
 from cmap.tools import sig_slice_tool
 from cmap.io import gct,plategrp,rnk
+import cmap.analytics.dgo as dgo
 import cmap.util.progress as progress
 import subprocess
 import datetime
@@ -197,3 +198,62 @@ plt.subplot(212)
 plt.title('Random KD-OE pairs - percent rank distribution')
 plt.hist(rnkRandom,30)
 plt.show()
+
+reload(dgo)
+dg = dgo.QueryTargetAnalysis(out=work_dir)
+# dg.add_dictionary(targetDict=targetDict)
+dg.make_result_frames(gp_type='KD',metric='wtcs')
+
+##
+cellDirs = [f for f in os.listdir(work_dir) if os.path.isdir(work_dir+'/'+f)]
+prog = progress.DeterminateProgressBar('dataframe read')
+df = pd.DataFrame()
+dfRank = pd.DataFrame()
+#loop through each cell line add to df
+for icell, cell1 in enumerate(cellDirs):
+    #define directories and load in outputs
+    outdir = os.path.join(work_dir,cell1,'sig_query_out')
+    if not glob.glob(outdir + '/result_*.gctx'):
+        print cell1 + ' no query result file'
+        continue #if no results file, skip loop
+    if metric == 'wtcs':
+        rsltFile = glob.glob(outdir + '/result_WTCS.LM.COMBINED_n*.gctx')[0]
+    if metric == 'spearman':
+        rsltFile = glob.glob(outdir + '/result_SPEARMAN_n*.gctx')[0]
+    rslt = gct.GCT()
+    rslt.read(rsltFile)
+    prog.update(cell1,icell,len(cellDirs))
+    rsltF = rslt.frame
+    rsltF = rsltF.T
+    indVals = rsltF.index.values
+    pertVals = [ind.split(':')[1][:13] for ind in indVals]
+    #make the column name gene and pert time
+    geneVals = []
+    for ind in rsltF.columns:
+        if gp_type == 'KD':
+            gene = ind.split(':')[1]
+        if gp_type == 'OE':
+            brdn = ind.split(':')[1]
+            gene = self.BRDNdict[brdn]
+        tp = ind.split(':')[0].split('_')[-1]
+        gname = '_'.join([gene, tp])
+        geneVals.append(gname)
+    if len(geneVals) > len(set(geneVals)):
+        print 'duplicate CGS for this celline'
+    newF = rsltF
+    newF.index = [pertVals, rsltF.index.values]
+    if gp_type == 'KD':
+        newF.columns = geneVals
+    if gp_type == 'OE':
+        newF.columns = [geneVals, rsltF.columns.values]
+    rankF = newF.rank(ascending=False,axis=1)
+    perRankF = rankF / float(rankF.shape[1]) * 100.0
+    #add cell line result to combined df
+    if len(df) == 0:
+        df = newF
+        dfRank = perRankF
+    else:
+        df = pd.concat([df,newF],axis=0)
+        dfRank = pd.concat([dfRank,perRankF],axis=0)
+self.dfCS = df
+self.dfRank = dfRank

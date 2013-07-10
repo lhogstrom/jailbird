@@ -58,3 +58,104 @@ for gene in geneCGS:
                                 n_uncorrected=20,
                                 connection_test='two_sided')
 
+
+### retrieve info from drugbank - gene target info and 
+#number of drugs targeting that drug
+file1 = '/xchip/cogs/projects/target_id/drugBank_db_xml/drugbank.xml'
+context = ET.iterparse(file1, events=("start", "end"))
+context = iter(context)
+event, root = context.next()
+for child in root:
+    print child.tag, child.attrib
+
+contextFull = ET.iterparse(file1)
+for event, elem in ET.iterparse(file1):
+	print event, elem
+elem.tag
+elem.text
+
+
+#make list of drugbank drugs
+nameList = []
+for event, elem in ET.iterparse(file1):
+	if elem.tag.endswith("drug"): #"name"
+		nameList.append(elem.text)
+
+
+
+
+def parseXML():
+    file = open(str(options.drugxml),'r')
+    data = file.read()
+    file.close()
+    dom = parseString(data)
+    druglist = dom.getElementsByTagName('drug')
+
+    with codecs.open(str(options.csvdata),'w','utf-8') as csvout, open('DrugTargetRel.csv','w') as dtout:
+        for entry in druglist:
+        count = count + 1
+        try:
+            drugtype = entry.attributes['type'].value
+            print count
+        except:
+            print count
+            print entry
+            drugidObj = entry.getElementsByTagName('drugbank-id')[0]
+            drugid = drugidObj.childNodes[0].nodeValue
+            drugnameObj = entry.getElementsByTagName('name')[0]
+            drugname = drugnameObj.childNodes[0].nodeValue
+
+            targetlist = entry.getElementsByTagName('target')
+            for target in targetlist:
+                targetid = target.attributes['partner'].value
+                dtout.write((','.join((drugid,targetid)))+'\n')
+
+            csvout.write((','.join((drugid,drugname,drugtype)))+'\n')
+
+#!python
+import codecs
+from xml.dom import minidom
+
+class DrugBank(object):
+    def __init__(self, filename):
+        self.fp = open(filename, 'r')
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        state = 0
+
+        while True:
+            line = self.fp.readline()
+
+            if state == 0:
+                if line.strip().startswith('<drug '):
+                    lines = [line]
+                    state = 1
+                    continue
+
+                if line.strip() == '</drugs>':
+                    self.fp.close()
+                    raise StopIteration()
+
+            if state == 1:
+                lines.append(line)
+                if line.strip() == '</drug>':
+                    return minidom.parseString("".join(lines))
+
+with codecs.open('csvout.csv', 'w', 'utf-8') as csvout, open('dtout.csv', 'w') as dtout:
+    db = DrugBank('drugbank.xml')
+    for dom in db:
+	        entry = dom.firstChild
+	        drugtype = entry.attributes['type'].value
+	        drugidObj = entry.getElementsByTagName('drugbank-id')[0]
+	        drugid = drugidObj.childNodes[0].nodeValue
+	        drugnameObj = entry.getElementsByTagName('name')[0]
+	        drugname = drugnameObj.childNodes[0].nodeValue
+	        targetlist = entry.getElementsByTagName('target')
+	        for target in targetlist:
+	            targetid = target.attributes['partner'].value
+            dtout.write((','.join((drugid,targetid)))+'\n')
+
+        csvout.write((','.join((drugid,drugname,drugtype)))+'\n')

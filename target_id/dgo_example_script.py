@@ -36,6 +36,11 @@ with open(targetSheetF,'rt') as f:
 
 ### Use dgo to test drug-gene connectivity
 reload(dgo)
+targetDict = {'BRD-A35588707' : targetDict['BRD-A35588707'],
+              'BRD-K06854232' : targetDict['BRD-K06854232']}
+pDescDict = {'BRD-A35588707' : pDescDict['BRD-A35588707'],
+             'BRD-K06854232' : pDescDict['BRD-K06854232']}
+
 dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
 dg.add_dictionary(targetDict=targetDict)
 dg.get_sig_ids(genomic_pert='KD',is_gold=True)
@@ -46,8 +51,8 @@ dg.test_known_connections(gp_type='KD',
                         metric='spearman',
                         pDescDict=pDescDict,
                         outName='two_sided_dg_graphs_n10M',
-                        make_graphs=False,
-                        n_rand=10000000,
+                        make_graphs=True,
+                        n_rand=1000,
                         connection_test='two_sided')
 dg.FDR_correction(pDescDict=pDescDict,
                 gp_type='KD',
