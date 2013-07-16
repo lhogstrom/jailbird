@@ -8,20 +8,74 @@ import cmap.analytics.dgo as dgo
 import cmap.util.progress as progress
 import pandas as pd
 
+##############################
+### make drug name dictionary ###
+##############################
+
+### CTD2
 work_dir = '/xchip/cogs/projects/target_id/CTD2_25June2013'
 if not os.path.exists(work_dir):
     os.mkdir(work_dir)
 
+targetSheetF = '/xchip/cogs/projects/target_id/4June2013/Informer2_drug_targets.txt'
+targetDict = {}
+pDescDict = {}
+with open(targetSheetF,'rt') as f:
+    for string in f:
+        splt = string.split('\r')
+        for i,line in enumerate(splt):
+            splt2 = line.split('\t')
+            pID = splt2[0] #the pert_id listed the line
+            pDesc = splt2[1]
+            targets = splt2[2]
+            targets = targets.split(';')
+            targets = [x for x in targets if x != '']
+            if targets[0] == '' or targets[0] == '?' or targets[0] == '-666':
+                continue
+            else:
+                targetDict[pID] = targets
+                pDescDict[pID] = pDesc
+### drugbank
+work_dir = '/xchip/cogs/projects/target_id/DrugBank_26June2013'
+if not os.path.exists(work_dir):
+    os.mkdir(work_dir)
+
+targetSheetF = '/xchip/cogs/projects/target_id/7June2014/A2_DrugBank_targets_tab.txt'
+targetDict = {}
+pDescDict = {}
+with open(targetSheetF,'rt') as f:
+    for string in f:
+        splt = string.split('\r')
+        for i,line in enumerate(splt):
+            splt2 = line.split('\t')
+            pID = splt2[0] #the pert_id listed the line
+            pDesc = splt2[1]
+            targets = splt2[2:]
+            targets = [x for x in targets if x != '']
+            # targets = targets.split(';')
+            if targets[0] == '' or targets[0] == '?' or targets[0] == '-666':
+                continue
+            else:
+                targetDict[pID] = targets
+                pDescDict[pID] = pDesc
+### DOS
+work_dir = '/xchip/cogs/projects/DOS/8July_target_id'
+if not os.path.exists(work_dir):
+    os.mkdir(work_dir)
+
+##############################
+### run dgo operations ###
+##############################
 
 reload(dgo)
-dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_connection')
-dg.add_dictionary(targetDict=targetDictCGS)
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
+# dg.add_dictionary(targetDict=targetDictCGS)
 # dg.get_sig_ids(genomic_pert='KD',is_gold=True)
 # dg.run_drug_gene_query(metric='spearman',max_processes=10)
 # #wait until queries finish
 dg.make_result_frames(gp_type='KD',metric='spearman')
 
-#make empty pDescDict
+# make empty pDescDict
 fullBRDs = []
 for ind in dg.dfCS.index:
     brd = ind[0]
@@ -32,9 +86,9 @@ for brd in uniqBRDs:
     pDescDict[brd] = '-666'
 
 inFile = '/xchip/cogs/projects/oncoDome/OncoDome_genes.txt'
-outDir = 'oncoDome_2July'
-if not os.path.exists(work_dir+'/'+outDir):
-    os.mkdir(work_dir+'/'+outDir)
+outDir = 'oncoDome_11July'
+if not os.path.exists(dg.outputdir+'/'+outDir):
+    os.mkdir(dg.outputdir+'/'+outDir)
 cgsList = []
 with open(inFile,'rt') as f:
     for string in f:
@@ -43,8 +97,8 @@ with open(inFile,'rt') as f:
 geneAll = set(cgsList)
 # check to see gene has a CGS
 geneCGS = geneAll.copy()
+CM = mu.CMapMongo()
 for gene in geneAll:
-	CM = mu.CMapMongo()
 	CGSsigs = CM.find({'pert_type':'trt_sh.cgs','pert_iname':gene},{'sig_id':True,'pert_iname':True})
 	if not CGSsigs:
 		geneCGS.remove(gene)
@@ -58,6 +112,11 @@ for gene in geneCGS:
                                 n_uncorrected=20,
                                 connection_test='two_sided')
 
+#pax8
+
+##############################
+### drugbank xml annotations ###
+##############################
 
 ### retrieve info from drugbank - gene target info and 
 #number of drugs targeting that drug
