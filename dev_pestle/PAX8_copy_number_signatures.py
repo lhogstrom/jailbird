@@ -14,7 +14,7 @@ import cmap.util.tool_ops as to
 import cmap.analytics.dgo as dgo
 # import cmap.analytics.oracle as oracle
 
-work_dir = '/xchip/cogs/projects/target_id/copy_number_15Jul'
+work_dir = '/xchip/cogs/projects/target_id/PAX8_copy_number_15Jul'
 if not os.path.exists(work_dir):
     os.mkdir(work_dir)
 
@@ -44,8 +44,9 @@ dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
 dg.add_dictionary(targetDict=targetDict)
 dg.get_sig_ids(genomic_pert='KD',is_gold=True)
 
-cnFile = '/xchip/cogs/projects/repurposing/PAX8/PAX8_50_50_s2n_n1x22268.gct'
-cnFile = '/xchip/cogs/projects/repurposing/PAX8/PAX8_100_100_s2n_n1x22268.gct'
+# cnFile = '/xchip/cogs/projects/repurposing/PAX8/PAX8_50_50_s2n_n1x22268.gct'
+# cnFile = '/xchip/cogs/projects/repurposing/PAX8/PAX8_100_100_s2n_n1x22268.gct'
+cnFile = '/xchip/cogs/projects/repurposing/cn/cn_loss_lm_n1003x978.gctx'
 cn = gct.GCT()
 cn.read(cnFile)
 #generate query - using sig_score file
@@ -83,6 +84,7 @@ for cell1 in dg.cell_lines_tested:
 # dg.make_result_frames(gp_type='OE',metric='spearman')
 gp_type = 'KD'
 work_dir = dg.outputdir
+metric = 'spearman'
 #which cell lines have a result dir
 cellDirs = [f for f in os.listdir(work_dir) if os.path.isdir(work_dir+'/'+f)]
 prog = progress.DeterminateProgressBar('dataframe read')
@@ -138,49 +140,59 @@ for icell, cell1 in enumerate(cellDirs):
 dg.dfCS = df
 dg.dfRank = dfRank
 
-### look at oncoDome genes
-inFile = '/xchip/cogs/projects/oncoDome/OncoDome_genes.txt'
-outDir = 'oncoDome_15July'
-if not os.path.exists(dg.outputdir+'/'+outDir):
-    os.mkdir(dg.outputdir+'/'+outDir)
-cgsList = []
-with open(inFile,'rt') as f:
-    for string in f:
-        splt = string[:-1]
-        cgsList.append(splt)
-geneAll = set(cgsList)
-# check to see gene has a CGS
-cnGenes = []
-for gene in geneAll:
-    if gene in dg.dfRank.columns:
-        cnGenes.append(gene)
-for gene in cnGenes:
-    dg.gene_to_drug_similarity(testGene=gene,
-                                gp_type='KD',
-                                metric='spearman',
-                                outName=outDir + '/gene_to_drug',
-                                pDescDict=pDescDict,
-                                n_rand=10000,
-                                n_uncorrected=20,
-                                connection_test='two_sided')
+dg.gene_to_drug_similarity(testGene='score',
+                            gp_type='KD',
+                            metric='spearman',
+                            outName='/gene_to_drug',
+                            pDescDict=pDescDict,
+                            n_rand=10000,
+                            n_uncorrected=20,
+                            connection_test='two_sided')
 
-### test known connections
-dg.test_known_connections(gp_type='KD',
-                        metric='spearman',
-                        pDescDict=pDescDict,
-                        outName='test_dg_graphs2',
-                        conn_thresh=.05,
-                        make_graphs=False,
-                        n_rand=100000,
-                        connection_test='two_sided')
-dg.FDR_correction(pDescDict=pDescDict,
-                gp_type='KD',
-                metric='spearman',
-                outName='FDR_pass',
-                alpha=0.2,
-                make_graphs=True,
-                specificity_graph=True)
-dg.fdr_html_summary(fdrDir='FDR_pass',specificity_graph=True)
-dg.store_parameters_rpt()
-outF = os.path.join(dg.outputdir,'drug-target_summary_peyton.txt')
-dg.make_target_summary(outF,dir_loc='apriori_connections_pass_FDR')
+
+# ### look at oncoDome genes
+# inFile = '/xchip/cogs/projects/oncoDome/OncoDome_genes.txt'
+# outDir = 'oncoDome_15July'
+# if not os.path.exists(dg.outputdir+'/'+outDir):
+#     os.mkdir(dg.outputdir+'/'+outDir)
+# cgsList = []
+# with open(inFile,'rt') as f:
+#     for string in f:
+#         splt = string[:-1]
+#         cgsList.append(splt)
+# geneAll = set(cgsList)
+# # check to see gene has a CGS
+# cnGenes = []
+# for gene in geneAll:
+#     if gene in dg.dfRank.columns:
+#         cnGenes.append(gene)
+# for gene in cnGenes:
+#     dg.gene_to_drug_similarity(testGene=gene,
+#                                 gp_type='KD',
+#                                 metric='spearman',
+#                                 outName=outDir + '/gene_to_drug',
+#                                 pDescDict=pDescDict,
+#                                 n_rand=10000,
+#                                 n_uncorrected=20,
+#                                 connection_test='two_sided')
+
+# ### test known connections
+# dg.test_known_connections(gp_type='KD',
+#                         metric='spearman',
+#                         pDescDict=pDescDict,
+#                         outName='test_dg_graphs2',
+#                         conn_thresh=.05,
+#                         make_graphs=False,
+#                         n_rand=100000,
+#                         connection_test='two_sided')
+# dg.FDR_correction(pDescDict=pDescDict,
+#                 gp_type='KD',
+#                 metric='spearman',
+#                 outName='FDR_pass',
+#                 alpha=0.2,
+#                 make_graphs=True,
+#                 specificity_graph=True)
+# dg.fdr_html_summary(fdrDir='FDR_pass',specificity_graph=True)
+# dg.store_parameters_rpt()
+# outF = os.path.join(dg.outputdir,'drug-target_summary_peyton.txt')
+# dg.make_target_summary(outF,dir_loc='apriori_connections_pass_FDR')

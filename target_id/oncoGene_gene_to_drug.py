@@ -68,7 +68,7 @@ if not os.path.exists(work_dir):
 ##############################
 
 reload(dgo)
-dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_connection')
 # dg.add_dictionary(targetDict=targetDictCGS)
 # dg.get_sig_ids(genomic_pert='KD',is_gold=True)
 # dg.run_drug_gene_query(metric='spearman',max_processes=10)
@@ -76,14 +76,14 @@ dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
 dg.make_result_frames(gp_type='KD',metric='spearman')
 
 # make empty pDescDict
-fullBRDs = []
-for ind in dg.dfCS.index:
-    brd = ind[0]
-    fullBRDs.append(brd)
-uniqBRDs = list(set(fullBRDs))
-pDescDict = {}
-for brd in uniqBRDs:
-    pDescDict[brd] = '-666'
+# fullBRDs = []
+# for ind in dg.dfCS.index:
+#     brd = ind[0]
+#     fullBRDs.append(brd)
+# uniqBRDs = list(set(fullBRDs))
+# pDescDict = {}
+# for brd in uniqBRDs:
+#     pDescDict[brd] = '-666'
 
 inFile = '/xchip/cogs/projects/oncoDome/OncoDome_genes.txt'
 outDir = 'oncoDome_11July'
@@ -113,6 +113,16 @@ for gene in geneCGS:
                                 connection_test='two_sided')
 
 #pax8
+outDir = 'PAX8_17July'
+gene = 'PAX8'
+dg.gene_to_drug_similarity(testGene=gene,
+                            gp_type='KD',
+                            metric='spearman',
+                            outName=outDir,
+                            pDescDict=pDescDict,
+                            n_rand=10000,
+                            n_uncorrected=35,
+                            connection_test='two_sided')
 
 ##############################
 ### drugbank xml annotations ###
@@ -218,3 +228,18 @@ with codecs.open('csvout.csv', 'w', 'utf-8') as csvout, open('dtout.csv', 'w') a
             dtout.write((','.join((drugid,targetid)))+'\n')
 
         csvout.write((','.join((drugid,drugname,drugtype)))+'\n')
+
+
+### scratch for null dist slide
+max_group_size = 10
+niter = 10000
+nullMtrx = np.zeros([max_group_size,niter])
+for n_obs in range(1,max_group_size):
+    permMtrx = np.random.rand(n_obs,niter)
+    nullDist = permMtrx.prod(axis=0)
+    nullMtrx[n_obs,:] = nullDist
+valDist = nullMtrx[8,:]
+plt.hist(valDist, bins=np.logspace(-10, 0 , 50))
+# plt.hist(valDist,30)
+plt.gca().set_xscale("log")
+plt.show()

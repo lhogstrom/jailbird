@@ -22,10 +22,12 @@ if not os.path.exists(work_dir):
 #test query
 pert_list = ['BRD-K69840642', 'BRD-K41859756']
 pDescDict = {'BRD-K69840642':'ISOX','BRD-K41859756':'NVP-AUY922'}
+targetDict = {'BRD-K69840642':['HSPA9'],'BRD-K41859756':['HSPA5']}
 
-dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
-dg.get_sig_ids(genomic_pert='KD',targetDict_loaded=False,pert_list=pert_list,is_gold=True)
-dg.run_drug_gene_query(metric='spearman',max_processes=10)
+
+dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman2')
+# dg.get_sig_ids(genomic_pert='KD',targetDict_loaded=False,pert_list=pert_list,is_gold=True)
+# dg.run_drug_gene_query(metric='spearman',max_processes=10)
 
 ### get query files
 metric = 'spearman'
@@ -47,47 +49,41 @@ for icell, cell1 in enumerate(cellDirs):
 # file2 = '/xchip/cogs/projects/target_id/CTD2_25June2013/drug_KD_spearman/PC3/sig_query_out/result_SPEARMAN_n440x5163.gctx'
 qres = queryresult.QueryResult()
 qres.read_multiple(fileList,transpose=True,rank_axis=1)
+reload(oracle)
 ocl = oracle.Oracle(qres,out=dg.outputdir)
-ocl.build_groups(["pert_iname"], ["pert_id"])
-ocl.connect()
+ocl.build_groups(["pert_iname","pert_time"], ["pert_id"])
+ocl.connect_row()
+ocl.connect_expected(targetDict)
+ocl.connect(direction='both')
+
 ocl.mk_summary_html()
 
 
+### run oracle on CTD2 
+work_dir = '/xchip/cogs/projects/target_id/CTD2_25June2013/oracle_17Jul'
+if not os.path.exists(work_dir):
+    os.mkdir(work_dir)
 
-files = fileList
-rank_axis = 1
-ds = pd.DataFrame()
-for file in  files:
-    dstmp = gct.fastGCT(file)
-    rankTmp = dstmp.frame.rank(ascending=False,axis=rank_axis)
-    pctrankTmp = rankTmp / float(rankTmp.shape[rank_axis])
-    if len(ds) == 0:
-        ds = dstmp.frame
-        rank = rankTmp
-        pctrank = pctrankTmp
-    else:
-        ds = pd.concat([ds,dstmp.frame],axis=0)
-        rank = pd.concat([rank,rankTmp],axis=0)
-        pctrank = pd.concat([pctrank,pctrankTmp],axis=0)
-self.score = ds
-self.rank = rank
-self.pctrank = pctrank
+targetSheetF = '/xchip/cogs/projects/target_id/4June2013/Informer2_drug_targets.txt'
+targetDict = {}
+pDescDict = {}
+with open(targetSheetF,'rt') as f:
+    for string in f:
+        splt = string.split('\r')
+        for i,line in enumerate(splt):
+            splt2 = line.split('\t')
+            pID = splt2[0] #the pert_id listed the line
+            pDesc = splt2[1]
+            targets = splt2[2]
+            targets = targets.split(';')
+            targets = [x for x in targets if x != '']
+            if targets[0] == '' or targets[0] == '?' or targets[0] == '-666':
+                continue
+            else:
+                targetDict[pID] = targets
+                pDescDict[pID] = pDesc
 
-### group
-
-        if len(sample_fields)==1:
-            sample_groupvar = self.query.rdesc.ix[:,sample_fields[0]].tolist()
-        else:
-            sample_groupvar = map(lambda x: '_'.join(x),
-                                 self.query.rdesc.ix[:,sample_fields].values)
-        self.row_groups = self.query.rdesc.index.groupby(np.array(sample_groupvar))
-        
-        if len(query_fields)==1:
-            query_groupvar = self.query.cdesc.ix[:,query_fields[0]].tolist()
-        else:
-            query_groupvar = map(lambda x: '_'.join(x),
-                                  query.cdesc.ix[:,query_fields].values)
-        self.col_groups = self.query.cdesc.index.groupby(np.array(query_groupvar))
+### scratch code playing with oracle modules ###
 
 
 ### connect 
@@ -125,4 +121,93 @@ ocl.connection_summary.to_csv(os.path.join(ocl.out,
 print "All connections computed."
 
 
+### connect - one row at a time
+qids='all'
+sig_ids='all'
+groupvar=None
+method="rank_product",
+irection='pos'
+n_jobs=1
+niter=10000
+direction='pos'
 
+# assert self.row_groups is not None, "Must define row_groups. Call build_groups first."
+# assert self.col_groups is not None, "Must define col_groups. Call build_groups first."
+# assert direction in ['pos','neg','both'], "direction must be 'pos','neg',or 'both'"
+
+# self.method=method
+# self.method_ = method
+summary_list = []
+for q in ocl.row_groups.keys():
+    print "Connecting query group %s" % q
+    # row_vals = ocl.query.pctrank.ix[ocl.row_groups[q]]
+    testStats = []
+    counts = []
+    prog = progress.DeterminateProgressBar('row test statistic')
+    for ig,g in enumerate(ocl.col_groups.keys()):
+        prog.update('querying cps',ig,len(ocl.col_groups.keys()))
+        rnk_vals = ocl.query.pctrank.ix[ocl.row_groups[q],ocl.col_groups[g]]
+        testStat = rnk_vals.prod().prod()
+        testStats.append(testStat)
+        count = rnk_vals.count().sum()
+        counts.append(count)
+
+
+    csR = ocl.dfCS.ix[brd][ind]
+
+
+
+    cpRank = self.dfRank.ix[brd]
+    cpSmRank = cpRank/100 # convert ranks back to 0 to 1
+    nCPs.append(cpRes.shape[0])
+    meanSer = cpRes.mean()
+    meanRnk = cpRank.mean()
+    prodRnk = cpSmRank.product()
+
+for q in self.row_groups.keys():
+    print "Connecting query group %s" % q
+    for g in self.col_groups.keys():
+        rnk_vals = self.query.pctrank.ix[self.row_groups[q],self.col_groups[g]]
+        score_vals = self.query.score.ix[self.row_groups[q],self.col_groups[g]]
+
+
+
+
+
+ocl.method=method
+assert direction in ['pos','neg','both'], "direction must be 'pos','neg',or 'both'"
+if ocl.method not in CONNECTIVITY_FUNCTIONS:
+    raise ValueError("Method '%s' not supported. " % ocl.method)
+else:
+    connector_class = CONNECTIVITY_FUNCTIONS[ocl.method]
+    ocl.method_ = connector_class()
+summary_list = []
+for q in ocl.row_groups.keys():
+    print "Connecting query group %s" % q
+    for g in ocl.col_groups.keys():
+        #print "Connecting to group %s"  % str(g)
+        values = ocl.query.pctrank.ix[ocl.row_groups[q],ocl.col_groups[g]]
+        entry = ocl.method_(ocl.query,values,q,g,direction)
+        summary_list.append(entry)
+        
+ocl.connection_summary = pd.DataFrame(summary_list)
+ocl.fdr_correction()
+ocl.connection_summary.sort(columns='q_value',inplace=True)
+ocl.connection_summary.to_csv(os.path.join(ocl.out,
+                                            'connection_summary.txt'),
+                               sep='\t',index=False)
+print "All connections computed."
+
+
+
+### oracle example 
+
+file = '/xchip/cogs/rogerhu/scratch/test_oracle/result_SPEARMAN_n14x10.gctx'
+# rp = connectors.RankProductConnector()
+qres = queryresult.QueryResult()
+qres.read(file)
+ocl = oracle.Oracle(qres,out='/xchip/cogs/rogerhu/scratch/oracle')
+ocl.build_groups(["pert_iname"], ["pert_iname"])
+ocl.connect()
+ocl.plot_all(connection_plots.rank_plot,variant="cell_id",plot_title="rank by cell_id")
+ocl.mk_summary_html()
