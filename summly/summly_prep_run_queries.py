@@ -14,7 +14,7 @@ if not os.path.exists(work_dir):
 
 #retrieve sig ids from mongo - on per cp per cell line?
 ### make target_dict
-# targetSheetF = '/xchip/cogs/projects/target_id/4June2013/Informer2_drug_targets.txt'
+# targetSheetF = '/xchip/cogs/projects/target_id/4June20    13/Informer2_drug_targets.txt'
 # targetDict = {}
 # pDescDict = {}
 # with open(targetSheetF,'rt') as f:
@@ -77,19 +77,19 @@ cmd = ' '.join(['rum -q local -f sig_query_tool',
 os.system(cmd)
 
 #run summly as a system call
-matlab -r "A=3;MyScript"
-matlab -nodesktop -r "brd = 'BRD-K68065987'; /xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m"
-matlab -nodesktop -r "/xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m"
-matlab -r "run_summly(brd = 'BRD-K81418486')"
-to_run = '/xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m'
-DosCmd = 'matlab -wait -automation -nosplash -r "run \'' + to_run + "', exit\""
-matlab -wait -automation -nosplash -r "brd = 'BRD-K68065987'; run /xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m"
+# matlab -r "A=3;MyScript"
+# matlab -nodesktop -r "brd = 'BRD-K68065987'; /xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m"
+# matlab -nodesktop -r "/xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m"
+# matlab -r "run_summly(brd = 'BRD-K81418486')"
+# to_run = '/xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m'
+# DosCmd = 'matlab -wait -automation -nosplash -r "run \'' + to_run + "', exit\""
+# matlab -wait -automation -nosplash -r "brd = 'BRD-K68065987'; run /xchip/cogs/hogstrom/scripts/jailbird/summly/run_summly.m"
 
 ### run external queries
-work_dir = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel'
+work_dir = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel_minus_phenox'
 metric = 'wtcs'
-fup = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/cflix_up_sm.gmt'
-fdn = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/cflix_dn_sm.gmt'
+fup = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/cflix_up_minus_phenox.gmt'
+fdn = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/cflix_dn_minus_phenox.gmt'
 cmd = ' '.join(['rum -q local -f sig_query_tool',
          '--uptag ' + fup,
          '--dntag ' + fdn,         

@@ -16,7 +16,7 @@ fup = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/cflix_up_sm.gmt'
 fdn = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/cflix_dn_sm.gmt'
 sig_query_tool('uptag', fup, 'dntag', fdn,'metric','wtcs','row_space','full')
 
-resDir = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/jul25/my_analysis.sig_query_tool.2013072509300493/';
+resDir = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel_minus_phenox/jul26/my_analysis.sig_query_tool.2013072615304993';
 outDir = '/xchip/cogs/hogstrom/analysis/summly/cflix_pannel/';
 sig_summly_tool(resDir, '--out', outDir)
 
