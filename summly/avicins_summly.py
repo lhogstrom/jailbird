@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import cmap.analytics.dgo as dgo
 import cmap.util.progress as progress
 import pandas as pd
+import matplotlib
 
 work_dir = '/xchip/cogs/projects/avicins/gold_10um'
 if not os.path.exists(work_dir):
@@ -34,6 +35,7 @@ pDescDict = {'BRD-A15100685':'avicin-d','BRD-A33746814':'avicin-g','BRD-A6959228
 ########################################
 ### write sig ids to file - run query ##
 ########################################
+
 CM = mu.CMapMongo()
 cellAll = CM.find({'pert_id':{'$regex':avicinsBrds[0]},'pert_dose':{'$gt':3}},{'cell_id':True})
 cgsCells = list(set(cellAll))
@@ -75,15 +77,32 @@ os.system(cmd)
 # Metabolic enzymes like GAPDH or Aldolase or Actin isoforms like Arp2/3 
 # surface in the query. Proteins with reactive cysteines are of great interest.
 
+########################################
+### read + explore summly results ######
+########################################
 
 ### read in summly results
 graphDir = work_dir + '/graph_out'
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
 nCp = len(avicinsBrds)
+#avicin matrix setup 
 avicinMtrx_sum_score = np.zeros((nCp,nCp))
 avicinMtrx_PercSummly = np.zeros((nCp,nCp))
 avicinMtrx_rank = np.zeros((nCp,nCp))
+#goi matrix setup 
+goiTested = ('PIK3CA',
+     'PIK3CB',
+     'GAPDH',
+     'AKT1',
+     'AKT2',
+     'MTOR',
+     'ALDOA',
+     'NFKB1',
+     'MYC')
+nGT = len(goiTested)
+goi_sum_score = np.zeros((nCp,nGT))
+goi_PercSummly = np.zeros((nCp,nGT))
 for ibrd,brd in enumerate(avicinsBrds):
     # brd = 'BRD-A15100685'
     basePath = work_dir + '/sig_query_10um'
@@ -99,7 +118,8 @@ for ibrd,brd in enumerate(avicinsBrds):
     cpRes['rank'] = np.arange(1,len(cpRes)+1)
     cgsRes = sumRes[sumRes['pert_type'] == 'trt_sh.cgs']
     cgsRes['rank'] = np.arange(1,len(cgsRes)+1)
-    oeRes = sumRes[sumRes['pert_type'] == 'trt_sh.oe']
+    oeRes = sumRes[sumRes['pert_type'] == 'trt_oe']
+    oeRes['rank'] = np.arange(1,len(oeRes)+1)
     ### matrix of avicin self connections
     for ibrd2, brd2 in enumerate(avicinsBrds):
         indSum = cpRes[cpRes['pert_id'] == brd2]['sum_score']
@@ -113,43 +133,60 @@ for ibrd,brd in enumerate(avicinsBrds):
         avicinMtrx_sum_score[ibrd,ibrd2] = sumScore
         avicinMtrx_PercSummly[ibrd,ibrd2] = percSummly
         avicinMtrx_rank[ibrd,ibrd2] = rank
-        print brd + ' ' + brd2 + ' ' + str(percSummly) + ' ' + str(sumScore)
-    # define genes of interest
-    goi = ['GAPDH', 'ARP2', 'ARP3', 'ALDOA', 'ALDOB'] #genes of interes
-    goi = ['PIK3CA', 'PIK3CB', 'AKT1', 'AKT2', 'MTOR', 'NFKB1','MYC', 'AMPK'] #genes of interes
-    goiSet = set(goi)
-    goiShort = goiSet.copy()
-    # how many of these genes have been knocked down?
-    cgsGenes = cgsRes['pert_iname'] 
-    for gene in goi:
-        if not gene in cgsGenes.values:
-            print gene + ' not in CGS list'
-            goiShort.remove(gene) #leave only genes we have profiled
-    # place to find it
-    for gene in goiShort:
-        indSum = cgsRes[cgsRes['pert_iname'] == gene]['sum_score']
+        # print brd + ' ' + brd2 + ' ' + str(percSummly) + ' ' + str(sumScore)
+    ### matrix of gene of interest connection
+    # geneRes = cgsRes # select oe or kd data
+    geneRes = oeRes # select oe or kd data
+    for igene,gene in enumerate(goiTested):
+        indSum = geneRes[geneRes['pert_iname'] == gene]['sum_score']
+        if not indSum:
+            print brd + ' - ' + gene + ' not compared' 
+            continue
         sumScore = indSum.values[0]
-        indrank = cgsRes[cgsRes['pert_iname'] == gene]['rank']
+        indrank = geneRes[geneRes['pert_iname'] == gene]['rank']
         rank = indrank.values[0]
-        percSummly = rank / float(len(cgsRes))
-        print gene + ' ' + str(percSummly) + ' ' + str(sumScore)
-    #plot distribution of sum_scores
-    metric = 'sum_score'
-    metVals = sumRes[metric]
-    metricVals = metVals.copy()
-    metricVals.sort()
-    metricVals = metricVals[::-1]
-    plt.plot(metricVals)
-    plt.xlabel('perturbagens')
-    plt.ylabel(metric)
-    plt.title('distributions of scores for ' + pDescDict[brd])
-    plt.savefig(os.path.join(graphDir,brd + '_' + metric + '.png'))
-    plt.close()
+        percSummly = rank / float(len(geneRes))
+        goi_sum_score[ibrd,igene] = sumScore
+        goi_PercSummly[ibrd,igene] = percSummly
+        print brd + ' ' + gene + ' ' + str(percSummly) + ' ' + str(sumScore)
+    ### plot distribution of sum_scores
+    # metric = 'sum_score'
+    # metVals = sumRes[metric]
+    # metricVals = metVals.copy()
+    # metricVals.sort()
+    # metricVals = metricVals[::-1]
+    # plt.plot(metricVals)
+    # plt.xlabel('perturbagens')
+    # plt.ylabel(metric)
+    # plt.title('distributions of scores for ' + pDescDict[brd])
+    # plt.savefig(os.path.join(graphDir,brd + '_' + metric + '.png'))
+    # plt.close()
     # plt.show()
-
 #make heatmap of rank score
-plt.imshow(avicinMtrx_sum_score,interpolation='nearest')
+# plt.imshow(avicinMtrx_sum_score,interpolation='nearest')
+plt.imshow(goi_sum_score,interpolation='nearest',cmap=matplotlib.cm.RdBu_r)
+plt.xticks(np.arange(9), goiTested,rotation=45)
+ytcks = [pDescDict[x] for x in avicinsBrds]
+plt.yticks(np.arange(4),ytcks)
+plt.title('avicin and gene KD - sum_score')
 plt.colorbar()
 plt.show()
 plt.close()
 
+
+### scratch 
+    ### check which genes have been tested with KD data
+    # goi = ['GAPDH', 'ARP2', 'ARP3', 'ALDOA', 'ALDOB'] #genes of interes
+    # goi = ['PIK3CA', 'PIK3CB', 'AKT1', 'AKT2', 'MTOR', 'NFKB1','MYC', 'AMPK'] #genes of interes
+    # goi = ['PIK3CA', 'PIK3CB', 'AKT1', 'AKT2', 
+    #     'MTOR', 'NFKB1','MYC', 'AMPK' ,'GAPDH', 
+    #     'ARP2', 'ARP3', 'ALDOA', 'ALDOB'] #genes of interes
+    # goiSet = set(goi)
+    # goiShort = goiSet.copy()
+    # # how many of these genes have been knocked down?
+    # cgsGenes = cgsRes['pert_iname'] 
+    # for gene in goi:
+    #     if not gene in cgsGenes.values:
+    #         print gene + ' not in CGS list'
+    #         goiShort.remove(gene) #leave only genes we have profiled
+    # place to find it

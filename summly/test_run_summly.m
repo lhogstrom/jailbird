@@ -32,8 +32,10 @@ outDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/';
 sig_summly_tool(resDir, '--out', outDir)
 
 %% avicin
-resDir = '/xchip/cogs/hogstrom/analysis/summly/avicin/sig_query_10um';
-outDir = '/xchip/cogs/hogstrom/analysis/summly/avicin';
+% resDir = '/xchip/cogs/hogstrom/analysis/summly/avicin/sig_query_10um';
+% outDir = '/xchip/cogs/hogstrom/analysis/summly/avicin';
+resDir = '/xchip/cogs/projects/avicins/gold_10um/sig_query_10um';
+outDir = '/xchip/cogs/projects/avicins/gold_10um/sig_query_10um';
 sig_summly_tool(resDir, '--out', outDir)
 
 
