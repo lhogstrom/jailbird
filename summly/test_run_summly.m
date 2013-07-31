@@ -27,8 +27,9 @@ outDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/summly_result
 sig_summly_tool(resDir, '--out', outDir)
 
 %% combined perts - more than one pert into summly 
-resDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/sig_query_no_7371';
-outDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/';
+% resDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/sig_query_no_7371';
+resDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/sig_query';
+outDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/sig_query';
 sig_summly_tool(resDir, '--out', outDir)
 
 %% avicin
