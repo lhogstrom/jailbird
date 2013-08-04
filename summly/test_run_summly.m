@@ -39,5 +39,9 @@ resDir = '/xchip/cogs/projects/avicins/gold_10um/sig_query_10um';
 outDir = '/xchip/cogs/projects/avicins/gold_10um/sig_query_10um';
 sig_summly_tool(resDir, '--out', outDir)
 
+%% cdt2
+resDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/ctd2_sig_query';
+outDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/ctd2_sig_query';
+sig_summly_tool(resDir, '--out', outDir)
 
 

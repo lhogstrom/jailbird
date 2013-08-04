@@ -14,7 +14,7 @@ from matplotlib import cm
 
 # get directory
 wkdir = '/xchip/cogs/projects/avicins/' 
-out = wkdir + '/pert_explorer_avicins'
+out = wkdir + '/pert_explorer_avicins2'
 if not os.path.exists(out):
     os.mkdir(out)
 
@@ -26,7 +26,8 @@ for brd in avicinsBrds:
     if not os.path.exists(out):
         os.mkdir(out)
     # examine drug rosiglitazone, on CPC006 plates, gold signatures
-    query = {'sig_id' : {'$regex' : 'PCLB00'}, 'is_gold' : True} 
+    # query = {'sig_id' : {'$regex' : 'PCLB00'}, 'is_gold' : True} 
+    query = {'sig_id' : {'$regex' : 'PCLB00'}, 'is_gold' : True, 'pert_dose':{'$gt':3}}
     self = PertExplorer(pert_id = brd,
                         metric = 'wtcs',
                         query = query,
@@ -53,6 +54,7 @@ for brd in avicinsBrds:
                                       ('distil_cc_q75', {'vmin' : 0, 'vmax' : 1}),
                                       ('distil_ss', {'vmin' : 0, 'vmax' : 10})],
                       annots_bottom = [('cell_lineage', True)],
+                      showfig = False
                       title = 'Example clustering for sig_id ' + pDescDict[brd])
     self.heatmap.save(format = 'png')
 
