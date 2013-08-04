@@ -304,7 +304,7 @@ for cell_tp in tpSet:
     plt.close()
 
 
-### 1+2 dose-consistant connection
+### 1+2 dose-consistent connection
 # requires strong dose connection at 1 conecntration
 # consistant directionality at two adjacent concentrations
 
@@ -319,7 +319,7 @@ minThresh2 = 2
 maxThresh1 = 85
 maxThresh2 = 75
 
-#is min val less than thresh?
+#is min val less than thresh1?
 if min1 <= minThresh1:
     minFlag = 1
     iSig = smFrame['rank'].argmin() #index of most extreme
@@ -329,7 +329,7 @@ if min1 <= minThresh1:
 else:
     minFlag = 0
 
-#is max val greater than thresh?
+#is max val greater than thresh1?
 if max1 >= maxThresh1:
     maxFlag = 1
     iSig = smFrame['rank'].argmax() #index of most extreme
@@ -343,7 +343,7 @@ if minFlag and maxFlag:
     print 'inconsistant directionality'
     continue
 
-
+# check if two adjacent concentrations pass thresh2
 for iSig in iSigs:
     if maxFlag == 1: 
         threshBool = smFrame['rank'] > maxThresh2
@@ -361,9 +361,11 @@ for iSig in iSigs:
         if sum(threshBool[iInt:iInt+3]) == 3:
             doseResponse = 1
     #check two bellow
-    if iInt-1 >= 0:
-        if sum(threshBool[iInt:iInt+3]) == 3:
+    if iInt-2 >= 0:
+        if sum(threshBool[iInt-2:iInt+1]) == 3:
             doseResponse = 1
+    if doseResponse == 1:
+        continue
 
 
 #maybe the KD should be the starting query
