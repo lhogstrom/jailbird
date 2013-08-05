@@ -367,6 +367,9 @@ for iSig in iSigs:
     if doseResponse == 1:
         continue
 
+if doseResponse == 1:
+    print brd + ' dose connection to' + gene1 + ' in ' + cell_tp
+
 
 #maybe the KD should be the starting query
 
