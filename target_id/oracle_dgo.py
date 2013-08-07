@@ -10,6 +10,7 @@ import cmap.util.progress as progress
 import subprocess
 import cmap.util.tool_ops as to
 import cmap.analytics.dgo as dgo
+import cmap.analytics.dgo_oracle as dgo_oracle
 
 import unittest
 import numpy as np
@@ -23,7 +24,6 @@ if not os.path.exists(work_dir):
 pert_list = ['BRD-K69840642', 'BRD-K41859756']
 pDescDict = {'BRD-K69840642':'ISOX','BRD-K41859756':'NVP-AUY922'}
 targetDict = {'BRD-K69840642':['HSPA9'],'BRD-K41859756':['HSPA5']}
-
 
 dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman2')
 # dg.get_sig_ids(genomic_pert='KD',targetDict_loaded=False,pert_list=pert_list,is_gold=True)

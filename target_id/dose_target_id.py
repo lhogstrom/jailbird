@@ -78,6 +78,111 @@ for brd in hogSet:
         hogTargetDict[brd] = targetDict[brd]
 
 ####################################
+### oracle drug-gene object ##########
+####################################
+
+import cmap.analytics.dgo_oracle as dgo_oracle
+reload(dgo_oracle)
+dg = dgo_oracle.QueryTargetAnalysis(out=work_dir)
+dg.add_dictionary(targetDict=targetDict)
+# dg.get_sig_ids(genomic_pert='KD',is_gold=True)
+# dg.get_sig_ids(genomic_pert='KD',targetDict_loaded=False,pert_list=pert_list,is_gold=True)
+# dg.run_drug_gene_query(metric='spearman',max_processes=10)
+dg.make_qres_obj(metric='spearman',gp_type='KD')
+dg.test_known_connections(gp_type='KD',metric='spearman',
+                            outName='dgo_oracle_connection_graphs',niter=10000,
+                            conn_thresh=.01,connection_direction='both',
+                            make_graphs=True,dose_graph=False)
+
+
+direction = 'both'
+# q = targetDict.keys()[0]
+q = 'BRD-K73319509'
+grp1 = targetDict[q][0]
+grpInnerMtch = [x for x in dg.ocl.col_groups.keys() if x.split('_')[0] == grp1]
+g = grpInnerMtch[0]
+rnk_vals = dg.ocl.query.pctrank.ix[dg.ocl.row_groups[q],dg.ocl.col_groups[g]]
+score_vals = dg.ocl.query.score.ix[dg.ocl.row_groups[q],dg.ocl.col_groups[g]]
+#calculate p-value
+entry = dg.ocl.method_(dg.ocl.query,rnk_vals,q,g,direction)
+# summary_list.append(entry)
+rnk_vals = rnk_vals.unstack()
+score_vals = score_vals.unstack()
+rnk_vals = rnk_vals[rnk_vals.notnull()]
+score_vals = score_vals[score_vals.notnull()]
+
+ref_ind = 1 
+inSer = rnk_vals
+platePres = [x[ref_ind].split(':')[0] for x in inSer.index]
+drug_tps = [x.split('_')[1]+ '_' + x.split('_')[2] for x in platePres]
+doses = [float(x[ref_ind].split(':')[-1]) for x in inSer.index]
+doseFrame = pd.DataFrame({'rank':inSer,'dose': doses,'cell_tp':kd_tps})
+tpSet = set(drug_tps)
+for cell_tp in tpSet:
+    smFrame = doseFrame[doseFrame['cell_tp'] == cell_tp]
+    smFrame = smFrame.sort('dose')
+    brd = smFrame.index[0][ref_ind].split(':')[1][:13]
+    # doseRange = range(1,len(smFrame)+1)
+    doseStr = [str(x) for x in smFrame['dose']]
+    ### 1+2 dose-consistent connection
+    # requires strong dose connection at 1 conecntration
+    # consistant directionality at two adjacent concentrations
+    max1 = max(smFrame['rank'])
+    min1 = min(smFrame['rank'])
+    minThresh1 = .01
+    minThresh2 = .02
+    maxThresh1 = .85
+    maxThresh2 = .75
+    #is min val less than thresh1?
+    if min1 <= minThresh1:
+        minFlag = 1
+        iSig = smFrame['rank'].argmin() #index of most extreme
+        #find indices of extreme
+        iSigs = smFrame[smFrame['rank'] < minThresh1].index
+        # connDirect = 'pos'
+    else:
+        minFlag = 0
+    #is max val greater than thresh1?
+    if max1 >= maxThresh1:
+        maxFlag = 1
+        iSig = smFrame['rank'].argmax() #index of most extreme
+        #find indices of extreme
+        iSigs = smFrame[smFrame['rank'] > maxThresh1].index
+        # connDirect = 'pos'
+    else:
+        maxFlag = 0
+    # both positive and negative connections?
+    if minFlag and maxFlag:
+        print 'inconsistant directionality'
+        continue
+    # check if two adjacent concentrations pass thresh2
+    for iSig in iSigs:
+        if maxFlag == 1: 
+            threshBool = smFrame['rank'] > maxThresh2
+        if minFlag == 1: 
+            threshBool = smFrame['rank'] < minThresh2
+        iInt = smFrame.index.get_loc(iSig)
+        nSm = len(smFrame)
+        doseResponse = 0
+        #check above and bellow
+        if iInt+1 <= nSm-1 and iInt-1 >= 0:
+            if sum(threshBool[iInt-1:iInt+2]) == 3:
+                doseResponse = 1
+        #check two above
+        if iInt+2 <= nSm-1:
+            if sum(threshBool[iInt:iInt+3]) == 3:
+                doseResponse = 1
+        #check two bellow
+        if iInt-2 >= 0:
+            if sum(threshBool[iInt-2:iInt+1]) == 3:
+                doseResponse = 1
+        if doseResponse == 1:
+            continue
+    if doseResponse == 1:
+        print brd + ' dose connection to' + gene1 + ' in ' + cell_tp
+
+
+####################################
 ### make drug-gene object ##########
 ####################################
 

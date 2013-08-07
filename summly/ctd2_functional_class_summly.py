@@ -34,36 +34,36 @@ for ibrd,brd in enumerate(allCtd2):
     pDescDict[brd] = allinames[ibrd]
 
 ### run queries for cps
-cgsCells = ['A375', 'A549', 'ASC', 'HA1E', 'HEPG2', 'HCC515', 'HT29', 'MCF7', 'NPC', 'PC3', 'VCAP']
-processes = set()
-file1 = work_dir + '/' + 'ctd2_sigs.grp'
-for pert in allCtd2:
-    sigs = []
-    for cell in cgsCells:
-        CM = mu.CMapMongo()
-        #dose min
-        # pert_query = CM.find({'pert_id':{'$regex':pert},'is_gold':True,'cell_id':cell,'pert_dose':{'$gt':5}},{'sig_id':True},limit=1)
-        #no dose min
-        pert_query = CM.find({'pert_id':{'$regex':pert},'is_gold':True,'cell_id':cell},{'sig_id':True},limit=1)
-        if pert_query:
-            sigs.append(pert_query[0])
-        # else:
-        #     print 'no sig for ' + pert + ' in ' + cell
-    with open(file1, 'a') as f:
-        [f.write(x + '\n') for x in sigs]
-metric = 'wtcs'
-queryDir = work_dir + '/ctd2_sig_query'
-if not os.path.exists(queryDir):
-    os.mkdir(queryDir)
-cmd = ' '.join(['rum -q local -f sig_query_tool',
-         '--sig_id ' + file1,
-         '--metric ' + metric,
-         '--column_space full',
-         '--out ' + queryDir,
-         '--mkdir false',
-         '--save_tail false'])
-         # '--row_space bing', 
-os.system(cmd)
+# cgsCells = ['A375', 'A549', 'ASC', 'HA1E', 'HEPG2', 'HCC515', 'HT29', 'MCF7', 'NPC', 'PC3', 'VCAP']
+# processes = set()
+# file1 = work_dir + '/' + 'ctd2_sigs.grp'
+# for pert in allCtd2:
+#     sigs = []
+#     for cell in cgsCells:
+#         CM = mu.CMapMongo()
+#         #dose min
+#         # pert_query = CM.find({'pert_id':{'$regex':pert},'is_gold':True,'cell_id':cell,'pert_dose':{'$gt':5}},{'sig_id':True},limit=1)
+#         #no dose min
+#         pert_query = CM.find({'pert_id':{'$regex':pert},'is_gold':True,'cell_id':cell},{'sig_id':True},limit=1)
+#         if pert_query:
+#             sigs.append(pert_query[0])
+#         # else:
+#         #     print 'no sig for ' + pert + ' in ' + cell
+#     with open(file1, 'a') as f:
+#         [f.write(x + '\n') for x in sigs]
+# metric = 'wtcs'
+# queryDir = work_dir + '/ctd2_sig_query'
+# if not os.path.exists(queryDir):
+#     os.mkdir(queryDir)
+# cmd = ' '.join(['rum -q local -f sig_query_tool',
+#          '--sig_id ' + file1,
+#          '--metric ' + metric,
+#          '--column_space full',
+#          '--out ' + queryDir,
+#          '--mkdir false',
+#          '--save_tail false'])
+#          # '--row_space bing', 
+# os.system(cmd)
 
 ########################################
 ###### full ctd2 summly results ######
@@ -77,7 +77,7 @@ for grp in grpSet:
     grpToCp[grp] = list(grpPerts.values)
     brdGrpList.extend(grpPerts.values)
 # get list of cps in summly dir
-basePath = work_dir + '/sig_query'
+basePath = work_dir + '/ctd2_sig_query'
 # basePath = '/xchip/cogs/hogstrom/analyszis/summly/cp_class/ctd2_sig_query'
 dateID = 'aug01/my_analysis.sig_summly_tool.2013080119394091'
 summDir = '/'.join([basePath,dateID])
@@ -155,3 +155,92 @@ for grpGene in grpToCp:
     outF = os.path.join(graphDir,grpGene + '_compound_group_heatmap.png')
     fig.savefig(outF, bbox_inches='tight')
     plt.close()
+
+
+
+### average number of hairpins that go into a CGS at the top of the summmly lists
+genes = list(cgsRes['pert_iname'].values)
+CM = mu.CMapMongo()
+nrepFrame = CM.find({'pert_iname' : {'$in' : genes},'pert_type':'trt_sh.cgs'}, {'pert_iname':True,'cell_id':True,'distil_nrep':True}, toDataFrame = True)
+nrepFrame.sort_index(by = 'pert_iname', inplace = True)
+#calculate average number of distil_nreps for each cgs across cell lines
+avFrame = nrepFrame.groupby(['pert_iname']).mean()
+avNrep = avFrame['distil_nrep']
+
+upReps = []
+dnReps = []
+for ibrd,brd in enumerate(cpDirs):
+    basePath = work_dir + '/sig_query_10um'
+    dateID = 'jul29/my_analysis.sig_summly_tool.2013072914520591'
+    inFile = '/'.join([summDir,
+                    brd,
+                    brd+'_summly.txt'])
+    sumRes = pd.io.parsers.read_csv(inFile,sep='\t')
+    # filter to only cps / cgs
+    pd.io.parsers.read_csv
+    cpRes = sumRes[sumRes['pert_type'] == 'trt_cp']
+    cpRes['rank'] = np.arange(1,len(cpRes)+1)
+    cgsRes = sumRes[sumRes['pert_type'] == 'trt_sh.cgs']
+    cgsRes['rank'] = np.arange(1,len(cgsRes)+1)
+    oeRes = sumRes[sumRes['pert_type'] == 'trt_oe']
+    oeRes['rank'] = np.arange(1,len(oeRes)+1)
+    #sort by summly results
+    resNrep = avNrep.reindex(index=cgsRes['pert_iname'])
+    up50 = resNrep.ix[:50].values
+    dn50 = resNrep.ix[-50:].values
+    upReps = np.append(up50,upReps)
+    dnReps = np.append(dn50,dnReps)
+
+### make histogram of nrep counts - baseline vs summly results
+n, bins, patches = plt.hist(avNrep.values,40)
+
+plt.hist(up50,bins=bins)
+
+
+fig = plt.figure(1, figsize=(20, 8))
+plt.suptitle('distil_nrep compound group',fontsize=14, fontweight='bold')
+plt.subplot(211)
+plt.title('all KDs')
+plt.xlabel('distil_nreps')
+n, bins, patches = plt.hist(avNrep.values,40)
+plt.subplot(212)
+plt.title('top connecting KDs')
+nR, binsR, patchesR = plt.hist(upReps,bins=bins,color='r')
+plt.xlabel('distil_nreps')
+
+ = n/float(sum(n))
+ratiosR = nR/float(sum(nR))
+
+ratioDiff = ratiosR-ratios
+ratioRatio = ratiosR/ratios
+
+#plot ratio
+
+plt.imshow(grp_sum_score,
+        interpolation='nearest',
+        cmap=matplotlib.cm.RdBu_r,
+        vmin=-1, 
+        vmax=1)
+plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
+# ytcks = [pDescDict[x] for x in avicinsBrds]
+plt.yticks(np.arange(len(grp)),ytcks)
+plt.colorbar()
+outF = os.path.join(graphDir,grpGene + '_compound_group_heatmap.png')
+fig.savefig(outF, bbox_inches='tight')
+plt.close()
+
+
+
+### scratch
+# inameSer = nrepFrame['pert_iname']
+# nrepFrame['distil_nrep']
+# inameSer.value_counts()
+# akt1 = nrepFrame[nrepFrame['pert_iname'] == 'AKT1']
+
+# scratchFrm = pd.Series(list(set(nrepFrame['pert_iname'].values)))
+# scratchFrm = scratchFrm.sort()
+# outF = '/xchip/cogs/hogstrom/analysis/summly/cp_class/KD_gene_symbols.txt'
+# scratchFrm.to_csv(path=outF,sep='\t')
+# outF = gseaDir + '/' + brd + '_KD_summly_result.txt'
+# scoreSeries = pd.Series(cgsRes['sum_score'].values, index=cgsRes['pert_iname'])
+# scoreSeries.to_csv(path=outF,sep='\t')
