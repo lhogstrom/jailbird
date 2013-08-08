@@ -186,48 +186,30 @@ for ibrd,brd in enumerate(cpDirs):
     oeRes['rank'] = np.arange(1,len(oeRes)+1)
     #sort by summly results
     resNrep = avNrep.reindex(index=cgsRes['pert_iname'])
-    up50 = resNrep.ix[:50].values
-    dn50 = resNrep.ix[-50:].values
+    up50 = resNrep.ix[:25].values
+    dn50 = resNrep.ix[-25:].values
     upReps = np.append(up50,upReps)
     dnReps = np.append(dn50,dnReps)
 
 ### make histogram of nrep counts - baseline vs summly results
-n, bins, patches = plt.hist(avNrep.values,40)
-
-plt.hist(up50,bins=bins)
-
-
 fig = plt.figure(1, figsize=(20, 8))
-plt.suptitle('distil_nrep compound group',fontsize=14, fontweight='bold')
+plt.suptitle('distil_nrep distribution',fontsize=14, fontweight='bold')
 plt.subplot(211)
 plt.title('all KDs')
-plt.xlabel('distil_nreps')
+plt.xlabel('average distil_nreps per gene')
 n, bins, patches = plt.hist(avNrep.values,40)
 plt.subplot(212)
-plt.title('top connecting KDs')
+plt.title('CTD2 summly top connecting KDs')
 nR, binsR, patchesR = plt.hist(upReps,bins=bins,color='r')
-plt.xlabel('distil_nreps')
-
- = n/float(sum(n))
-ratiosR = nR/float(sum(nR))
-
-ratioDiff = ratiosR-ratios
-ratioRatio = ratiosR/ratios
+plt.xlabel('average distil_nreps per gene')
 
 #plot ratio
+plt.plot(bins[:40],nrepRatio,'o')
+plt.title('overrepresentation of high distil_nreps in summly results',fontsize=14, fontweight='bold')
+plt.xlabel('average number of hairpins in cgs (distil_nreps)')
+plt.ylabel('ratio top connectors to baseline')
 
-plt.imshow(grp_sum_score,
-        interpolation='nearest',
-        cmap=matplotlib.cm.RdBu_r,
-        vmin=-1, 
-        vmax=1)
-plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
-# ytcks = [pDescDict[x] for x in avicinsBrds]
-plt.yticks(np.arange(len(grp)),ytcks)
-plt.colorbar()
-outF = os.path.join(graphDir,grpGene + '_compound_group_heatmap.png')
-fig.savefig(outF, bbox_inches='tight')
-plt.close()
+
 
 
 
@@ -244,3 +226,7 @@ plt.close()
 # outF = gseaDir + '/' + brd + '_KD_summly_result.txt'
 # scoreSeries = pd.Series(cgsRes['sum_score'].values, index=cgsRes['pert_iname'])
 # scoreSeries.to_csv(path=outF,sep='\t')
+
+# n, bins, patches = plt.hist(avNrep.values,40)
+# plt.hist(up50,bins=bins)
+

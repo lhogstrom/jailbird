@@ -29,7 +29,7 @@ pIDs = list(geneF['pert_id'].values)
 pIDs = list(set(pIDs))
 targetDict = {}
 for brd in pIDs:
-    targetDict[brd] = 'TP53'
+    targetDict[brd] = ['TP53']
 
 #make dictionary of inames
 pDescDict = {}
@@ -62,11 +62,11 @@ dg.test_known_connections(gp_type='KD',
 dg.FDR_correction(pDescDict=pDescDict,
                 gp_type='KD',
                 metric='spearman',
-                outName='test_FDR2',
+                outName='FDR_pass',
                 alpha=0.2,
                 make_graphs=True,
                 specificity_graph=True)
-dg.fdr_html_summary(fdrDir='test_FDR2',specificity_graph=True)
+dg.fdr_html_summary(fdrDir='FDR_pass',specificity_graph=True)
 dg.store_parameters_rpt()
 outF = os.path.join(dg.outputdir,'drug-target_summary_peyton.txt')
 dg.make_target_summary(outF,dir_loc='apriori_connections_pass_FDR')
@@ -84,7 +84,7 @@ dg.test_known_connections(gp_type='OE',
                         pDescDict=pDescDict,
                         outName='two_sided_dg_graphs',
                         n_rand=100000,
-                        make_graphs=False,
+                        make_graphs=True,
                         connection_test='two_sided')
 dg.FDR_correction(pDescDict=pDescDict,
                 gp_type='OE',
@@ -92,7 +92,7 @@ dg.FDR_correction(pDescDict=pDescDict,
                 outName='apriori_two_sided_pass_FDR',
                 alpha=0.2,
                 make_graphs=True,
-                specificity_graph=True)
+                specificity_graph=False)
 dg.fdr_html_summary(fdrDir='apriori_two_sided_pass_FDR',specificity_graph=True)
 # dg.gene_to_drug_similarity(testGene='ABCB5',gp_type='KD',metric='spearman',outName='gene_to_drug_connections',pDescDict=pDescDict,n_rand=10000,n_uncorrected=20)
 # # # dg.test_unknown_rank_product(gp_type='KD')
@@ -103,13 +103,13 @@ dg.store_parameters_rpt()
 
 
 ### run queries for cps
-cgsCells = ['A375', 'A549', 'ASC', 'HA1E', 'HEPG2', 'HCC515', 'HT29', 'MCF7', 'NPC', 'PC3', 'VCAP']
+cgsCells = ['A375', 'A549', 'HA1E', 'HEPG2', 'HCC515', 'HT29', 'MCF7', 'PC3', 'VCAP']
 processes = set()
 file1 = work_dir + '/' + 'TP53_stitch_cp_sigs.grp'
+CM = mu.CMapMongo()
 for pert in pIDs:
     sigs = []
     for cell in cgsCells:
-        CM = mu.CMapMongo()
         #dose min
         # pert_query = CM.find({'pert_id':{'$regex':pert},'is_gold':True,'cell_id':cell,'pert_dose':{'$gt':5}},{'sig_id':True},limit=1)
         #no dose min

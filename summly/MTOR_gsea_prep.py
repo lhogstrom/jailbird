@@ -69,9 +69,24 @@ for ibrd,brd in enumerate(grp):
     oeRes = sumRes[sumRes['pert_type'] == 'trt_oe']
     oeRes['rank'] = np.arange(1,len(oeRes)+1)
     #write list of kd/oe genes to a file for gsea preranked
-    outF = gseaDir + '/' + brd + '_KD_summly_result.txt'
+    outF = gseaDir + '/' + brd + '_KD_summly_result.rnk'
     scoreSeries = pd.Series(cgsRes['sum_score'].values, index=cgsRes['pert_iname'])
     scoreSeries.to_csv(path=outF,sep='\t')
+
+### for MTOR pathway list, which have gene symbols and KDs
+mtorFile = '/xchip/cogs/hogstrom/analysis/summly/cp_class/MTOR_cp_GSEA_lists/MTOR_gene_list_pathway_annot_no_greek.grp'
+mtorF = pd.read_csv(mtorFile)
+mtorSet = set([x[0] for x in mtorF.values])
+
+inameSer = cgsRes['pert_iname']
+inameSet = set(inameSer.values)
+overlap1 = inameSet.intersection(mtorSet)
+
+outF = '/xchip/cogs/hogstrom/analysis/summly/cp_class/MTOR_cp_GSEA_lists/MTOR_gene_list_pathway_gene_sym.grp'
+outFrame = pd.Series(data=list(overlap1))
+outFrame.to_csv(outF,index=False)
+
+
 
 
 
