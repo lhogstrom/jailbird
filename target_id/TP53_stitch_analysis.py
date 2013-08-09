@@ -41,6 +41,15 @@ for pert in pIDs:
         else:
             pDescDict[pert] = '-666'
 
+#generate dictionary with $in query
+# CM = mu.CMapMongo()
+# pert_query = CM.find({'pert_id':{'$in':pIDs},'is_gold':True},{'pert_id':True,'pert_iname':True})
+# for pert in pert_query:
+#     pDescDict[pert[0]] = pert[1]
+#         if pert in pert_query:
+#             pDescDict[pert] = pert_query[0]
+#         else:
+#             pDescDict[pert] = '-666'
 
 #run dgo - KDs
 dg = dgo.QueryTargetAnalysis(out=work_dir + '/drug_KD_spearman')
@@ -134,3 +143,89 @@ cmd = ' '.join(['rum -q local -f sig_query_tool',
          # '--row_space bing', 
 os.system(cmd)
 
+########################################
+###### make stitch summly heatmaps #####
+########################################
+
+# brdGrpList = []
+# grpSet = set(drugLabels['gene_dw_annot'])
+# grpToCp = {}
+# for grp in grpSet:
+#     grpPerts = drugLabels['pert_id'][drugLabels['gene_dw_annot'] == grp]
+#     grpToCp[grp] = list(grpPerts.values)
+#     brdGrpList.extend(grpPerts.values)
+# get list of cps in summly dir
+basePath = work_dir + '/tp53_stitch_query'
+# basePath = '/xchip/cogs/hogstrom/analyszis/summly/cp_class/ctd2_sig_query'
+dateID = 'aug08/my_analysis.sig_summly_tool.2013080819071649'
+summDir = '/'.join([basePath,dateID])
+cpDirs = [f for f in os.listdir(summDir) if os.path.isdir(summDir+'/'+f)]
+
+graphDir = work_dir + '/tp53_stitch_query/graph_out'
+if not os.path.exists(graphDir):
+    os.mkdir(graphDir)
+### examine functional gorup
+grpGene = 'TP53'
+grp = cpDirs
+nGrp = len(grp)
+grp_sum_score = np.zeros((nGrp,nGrp))
+grp_PercSummly = np.zeros((nGrp,nGrp))
+grp_rank = np.zeros((nGrp,nGrp))
+for ibrd,brd in enumerate(grp):
+    basePath = work_dir + '/sig_query_10um'
+    dateID = 'jul29/my_analysis.sig_summly_tool.2013072914520591'
+    inFile = '/'.join([summDir,
+                    brd,
+                    brd+'_summly.txt'])
+    sumRes = pd.io.parsers.read_csv(inFile,sep='\t')
+    # filter to only cps / cgs
+    pd.io.parsers.read_csv
+    cpRes = sumRes[sumRes['pert_type'] == 'trt_cp']
+    cpRes['rank'] = np.arange(1,len(cpRes)+1)
+    cgsRes = sumRes[sumRes['pert_type'] == 'trt_sh.cgs']
+    cgsRes['rank'] = np.arange(1,len(cgsRes)+1)
+    oeRes = sumRes[sumRes['pert_type'] == 'trt_oe']
+    oeRes['rank'] = np.arange(1,len(oeRes)+1)
+    #check group connection 
+    for ibrd2, brd2 in enumerate(grp):
+        indSum = cpRes[cpRes['pert_id'] == brd2]['sum_score']
+        if not indSum:
+            print brd + ' ' + brd2 + ' not compared' 
+            continue
+            grp_sum_score[ibrd,ibrd2] = np.nan
+            grp_PercSummly[ibrd,ibrd2] = np.nan
+            grp_rank[ibrd,ibrd2] = np.nan
+        sumScore = indSum.values[0]
+        indrank = cpRes[cpRes['pert_id'] == brd2]['rank']
+        rank = indrank.values[0]
+        percSummly = rank / float(len(cpRes))
+        grp_sum_score[ibrd,ibrd2] = sumScore
+        grp_PercSummly[ibrd,ibrd2] = percSummly
+        grp_rank[ibrd,ibrd2] = rank
+### print group heatmap
+fig = plt.figure(1, figsize=(20, 8))
+plt.suptitle(grpGene + ' compound group',fontsize=14, fontweight='bold')
+plt.subplot(121)
+plt.title('percent summly rank')
+plt.imshow(grp_PercSummly,
+        interpolation='nearest',
+        cmap=matplotlib.cm.RdBu_r,
+        vmin=0, 
+        vmax=1)
+ytcks = [pDescDict[x] for x in grp]
+plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
+plt.yticks(np.arange(len(grp)),ytcks)
+plt.colorbar()
+plt.subplot(122)
+plt.title('sum_score')
+plt.imshow(grp_sum_score,
+        interpolation='nearest',
+        cmap=matplotlib.cm.RdBu_r,
+        vmin=-1, 
+        vmax=1)
+plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
+plt.yticks(np.arange(len(grp)),ytcks)
+plt.colorbar()
+outF = os.path.join(graphDir,grpGene + '_compound_group_heatmap.png')
+fig.savefig(outF, bbox_inches='tight')
+plt.close()

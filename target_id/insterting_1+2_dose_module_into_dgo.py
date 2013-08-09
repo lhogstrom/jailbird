@@ -41,20 +41,8 @@ dg.test_known_connections(gp_type='KD',metric='spearman',
 
 
 ### oracle scratch
-direction = 'both'
-q = targetDict.keys()[0]
-grp1 = targetDict[q][0]
-grpInnerMtch = [x for x in dg.ocl.col_groups.keys() if x.split('_')[0] == grp1]
-g = grpInnerMtch[0]
-rnk_vals = dg.ocl.query.pctrank.ix[dg.ocl.row_groups[q],dg.ocl.col_groups[g]]
-score_vals = dg.ocl.query.score.ix[dg.ocl.row_groups[q],dg.ocl.col_groups[g]]
-#calculate p-value
-entry = dg.ocl.method_(dg.ocl.query,rnk_vals,q,g,direction)
-# summary_list.append(entry)
-rnk_vals = rnk_vals.unstack()
-score_vals = score_vals.unstack()
-rnk_vals = rnk_vals[rnk_vals.notnull()]
-score_vals = score_vals[score_vals.notnull()]
+
+
 
 
 

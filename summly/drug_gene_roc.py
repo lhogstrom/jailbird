@@ -109,7 +109,7 @@ for ibrd,brd in enumerate(cpDirs):
     oeRes = sumRes[sumRes['pert_type'] == 'trt_oe']
     oeRes['rank'] = np.arange(1,len(oeRes)+1)
     #sort by summly results
-    tmpFrame = pd.DataFrame(data=cgsRes['sum_score'].values,index=cgsRes['pert_iname'],columns=[brd])
+    tmpFrame = pd.DataFrame(data=oeRes['sum_score'].values,index=oeRes['pert_iname'],columns=[brd])
     sumScoreFrm = pd.concat([sumScoreFrm,tmpFrame],axis=1)
 
 ### create a matrix of expected relationships
@@ -150,7 +150,7 @@ pl.xlim([0.0, 1.0])
 pl.ylim([0.0, 1.0])
 pl.xlabel('False Positive Rate')
 pl.ylabel('True Positive Rate')
-pl.title('Receiver operating characteristic')
+pl.title('Expected Drug-OE ROC')
 pl.legend(loc="lower right")
 pl.show()
 
@@ -207,7 +207,7 @@ pl.xlim([0.0, 1.0])
 pl.ylim([0.0, 1.0])
 pl.xlabel('False Positive Rate')
 pl.ylabel('True Positive Rate')
-pl.title('Receiver operating characteristic')
+pl.title('expected drug-drug ROC')
 pl.legend(loc="lower right")
 pl.show()
 

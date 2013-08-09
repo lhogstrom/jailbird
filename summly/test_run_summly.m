@@ -45,6 +45,6 @@ outDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/ctd2_sig_query';
 sig_summly_tool(resDir, '--out', outDir)
 
 %% tp53 STITCH cps
-resDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/ctd2_sig_query';
-outDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/ctd2_sig_query';
+resDir = '/xchip/cogs/hogstrom/analysis/summly/TP53_dgo/tp53_stitch_query';
+outDir = '/xchip/cogs/hogstrom/analysis/summly/TP53_dgo/tp53_stitch_query';
 sig_summly_tool(resDir, '--out', outDir)
