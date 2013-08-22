@@ -23,7 +23,7 @@ sig_summly_tool(resDir, '--out', outDir)
 
 %% test known drug-gene connections
 resDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/sig_query';
-outDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/summly_result';
+outDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/summly_result_2';
 sig_summly_tool(resDir, '--out', outDir)
 
 %% combined perts - more than one pert into summly 

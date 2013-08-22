@@ -127,7 +127,7 @@ for brd in dgMtrx.columns:
                 continue
             dgMtrx.ix[target,brd] = 1
 
-
+### ROC analysis for target-ID classes ###
 sumScores = sumScoreFrm.unstack()
 dg_labels = pd.DataFrame(dgMtrx.unstack(),columns=['label'])
 # labelFrm = pd.DataFrame(data=sumScores.values,index=sumScores.index,columns=[brd])
@@ -136,7 +136,6 @@ labelFrm = pd.concat([labelFrm,dg_labels],axis=1)
 labelSrt = labelFrm[sumScores.notnull()]
 labelSrt = labelSrt.sort(columns='sum_scores' ,ascending=False)
 
-#generate FDR
 # fpr, tpr, thresholds = roc_curve(dg_labels, sumScores)
 fpr, tpr, thresholds = roc_curve(labelSrt['label'].values, labelSrt['sum_scores'].values)
 roc_auc = auc(fpr, tpr)
