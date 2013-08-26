@@ -23,8 +23,9 @@ sig_summly_tool(resDir, '--out', outDir)
 
 %% test known drug-gene connections
 resDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/sig_query';
-outDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/summly_result_2';
-sig_summly_tool(resDir, '--out', outDir)
+outDir = '/xchip/cogs/hogstrom/analysis/summly/bioAs/BRD-K81418486/summly_result_saveFull';
+% sig_summly_tool(resDir, '--out', outDir)
+sig_summly_tool(resDir, '--out', outDir,'--save_full',true)
 
 %% combined perts - more than one pert into summly 
 % resDir = '/xchip/cogs/hogstrom/analysis/summly/cp_class/sig_query_no_7371';
