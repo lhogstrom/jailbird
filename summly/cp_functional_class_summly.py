@@ -13,7 +13,7 @@ work_dir = '/xchip/cogs/hogstrom/analysis/summly/cp_class'
 if not os.path.exists(work_dir):
     os.mkdir(work_dir)
 
-drugFile = '/xchip/cogs/projects/target_id/ctd2_annots/ctd2_merged_mapped_genes.txt'
+drugFile = '/xchip/cogs/projects/cp_annot/ctd2_annots/ctd2_merged_mapped_genes.txt'
 drugLabels = pd.io.parsers.read_csv(drugFile,sep='\t')
 targetSet = set(drugLabels['gene_dw_annot'])
 
@@ -92,20 +92,20 @@ inv_map = dict(zip(map1.values(), map1.keys()))
 ########################################
 
 # subset of molecular targets + cps
-bigGroups = ['AKT','BRAF','EGFR','HDAC','MAPK','MTOR','HSP90','PI3K','PPARG','TP53']
-brdGrpList = []
-grpToCp = {}
-for grp in bigGroups:
-    grpPerts = drugLabels['pert_id'][drugLabels['gene_dw_annot'] == grp]
-    grpToCp[grp] = list(grpPerts.values)
-    brdGrpList.extend(grpPerts.values)
+# bigGroups = ['AKT','BRAF','EGFR','HDAC','MAPK','MTOR','HSP90','PI3K','PPARG','TP53']
+# brdGrpList = []
+# grpToCp = {}
+# for grp in bigGroups:
+#     grpPerts = drugLabels['pert_id'][drugLabels['gene_dw_annot'] == grp]
+#     grpToCp[grp] = list(grpPerts.values)
+#     brdGrpList.extend(grpPerts.values)
 # get list of cps in summly dir
 basePath = work_dir + '/sig_query'
 dateID = 'jul30/my_analysis.sig_summly_tool.2013073021435191'
 summDir = '/'.join([basePath,dateID])
 cpDirs = [f for f in os.listdir(summDir) if os.path.isdir(summDir+'/'+f)]
 
-graphDir = work_dir + '/graph_out'
+graphDir = work_dir + '/graph_out_4Sept'
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
 ### examine each functional gorup
@@ -199,15 +199,31 @@ for grp in grpSet:
     brdGrpList.extend(grpPerts.values)
 # get list of cps in summly dir
 # basePath = work_dir + '/sig_query'
-basePath = '/xchip/cogs/hogstrom/analyszis/summly/cp_class/ctd2_sig_query'
+basePath = '/xchip/cogs/hogstrom/analysis/summly/cp_class/ctd2_sig_query'
 dateID = 'aug01/my_analysis.sig_summly_tool.2013080119394091'
 summDir = '/'.join([basePath,dateID])
 cpDirs = [f for f in os.listdir(summDir) if os.path.isdir(summDir+'/'+f)]
 
-graphDir = work_dir + '/ctd2_graph_out'
+graphDir = work_dir + '/ctd2_graph_out_4Sept'
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
+
+# take the average of a pairwise matrix
+def av_mtrx(mtrx):
+    nm = len(mtrx)
+    avMtrx = np.zeros((nm,nm))
+    for i1 in range(nm):
+        for i2 in range(nm):
+            val1 = mtrx[i1,i2]
+            val2 = mtrx[i2,i1]
+            avMtrx[i1,i2] = np.mean([val1,val2])
+            # avMtrxUp = np.triu(avMtrx,k=1)
+            iUp = np.tril_indices(nm)
+            avMtrx[iUp] = np.nan
+    return avMtrx
+
 ### examine each functional gorup
+sumScoreDict = {} #matrix of connections for each group
 for grpGene in grpToCp:
     if grpGene == '-666':
         continue
@@ -248,14 +264,20 @@ for grpGene in grpToCp:
             grp_sum_score[ibrd,ibrd2] = sumScore
             grp_PercSummly[ibrd,ibrd2] = percSummly
             grp_rank[ibrd,ibrd2] = rank
+    #take averages
+    av_grp_sum_score = av_mtrx(grp_sum_score)
+    av_grp_PercSummly = av_mtrx(grp_PercSummly)
+    av_grp_rank = av_mtrx(grp_rank)
+    # store averages
+    sumScoreDict[grpGene] = grp_sum_score
     ### print group heatmap
     fig = plt.figure(1, figsize=(20, 8))
     plt.suptitle(grpGene + ' compound group',fontsize=14, fontweight='bold')
     plt.subplot(121)
     plt.title('percent summly rank')
-    plt.imshow(grp_PercSummly,
+    plt.imshow(av_grp_PercSummly,
             interpolation='nearest',
-            cmap=matplotlib.cm.RdBu_r,
+            cmap=matplotlib.cm.Greens_r,
             vmin=0, 
             vmax=1)
     ytcks = [pDescDict[x] for x in grp]
@@ -264,15 +286,28 @@ for grpGene in grpToCp:
     plt.colorbar()
     plt.subplot(122)
     plt.title('sum_score')
-    plt.imshow(grp_sum_score,
+    plt.imshow(av_grp_sum_score,
             interpolation='nearest',
             cmap=matplotlib.cm.RdBu_r,
             vmin=-1, 
             vmax=1)
     plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
-    # ytcks = [pDescDict[x] for x in avicinsBrds]
     plt.yticks(np.arange(len(grp)),ytcks)
     plt.colorbar()
     outF = os.path.join(graphDir,grpGene + '_compound_group_heatmap.png')
     fig.savefig(outF, bbox_inches='tight')
     plt.close()
+
+#make boxplot of all connections
+grpList = []
+for gName in sumScoreDict:
+    m1 = sumScoreDict[gName]
+    upMtrx = av_mtrx(m1)
+    flatM = upMtrx.flatten()
+    flatM = flatM[~np.isnan(flatM)] # remove nan
+    grpList.append(flatM)
+plt.boxplot(grpList)
+
+
+
+

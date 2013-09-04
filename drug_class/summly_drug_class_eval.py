@@ -104,22 +104,21 @@ sigTable.to_csv(sigFile)
 # sumFile = wkdir + '/class_summary.txt'
 # grpSummary.to_csv(sumFile)
 
+# table for rajiv's criteria
 clGrpBy = drugLabels.groupby('CLASS')
 clGrps = clGrpBy.groups
-classDict = {}
+classDF= pd.DataFrame()
 for g in clGrps:
     ig = clGrps[g]
     for ibrd in ig:
         brd = drugLabels['BRD'][ibrd]
-        if brd not in sigTable:
+        if brd not in sigCounts.index:
             continue
         sigsT = sigTable.ix[brd]
         sigsT['pert_id'] = brd
         sigsT['class'] = g
         sigsT['n_total_sigs'] = sigCountSer.ix[brd]
         sigsT['n_cells'] = nCellDict[brd]
-        grpList = list(set(brdSer))
-        classDict[g] = grpList
-sigClass = pd.Series(classDict)
-
-sigsT.fillna(nCellDict)
+        classDF = pd.concat([classDF,sigsT],axis=0)
+sigFile = wkdir + '/sig_id_table.txt'
+classDF.to_csv(sigFile)
