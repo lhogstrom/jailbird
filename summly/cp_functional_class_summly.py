@@ -224,6 +224,7 @@ def av_mtrx(mtrx):
 
 ### examine each functional gorup
 sumScoreDict = {} #matrix of connections for each group
+percSummlyDict = {}
 for grpGene in grpToCp:
     if grpGene == '-666':
         continue
@@ -270,6 +271,7 @@ for grpGene in grpToCp:
     av_grp_rank = av_mtrx(grp_rank)
     # store averages
     sumScoreDict[grpGene] = grp_sum_score
+    percSummlyDict[grpGene] = grp_PercSummly
     ### print group heatmap
     fig = plt.figure(1, figsize=(20, 8))
     plt.suptitle(grpGene + ' compound group',fontsize=14, fontweight='bold')
@@ -299,15 +301,33 @@ for grpGene in grpToCp:
     plt.close()
 
 #make boxplot of all connections
-grpList = []
+sumScoreList = []
+percSumList = []
+tickList = []
 for gName in sumScoreDict:
+    # sum score setup
     m1 = sumScoreDict[gName]
     upMtrx = av_mtrx(m1)
     flatM = upMtrx.flatten()
     flatM = flatM[~np.isnan(flatM)] # remove nan
-    grpList.append(flatM)
-plt.boxplot(grpList)
+    sumScoreList.append(flatM)
+    # percent summly setup
+    m2 = percSummlyDict[gName]
+    upMtrx2 = av_mtrx(m2)
+    flatM2 = upMtrx2.flatten()
+    flatM2 = flatM2[~np.isnan(flatM2)] # remove nan
+    percSumList.append(flatM2)
+    #names
+    tickList.append(gName)
+plt.boxplot(sumScoreList)
+plt.xticks(np.arange(len(tickList)),tickList,rotation=45)
+plt.xlabel('compound class - by Molecular target',fontweight='bold')
+plt.ylabel('sum_score',fontweight='bold')
+plt.title('distribution of sum scores for CTD2 compound class',fontweight='bold')
 
-
-
+plt.boxplot(percSumList)
+plt.xticks(np.arange(len(tickList)),tickList,rotation=45)
+plt.xlabel('compound class - by molecular target',fontweight='bold')
+plt.ylabel('percent summly',fontweight='bold')
+plt.title('distribution of summly percents for CTD2 compound class',fontweight='bold')
 

@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib
 import pandas as pd
 
-wkdir = '/xchip/cogs/projects/cp_class_analysis/3Sept'
+wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/lists'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -122,3 +122,32 @@ for g in clGrps:
         classDF = pd.concat([classDF,sigsT],axis=0)
 sigFile = wkdir + '/sig_id_table.txt'
 classDF.to_csv(sigFile)
+
+# load in Rajiv's file
+pclFile = '/xchip/cogs/sig_tools/sig_summly/pcl/pcl_sig_info.txt'
+pclTbl = pd.read_csv(pclFile,sep='\t')
+sumSpaceFile = '/xchip/cogs/sig_tools/sig_query/results/a2_internal_wtcs.lm/query_info_n73597.txt'
+summSpace = pd.read_csv(sumSpaceFile,sep='\t')
+
+#sort based on pert_id
+pclGrp = pclTbl.groupby('pert_id')
+pclDict= pclGrp.groups
+for brd in pclDict:
+    tmpTbl = pclTbl.ix[pclDict[brd]] #table for the one pert_id
+    tmpSer = tmpTbl['sig_id'] # series of sig_ids
+    brdFile = wkdir + '/' + brd + '.grp'
+    tmpSer.to_csv(brdFile,index=False) # write sigs for each brd to a file
+
+#submit summly jobs to lsf
+for brd in pclDict:
+    summlyMtrx = '/xchip/cogs/sig_tools/sig_query/results/a2_internal_wtcs.lm/'
+    outDir = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out'
+    querySpace = wkdir + '/' + brd + '.grp'
+    cmd = ' '.join(['rum -q hour -x sig_summly_tool',
+             summlyMtrx,
+             '--query_space ' + querySpace,
+             '--group_query true',
+             '--out ' + outDir])
+    os.system(cmd)
+
+
