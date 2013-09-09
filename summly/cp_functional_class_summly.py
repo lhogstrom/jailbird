@@ -127,7 +127,6 @@ for grpGene in grpToCp:
                         brd+'_summly.txt'])
         sumRes = pd.io.parsers.read_csv(inFile,sep='\t')
         # filter to only cps / cgs
-        pd.io.parsers.read_csv
         cpRes = sumRes[sumRes['pert_type'] == 'trt_cp']
         cpRes['rank'] = np.arange(1,len(cpRes)+1)
         cgsRes = sumRes[sumRes['pert_type'] == 'trt_sh.cgs']
