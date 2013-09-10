@@ -19,13 +19,12 @@ if not os.path.exists(wkdir):
 drugFile = '/xchip/cogs/sig_tools/sig_summly/pcl/pcl_classes.txt'
 drugLabels = pd.io.parsers.read_csv(drugFile,sep='\t')
 #repalce ugly characters
-drugLabels['class'].str.replace("/","-")
-drugLabels['class'].str.replace(" ","_")
-drugLabels['class'].str.replace("/","_")
-drugLabels['class'].str.replace("&","_")
-drugLabels['class'].str.replace("?","_")
-drugLabels['class'].str.replace("(","_")
-drugLabels['class'].str.replace(")","_")
+drugLabels['class'] = drugLabels['class'].str.replace("/","-")
+drugLabels['class'] = drugLabels['class'].str.replace(" ","_")
+drugLabels['class'] = drugLabels['class'].str.replace("&","_")
+drugLabels['class'] = drugLabels['class'].str.replace("?","_")
+drugLabels['class'] = drugLabels['class'].str.replace("(","_")
+drugLabels['class'] = drugLabels['class'].str.replace(")","_")
 
 # set up dictionary of compound classes
 grpSet = set(drugLabels['class'])
@@ -167,7 +166,7 @@ for brd in pclDict:
 #submit summly jobs to lsf - CELL LINE INDEPENDENT MODE
 for brd in pclDict:
     summlyMtrx = '/xchip/cogs/sig_tools/sig_query/results/a2_internal_wtcs.lm/'
-    outDir = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out_independent'
+    outDir = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out_no_match'
     querySpace = wkdir + '/' + brd + '.grp'
     cmd = ' '.join(['rum -q hour -x sig_summly_tool',
              summlyMtrx,
@@ -180,18 +179,38 @@ for brd in pclDict:
 ###### full ctd2 summly results ######
 ########################################
 
-# take the average of a pairwise matrix
-def av_mtrx(mtrx):
+# take the average of a pairwise matrix - return upper right of matrix
+def av_mtrx_upper(mtrx):
     nm = len(mtrx)
     avMtrx = np.zeros((nm,nm))
     for i1 in range(nm):
         for i2 in range(nm):
             val1 = mtrx[i1,i2]
             val2 = mtrx[i2,i1]
-            avMtrx[i1,i2] = np.mean([val1,val2])
-            # avMtrxUp = np.triu(avMtrx,k=1)
-            iUp = np.tril_indices(nm)
-            avMtrx[iUp] = np.nan
+            if (val1 == -666) or (val2 == -666):
+                avMtrx[i1,i2] = np.nan
+            else:
+                avMtrx[i1,i2] = np.mean([val1,val2])            
+    # avMtrxUp = np.triu(avMtrx,k=1)
+    iUp = np.tril_indices(nm)
+    avMtrx[iUp] = np.nan
+    return avMtrx
+
+# take the average of a pairwise matrix
+def av_mtrx(mtrx):
+    nm = len(mtrx)
+    avMtrx = np.zeros((nm,nm))
+    for i1 in range(nm):
+        for i2 in range(nm):
+            if i1 == i2:
+                avMtrx[i1,i2] = np.nan
+                continue
+            val1 = mtrx[i1,i2]
+            val2 = mtrx[i2,i1]
+            if (val1 == -666) or (val2 == -666):
+                avMtrx[i1,i2] = np.nan
+            else:
+                avMtrx[i1,i2] = np.mean([val1,val2])
     return avMtrx
 
 # get list of cps in summly dir
@@ -211,25 +230,29 @@ for brd in pclDict:
     if not brd in cpPathDict:
         summlyLeftOut.appen(brd)
 
-graphDir = wkdir + '/graphs_Sept9'
+graphDir = wkdir + '/graphs_Sept10'
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
 
 ### examine each functional gorup
 sumScoreDict = {} #matrix of connections for each group
 percSummlyDict = {}
+rnkptDict = {}
 for grpName in grpToCp:
     if grpName == '-666':
         continue
     grp = grpToCp[grpName]
-    grp = [cp for cp in grp if cp in cpPathDict] # leave out compounds that don't have summly data
     if not grp: # skip if grp is empty
         continue
+    grp = [cp for cp in grp if cp in cpPathDict] # leave out compounds that don't have summly data
+    grpInames = [inameDict[cp] for cp in grp] # inames
+    grpZip = zip(*[grp,grpInames])
     # matrices for grp connections
     nGrp = len(grp)
     grp_sum_score = np.zeros((nGrp,nGrp))
-    grp_PercSummly = np.zeros((nGrp,nGrp))
-    grp_rank = np.zeros((nGrp,nGrp))
+    grp_rankpt = np.zeros((nGrp,nGrp))
+    # grp_PercSummly = np.zeros((nGrp,nGrp))
+    # grp_rank = np.zeros((nGrp,nGrp))
     for ibrd,brd in enumerate(grp):
         if not brd in cpPathDict:
             continue
@@ -245,48 +268,57 @@ for grpName in grpToCp:
         oeRes['rank'] = np.arange(1,len(oeRes)+1)
         #check group connection 
         for ibrd2, brd2 in enumerate(grp):
-            indSum = cpRes[cpRes['pert_id'] == brd2]['sum_score_4']
-            if not indSum:
+            indSum = cpRes[cpRes['pert_id'] == brd2]
+            if not indSum.any:
                 print brd + ' ' + brd2 + ' not compared' 
                 continue
-            sumScore = indSum.values[0]
-            indrank = cpRes[cpRes['pert_id'] == brd2]['rank']
-            rank = indrank.values[0]
-            percSummly = rank / float(len(cpRes))
+            sumScore = indSum['sum_score_4'].values[0]
+            meanRnkpt = indSum['mean_rankpt_4'].values[0]
             grp_sum_score[ibrd,ibrd2] = sumScore
-            grp_PercSummly[ibrd,ibrd2] = percSummly
-            grp_rank[ibrd,ibrd2] = rank
-    #make pairwise matrix into a pandas dataframe
-    sumScoreFrm = pd.DataFrame(grp_sum_score,index=grp,columns=grp)
-
-
+            grp_rankpt[ibrd,ibrd2] = meanRnkpt
+            # indrank = cpRes[cpRes['pert_id'] == brd2]['rank']
+            # rank = indrank.values[0]
+            # percSummly = rank / float(len(cpRes))
+            # grp_PercSummly[ibrd,ibrd2] = percSummly
+            # grp_rank[ibrd,ibrd2] = rank
     #take averages
     av_grp_sum_score = av_mtrx(grp_sum_score)
-    av_grp_PercSummly = av_mtrx(grp_PercSummly)
-    av_grp_rank = av_mtrx(grp_rank)
+    av_grp_rankpt = av_mtrx(grp_rankpt)
+    # av_grp_PercSummly = av_mtrx(grp_PercSummly)
+    # av_grp_rank = av_mtrx(grp_rank)
     # store averages
-    sumScoreDict[grpName] = grp_sum_score
-    percSummlyDict[grpName] = grp_PercSummly
+    sumScoreDict[grpName] = av_mtrx_upper(grp_sum_score)
+    rnkptDict[grpName] = av_mtrx_upper(grp_rankpt)
+    # percSummlyDict[grpName] = av_mtrx_upper(grp_PercSummly)
+    #make pairwise matrix into a pandas dataframe
+    Hindex = pd.MultiIndex.from_tuples(grpZip, names=['brd', 'iname'])
+    sumScoreFrm = pd.DataFrame(av_grp_sum_score,index=Hindex,columns=Hindex)
+    ssF = os.path.join(graphDir,grpName + '_average_sum_score_matrix.txt')
+    sumScoreFrm.to_csv(ssF,sep='\t')
+    #write rankpoint matrix
+    rankptFrm = pd.DataFrame(av_grp_rankpt,index=Hindex,columns=Hindex)
+    rpF = os.path.join(graphDir,grpName + '_mean_rankpt_matrix.txt')
+    rankptFrm.to_csv(rpF,sep='\t')
     ### print group heatmap
     fig = plt.figure(1, figsize=(20, 8))
     plt.suptitle(grpName + ' compound group',fontsize=14, fontweight='bold')
     plt.subplot(121)
-    plt.title('percent summly rank')
-    plt.imshow(av_grp_PercSummly,
+    plt.title('mean_rankpt_4')
+    plt.imshow(av_grp_rankpt,
             interpolation='nearest',
-            cmap=matplotlib.cm.Greens_r,
-            vmin=0, 
-            vmax=1)
+            cmap=matplotlib.cm.Greens,
+            vmin=-100, 
+            vmax=100)
     ytcks = [inameDict[x] for x in grp]
     plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
     plt.yticks(np.arange(len(grp)),ytcks)
     plt.colorbar()
     plt.subplot(122)
-    plt.title('sum_score')
+    plt.title('sum_score_4')
     plt.imshow(av_grp_sum_score,
             interpolation='nearest',
             cmap=matplotlib.cm.RdBu_r,
-            vmin=-1, 
+            vmin=-1,
             vmax=1)
     plt.xticks(np.arange(len(grp)), ytcks,rotation=75)
     plt.yticks(np.arange(len(grp)),ytcks)
@@ -295,35 +327,48 @@ for grpName in grpToCp:
     fig.savefig(outF, bbox_inches='tight')
     plt.close()
 
+#order goups acording to mean sum_score
+sumMeanDict = {}
+for gName in sumScoreDict:
+    sumMtrx = sumScoreDict[gName] # sum score matrix for group
+    meanSum = np.mean(sumMtrx[~np.isnan(sumMtrx)])
+    sumMeanDict[gName] = meanSum
+sumMeanSer = pd.Series(sumMeanDict)
+sumMeanSer = sumMeanSer.order()
+
 #make boxplot of all connections
 sumScoreList = []
-percSumList = []
+rnkptSumList = []
 tickList = []
-for gName in sumScoreDict:
+for gName in sumMeanSer.index:
     # sum score setup
     m1 = sumScoreDict[gName]
-    upMtrx = av_mtrx(m1)
-    flatM = upMtrx.flatten()
+    flatM = m1.flatten()
     flatM = flatM[~np.isnan(flatM)] # remove nan
     sumScoreList.append(flatM)
     # percent summly setup
-    m2 = percSummlyDict[gName]
-    upMtrx2 = av_mtrx(m2)
-    flatM2 = upMtrx2.flatten()
+    m2 = rnkptDict[gName]
+    flatM2 = m2.flatten()
     flatM2 = flatM2[~np.isnan(flatM2)] # remove nan
-    percSumList.append(flatM2)
+    rnkptSumList.append(flatM2)
     #names
     tickList.append(gName)
-plt.boxplot(sumScoreList)
-plt.xticks(np.arange(len(tickList)),tickList,rotation=45)
-plt.xlabel('compound class - by Molecular target',fontweight='bold')
-plt.ylabel('sum_score',fontweight='bold')
-plt.title('distribution of sum scores for CTD2 compound class',fontweight='bold')
+plt.boxplot(sumScoreList,vert=0)
+plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
+plt.tick_params(labelsize=8)
+plt.ylabel('compound class - by Molecular target',fontweight='bold')
+plt.xlabel('sum_score_4',fontweight='bold')
+plt.title('distribution of sum scores values by group',fontweight='bold')
+outF = os.path.join(graphDir,'sumScore_boxplot.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
 
-plt.boxplot(percSumList)
-plt.xticks(np.arange(len(tickList)),tickList,rotation=45)
-plt.xlabel('compound class - by molecular target',fontweight='bold')
-plt.ylabel('percent summly',fontweight='bold')
-plt.title('distribution of summly percents for CTD2 compound class',fontweight='bold')
-
-
+plt.boxplot(rnkptSumList,vert=0)
+plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
+plt.tick_params(labelsize=8)
+plt.ylabel('compound class',fontweight='bold')
+plt.xlabel('rankpt_4',fontweight='bold')
+plt.title('distribution of rankpt values by group',fontweight='bold')
+outF = os.path.join(graphDir,'rankpt_boxplot.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
