@@ -155,7 +155,7 @@ for brd in firstTbl.index:
 for brd in pclDict:
     summlyMtrx = '/xchip/cogs/sig_tools/sig_query/results/a2_internal_wtcs.lm/'
     outDir = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out_match'
-    querySpace = wkdir + '/' + brd + '.grp'
+    querySpace = wkdir + '/lists/' + brd + '.grp'
     cmd = ' '.join(['rum -q hour -x sig_summly_tool',
              summlyMtrx,
              '--query_space ' + querySpace,
@@ -167,7 +167,7 @@ for brd in pclDict:
 for brd in pclDict:
     summlyMtrx = '/xchip/cogs/sig_tools/sig_query/results/a2_internal_wtcs.lm/'
     outDir = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out_no_match'
-    querySpace = wkdir + '/' + brd + '.grp'
+    querySpace = wkdir + '/lists/' + brd + '.grp'
     cmd = ' '.join(['rum -q hour -x sig_summly_tool',
              summlyMtrx,
              '--query_space ' + querySpace,
@@ -331,7 +331,7 @@ for grpName in grpToCp:
 sumMeanDict = {}
 for gName in sumScoreDict:
     sumMtrx = sumScoreDict[gName] # sum score matrix for group
-    meanSum = np.mean(sumMtrx[~np.isnan(sumMtrx)])
+    meanSum = np.median(sumMtrx[~np.isnan(sumMtrx)])
     sumMeanDict[gName] = meanSum
 sumMeanSer = pd.Series(sumMeanDict)
 sumMeanSer = sumMeanSer.order()
