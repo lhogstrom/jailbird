@@ -46,6 +46,7 @@ pclaObj = pcla.PCLA(grpToCp,
                     wkdir)
 pclaObj.get_sig_ids()
 pclaObj.run_summly(cell_match_mode='true')
+summPath = pclaObj.out + '/sept11'
 pclaObj.make_summly_path_dict(summPath)
 pclaObj.inameDict = inameDict #make this part of the tool
 pclaObj.test_groups(make_heatmaps=False,
