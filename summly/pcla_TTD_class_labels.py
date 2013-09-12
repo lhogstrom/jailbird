@@ -14,19 +14,39 @@ if not os.path.exists(wkdir):
 
 drugFile = '/xchip/cogs/projects/cp_annot/ttd_cmap_export_filtered_20130910.txt'
 drugLabels = pd.io.parsers.read_csv(drugFile,sep='\t')
+drugLabels['Name'] = drugLabels['Name'].str.replace("/","-")
+drugLabels['Name'] = drugLabels['Name'].str.replace(" ","_")
+drugLabels['Name'] = drugLabels['Name'].str.replace("&","_")
+drugLabels['Name'] = drugLabels['Name'].str.replace("?","_")
+drugLabels['Name'] = drugLabels['Name'].str.replace("(","_")
+drugLabels['Name'] = drugLabels['Name'].str.replace(")","_")
 
+
+# all members of a family
+# brdLstLst = drugLabels.pert_ids_merged.str.split('|').tolist()
+# drugLabels['pert_ids_merged'] = brdLstLst
+# grouped = drugLabels.groupby('TTD_target_ID')
+# grouped.groups
+# ttd_cp_dict = {}
+# for group in grouped:
+#     groupName = group[1]['Name'].values[0]
+#     cpLstLst = group[1]['pert_ids_merged'].values
+#     cpLst = [item for sublist in cpLstLst for item in sublist] 
+#     cpLst = list(set(cpLst))# make sure list is unique
+#     ttd_cp_dict[groupName] = cpLst
+
+# specify directionality
 brdLstLst = drugLabels.pert_ids_merged.str.split('|').tolist()
 drugLabels['pert_ids_merged'] = brdLstLst
-grouped = drugLabels.groupby('TTD_target_ID')
-grouped.groups
-
+grouped = drugLabels.groupby(['TTD_target_ID','Category'])
 ttd_cp_dict = {}
 for group in grouped:
     groupName = group[1]['Name'].values[0]
+    groupCat = group[1]['Category'].values[0]
     cpLstLst = group[1]['pert_ids_merged'].values
     cpLst = [item for sublist in cpLstLst for item in sublist] 
-    cpLst = list(set(cpLst))# make sure list is unique
-    ttd_cp_dict[groupName] = cpLst
+    cpLst = list(set(cpLst)) # make sure list is unique
+    ttd_cp_dict[groupName+':'+groupCat] = cpLst
 
 inameDict = {}
 for x in drugLabels.iterrows():
@@ -40,13 +60,22 @@ gp_type = 'KD'
 metric = 'wtcs'
 pclaObj = pcla.PCLA(ttd_cp_dict,  
                     metric, 
-                    wkdir)
-pclaObj.get_sig_ids()
-pclaObj.run_summly(cell_match_mode='true')
-summPath = pclaObj.out + '/sept11'
+                    wkdir,
+                    summly_out_prefix='summly_out',
+                    pairwise_prefix='pairwise_matrices_by_Category',
+                    cell_match_mode=True, 
+                    row_space = 'lm')
+# pclaObj.get_sig_ids()
+# pclaObj.run_summly(rerun_mode=False)
+summPath = pclaObj.out + '/summly_out/sep11'
+pclaObj.make_summly_path_dict(summPath)
+# pclaObj.run_summly(rerun_mode=True)
 pclaObj.make_summly_path_dict(summPath)
 pclaObj.inameDict = inameDict #make this part of the tool
 pclaObj.test_groups(make_heatmaps=True,
+        group_size_min=3,
         sum_score_metric='sum_score_4',
         rankpt_metric='mean_rankpt_4')
 pclaObj.make_summary_boxplot()
+
+
