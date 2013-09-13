@@ -8,7 +8,7 @@ import cmap.io.gmt as gmt
 import cmap
 import pandas as pd
 
-wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/nonMatch_Sept12'
+wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/graphs_Sept11'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -37,28 +37,28 @@ inameDict = {}
 for ibrd,brd in enumerate(drugLabels['pert_id']):
     inameDict[brd] = drugLabels.ix[ibrd]['pert_iname']
 
-### 
+### instantiate pcla 
 reload(pcla)
 gp_type = 'KD'
 metric = 'wtcs'
-po = pcla.PCLA(grpToCp,
-                    metric,
+pclaObj = pcla.PCLA(grpToCp,  
+                    metric, 
                     wkdir,
                     summly_out_prefix='summly_out',
-                    pairwise_prefix='pairwise_matrices',
-                    cell_match_mode=False, 
+                    pairwise_prefix='pairwise_matrices_small_groups',
+                    cell_match_mode=True, 
                     row_space = 'lm')
-# po.get_sig_ids()
-# po.run_summly(rerun_mode=False)
-# summPath = po.out + '/summly_out/sep11'
-# summPath = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out/sep06'
-summPath_nMtch = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out_no_match/sep10'
-po.make_summly_path_dict(summPath_nMtch)
-# po.run_summly(rerun_mode=True)
-# po.make_summly_path_dict(summPath_nMtch)
-po.inameDict = inameDict #make this part of the tool
-po.test_groups(make_heatmaps=True,
-        group_size_min=3,
+### get sig_ids and run summly
+# pclaObj.get_sig_ids()
+# pclaObj.run_summly(rerun_mode=False)
+
+### if you already have a summly output, feed it to the tool
+summPath = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out/sep06'
+pclaObj.make_summly_path_dict(summPath)
+pclaObj.inameDict = inameDict #make this part of the tool
+pclaObj.test_groups(make_heatmaps=True,
+        group_size_min=8,
         sum_score_metric='sum_score_4',
         rankpt_metric='mean_rankpt_4')
-po.make_summary_boxplot()
+pclaObj.make_summary_boxplot()
+

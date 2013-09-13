@@ -46,7 +46,7 @@ for group in grouped:
     cpLstLst = group[1]['pert_ids_merged'].values
     cpLst = [item for sublist in cpLstLst for item in sublist] 
     cpLst = list(set(cpLst)) # make sure list is unique
-    ttd_cp_dict[groupName+':'+groupCat] = cpLst
+    ttd_cp_dict[groupName+'-'+groupCat] = cpLst
 
 inameDict = {}
 for x in drugLabels.iterrows():
@@ -58,24 +58,24 @@ for x in drugLabels.iterrows():
 reload(pcla)
 gp_type = 'KD'
 metric = 'wtcs'
-pclaObj = pcla.PCLA(ttd_cp_dict,  
+po = pcla.PCLA(ttd_cp_dict,  
                     metric, 
                     wkdir,
                     summly_out_prefix='summly_out',
                     pairwise_prefix='pairwise_matrices_by_Category',
                     cell_match_mode=True, 
                     row_space = 'lm')
-# pclaObj.get_sig_ids()
-# pclaObj.run_summly(rerun_mode=False)
-summPath = pclaObj.out + '/summly_out/sep11'
-pclaObj.make_summly_path_dict(summPath)
-# pclaObj.run_summly(rerun_mode=True)
-pclaObj.make_summly_path_dict(summPath)
-pclaObj.inameDict = inameDict #make this part of the tool
-pclaObj.test_groups(make_heatmaps=True,
-        group_size_min=3,
+# po.get_sig_ids()
+# po.run_summly(rerun_mode=False)
+summPath = po.out + '/summly_out/sep11'
+po.make_summly_path_dict(summPath)
+# po.run_summly(rerun_mode=True)
+po.make_summly_path_dict(summPath)
+po.inameDict = inameDict #make this part of the tool
+po.test_groups(make_heatmaps=False,
+        group_size_min=15,
         sum_score_metric='sum_score_4',
         rankpt_metric='mean_rankpt_4')
-pclaObj.make_summary_boxplot()
+po.make_summary_boxplot()
 
 
