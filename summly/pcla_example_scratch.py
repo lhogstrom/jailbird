@@ -8,7 +8,7 @@ import cmap.io.gmt as gmt
 import cmap
 import pandas as pd
 
-wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/nonMatch_Sept12'
+wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/nonMatch_Sept13'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -39,7 +39,6 @@ for ibrd,brd in enumerate(drugLabels['pert_id']):
 
 ### 
 reload(pcla)
-gp_type = 'KD'
 metric = 'wtcs'
 po = pcla.PCLA(grpToCp,
                     metric,
@@ -57,8 +56,10 @@ po.make_summly_path_dict(summPath_nMtch)
 # po.run_summly(rerun_mode=True)
 # po.make_summly_path_dict(summPath_nMtch)
 po.inameDict = inameDict #make this part of the tool
+po.get_inames()
 po.test_groups(make_heatmaps=True,
         group_size_min=3,
         sum_score_metric='sum_score_4',
         rankpt_metric='mean_rankpt_4')
 po.make_summary_boxplot()
+
