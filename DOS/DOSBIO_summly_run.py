@@ -63,13 +63,8 @@ for brd in dosbioSet:
             sigSummly = pd.concat([sigSummly,tmpTbl])
 sigs = sigSummly['sig_id']
 sigsF = wkdir + '/DOSBIO_summly_sigs.grp'
-sigs.to_csv(sigsF,index=False)
+# sigs.to_csv(sigsF,index=False)
 
-
-
-for inx in sigTable.index:
-    nT = len(sigTable.ix[inx])
-    if nT > 3:
 
 # print dos bios pert_ids to a file for rajiv
 dosbioSer = pd.Series(list(dosbioSet))

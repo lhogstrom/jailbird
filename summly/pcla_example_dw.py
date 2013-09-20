@@ -49,16 +49,18 @@ pclaObj = pcla.PCLA(grpToCp,
                     cell_match_mode=True, 
                     row_space = 'lm')
 ### get sig_ids and run summly
-# pclaObj.get_sig_ids()
+pclaObj.get_sig_ids()
 # pclaObj.run_summly(rerun_mode=False)
 
 ### if you already have a summly output, feed it to the tool
 summPath = '/xchip/cogs/sig_tools/sig_summly/pcl/summly_out/sep06'
 pclaObj.make_summly_path_dict(summPath)
 pclaObj.inameDict = inameDict #make this part of the tool
-pclaObj.test_groups(make_heatmaps=True,
-        group_size_min=8,
-        sum_score_metric='sum_score_4',
-        rankpt_metric='mean_rankpt_4')
-pclaObj.make_summary_boxplot()
+# pclaObj.test_groups(make_heatmaps=True,
+#         group_size_min=8,
+#         sum_score_metric='sum_score_4',
+#         rankpt_metric='mean_rankpt_4')
+# pclaObj.make_summary_boxplot()
+
+pclaObj.cluster_all_cps()
 
