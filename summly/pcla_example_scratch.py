@@ -9,7 +9,7 @@ import cmap
 import pandas as pd
 import matplotlib.pyplot as plt
 
-drugFile = '/xchip/cogs/sig_tools/sig_summly/pcl/pcl_classes.txt'
+drugFile = '/xchip/cogs/projects/pharm_class/pcl_classes.txt'
 drugLabels = pd.io.parsers.read_csv(drugFile,sep='\t')
 #repalce ugly characters
 drugLabels['class'] = drugLabels['class'].str.replace("/","-")
@@ -35,7 +35,7 @@ for ibrd,brd in enumerate(drugLabels['pert_id']):
     inameDict[brd] = drugLabels.ix[ibrd]['pert_iname']
 
 ### cell line match mode
-wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/Match_Sept16'
+wkdir = '/xchip/cogs/projects/pharm_class/Match_Sept27'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 reload(pcla)
@@ -47,10 +47,14 @@ po = pcla.PCLA(grpToCp,
                     pairwise_prefix='pairwise_matrices',
                     cell_match_mode=True, 
                     row_space = 'lm')
+summPath = '/xchip/cogs/data/rnwork/batch_summly/summly_lm50'
+po.make_rankpt_Mtrx(summPath)
+
 po.get_sig_ids()
 # po.run_summly(rerun_mode=False)
 # summPath = po.out + '/summly_out/sep11'
-summPath = '/xchip/cogs/projects/connectivity/summly/matched/src'
+# summPath = '/xchip/cogs/projects/connectivity/summly/matched/src'
+
 po.make_summly_path_dict(summPath)
 # po.run_summly(rerun_mode=True)
 # po.make_summly_path_dict(summPath_nMtch)
@@ -64,6 +68,10 @@ po.get_inames()
 po.cluster_all_cps(make_heatmaps=True,
         sum_score_metric='sum_score_4',
         rankpt_metric='mean_rankpt_4')
+po.test_class_interrelatedness(make_heatmaps=True,
+                            make_boxplots=True, 
+                            make_group_by_cp_mtrx=True,
+                            rankpt_metric='mean_rankpt_4')
 
 ### non match mode
 wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/nonMatch_Sept14'
@@ -150,3 +158,18 @@ allbrds = self.cpPathDict.keys()
 grp = allbrds
 rankptMtrx = po.whole_rankpt
 percSummlyMtrx = po.whole_PercSummly
+
+make_heatmaps=True
+make_boxplots=True 
+rnkpt_thresh=90     
+group_size_min=3
+sum_score_metric='sum_score_4'
+rankpt_metric='mean_rankpt_4'
+
+group_name = 'all_compounds'
+grp = clust_order.values
+rankpt_mtrx = rankptClustered.values
+sumRank_mtrx = rankptClustered.values
+out = outF
+
+

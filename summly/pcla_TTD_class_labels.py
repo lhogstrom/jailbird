@@ -8,7 +8,7 @@ import cmap.io.gmt as gmt
 import cmap
 import pandas as pd
 
-wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/TTD_Sept11'
+wkdir = '/xchip/cogs/sig_tools/sig_summly/pcl/TTD_Sept24'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -65,17 +65,24 @@ po = pcla.PCLA(ttd_cp_dict,
                     pairwise_prefix='pairwise_matrices_by_Category',
                     cell_match_mode=True, 
                     row_space = 'lm')
-# po.get_sig_ids()
+po.get_sig_ids()
 # po.run_summly(rerun_mode=False)
-summPath = po.out + '/summly_out/sep11'
+# summPath = po.out + '/summly_out/sep11'
+summPath = '/xchip/cogs/data/rnwork/batch_summly/summly_lm50'
 po.make_summly_path_dict(summPath)
 # po.run_summly(rerun_mode=True)
-po.make_summly_path_dict(summPath)
-po.inameDict = inameDict #make this part of the tool
+# po.make_summly_path_dict(summPath)
+po.inameDict = inameDict 
 po.test_groups(make_heatmaps=False,
         group_size_min=15,
         sum_score_metric='sum_score_4',
         rankpt_metric='mean_rankpt_4')
 po.make_summary_boxplot()
-
+po.cluster_all_cps(make_heatmaps=True,
+        sum_score_metric='sum_score_4',
+        rankpt_metric='mean_rankpt_4')
+po.test_class_interrelatedness(make_heatmaps=False,
+                            make_boxplots=True, 
+                            make_group_by_cp_mtrx=True,
+                            rankpt_metric='mean_rankpt_4')
 
