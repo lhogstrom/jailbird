@@ -51,8 +51,8 @@ drugLabels['pert_ids_merged'] = brdLstLst
 grouped = drugLabels.groupby(['TTD_target_ID','Category'])
 ttd_cp_dict = {}
 for ig, group in enumerate(grouped):
-    if ig > 20:
-        continue
+    # if ig > 20: # shorten diction 
+    #     continue
     groupName = group[1]['Name'].values[0]
     groupCat = group[1]['Category'].values[0]
     cpLstLst = group[1]['pert_ids_merged'].values
@@ -72,47 +72,47 @@ for x in drugLabels.iterrows():
 
 
 ### drugBank list
-# drugFile = '/xchip/cogs/hogstrom/notes/TTD_annotations/drugbanktarget_pert_id.csv'
-# drugLabels = pd.io.parsers.read_csv(drugFile)
-# drugLabels['action_calc'] = drugLabels['action_calc'].str.replace("other/unknown","other")
-# # specify directionality
-# brdLstLst = drugLabels.pert_ids.str.split('|').tolist()
-# drugLabels['pert_ids'] = brdLstLst
-# # group by gene and action
-# grouped = drugLabels.groupby(['gene','action_calc'])
-# ttd_cp_dict = {}
-# for group in grouped:
-#     groupName = group[1]['gene'].values[0]
-#     groupCat = group[1]['action_calc'].values[0]
-#     cpLstLst = group[1]['pert_ids'].values
-#     cpLst = [item for sublist in cpLstLst for item in sublist] 
-#     cpLst = list(set(cpLst)) # make sure list is unique
-#     if groupCat == '-666':
-#         ttd_cp_dict[groupName] = cpLst
-#     else:
-#         ttd_cp_dict[groupName+'-'+groupCat] = cpLst
-# # group only be gene
-# grouped = drugLabels.groupby(['gene'])
-# gene_cp_dict = {}
-# for ig, group in enumerate(grouped):
-#     # if ig > 40:
-#     #     continue
-#     if group[0] == '-666':
-#         continue    
-#     groupName = group[1]['gene'].values[0]
-#     cpLstLst = group[1]['pert_ids'].values
-#     cpLst = [item for sublist in cpLstLst for item in sublist] 
-#     cpLst = list(set(cpLst)) # make sure list is unique
-#     gene_cp_dict[groupName] = cpLst
+drugFile = '/xchip/cogs/hogstrom/notes/TTD_annotations/drugbanktarget_pert_id.csv'
+drugLabels = pd.io.parsers.read_csv(drugFile)
+drugLabels['action_calc'] = drugLabels['action_calc'].str.replace("other/unknown","other")
+# specify directionality
+brdLstLst = drugLabels.pert_ids.str.split('|').tolist()
+drugLabels['pert_ids'] = brdLstLst
+# group by gene and action
+grouped = drugLabels.groupby(['gene','action_calc'])
+ttd_cp_dict = {}
+for group in grouped:
+    groupName = group[1]['gene'].values[0]
+    groupCat = group[1]['action_calc'].values[0]
+    cpLstLst = group[1]['pert_ids'].values
+    cpLst = [item for sublist in cpLstLst for item in sublist] 
+    cpLst = list(set(cpLst)) # make sure list is unique
+    if groupCat == '-666':
+        ttd_cp_dict[groupName] = cpLst
+    else:
+        ttd_cp_dict[groupName+'-'+groupCat] = cpLst
+# group only be gene
+grouped = drugLabels.groupby(['gene'])
+gene_cp_dict = {}
+for ig, group in enumerate(grouped):
+    # if ig > 40:
+    #     continue
+    if group[0] == '-666':
+        continue    
+    groupName = group[1]['gene'].values[0]
+    cpLstLst = group[1]['pert_ids'].values
+    cpLst = [item for sublist in cpLstLst for item in sublist] 
+    cpLst = list(set(cpLst)) # make sure list is unique
+    gene_cp_dict[groupName] = cpLst
 
 
-### cell line match mode
-wkdir = '/xchip/cogs/projects/pharm_class/TTD_Oct7'
+### class analysis
+wkdir = '/xchip/cogs/projects/pharm_class/TTd_Oct16'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 reload(pcla)
 metric = 'wtcs'
-po = pcla.PCLA(ttd_cp_dict,
+po = pcla.PCLA(ttd_cp_dict,    
                     metric,
                     wkdir,
                     pairwise_prefix='pairwise_matrices',
@@ -121,13 +121,29 @@ po = pcla.PCLA(ttd_cp_dict,
                     row_space = 'lm',
                     cell_match_mode=True)
 po.get_inames()
-# po.inameDict = inameDict 
-summPath = '/xchip/cogs/data/rnwork/batch_summly/summly_lm50'
-po.make_rankpt_Mtrx(summPath)
-# po.check_shRNA_connection() 
+po.load_summly_mtrx()
 po.test_groups(make_heatmaps=True,
-            group_size_min=3)
+            group_size_min=5)
 po.make_summary_boxplot()
+
+### Drug-KD connection
+wkdir = '/xchip/cogs/projects/pharm_class/drugBank_Oct16'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
+reload(pcla)
+metric = 'wtcs'
+po = pcla.PCLA(gene_cp_dict,    
+                    metric,
+                    wkdir,
+                    pairwise_prefix='pairwise_matrices',
+                    rankpt_metric='mean_rankpt_4',
+                    sum_score_metric='sum_score_4',
+                    row_space = 'lm',
+                    cell_match_mode=True)
+po.get_inames()
+po.load_summly_mtrx()
+po.check_shRNA_connection() 
+
 
 # po2 = po
 po.sum_scoreMtrx = po2.sum_scoreMtrx
@@ -136,3 +152,12 @@ po.rankptMtrx = po2.rankptMtrx
 po.cp_percent_summlyMtrx = po2.cp_percent_summlyMtrx
 po.pclResultDict = po2.pclResultDict
 po.brdTpDict = po2.brdTpDict
+
+## count number of compounds with a drugBank TTD_target_ID
+subList = []
+for x in po.pclResultDict:
+    subList.append(po.pclResultDict[x])
+cpList = [item for sublist in subList for item in sublist]
+len(set(cpList))
+
+

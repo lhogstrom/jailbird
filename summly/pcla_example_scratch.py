@@ -49,7 +49,6 @@ po = pcla.PCLA(grpToCp,
                     row_space = 'lm')
 summPath = '/xchip/cogs/data/rnwork/batch_summly/summly_lm50'
 po.make_rankpt_Mtrx(summPath)
-
 po.get_sig_ids()
 # po.run_summly(rerun_mode=False)
 # summPath = po.out + '/summly_out/sep11'

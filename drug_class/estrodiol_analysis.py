@@ -17,6 +17,8 @@ import cmap.tools.sig_dose_tool as sdt
 import cmap.io.gct as gct
 import pandas as pd
 import cmap.io.gmt as gmt
+from scipy import stats
+import matplotlib.pyplot as plt
 
 # get directory
 dir1 = '/xchip/cogs/projects/pharm_class' 
@@ -138,6 +140,29 @@ for brd in estrodiolBrds:
     #     processes.difference_update(
     #         p for p in processes if p.poll() is not None)
 
+### run sig_introspect on all compounds together
+cellList = ['HEPG2', 'A375', 'PC3', 'MCF7', 'HA1E', 'HT29', 'HCC515', 'A549']
+nonMCF7cells = ['HEPG2', 'A375', 'PC3', 'HA1E', 'HT29', 'HCC515', 'A549']
+outIntrospect = wkdir + '/brew_introspect_nonMCF7'
+if not os.path.exists(outIntrospect):
+    os.mkdir(outIntrospect)
+CM = mu.CMapMongo()
+qRes = CM.find({'pert_id':{'$in': estrodiolBrds},'sig_id' : {'$regex' : 'PCLB00'}, 'is_gold' : True,'cell_id':{'$in': nonMCF7cells}},
+        {'sig_id':True,'pert_iname':True,'pert_id':True,'pert_mfc_id':True},
+        toDataFrame=True)
+qSer = qRes['sig_id']
+outF = outIntrospect + '/nonMCF7_sig_ids.grp'
+qSer.to_csv(outF,index=False,header=False)
+#run sig_introspect
+cmd = ' '.join(['rum -q local',
+     '-d sulfur_io=100',
+     '-o ' + outIntrospect,
+     '-x sig_introspect_tool ',
+     '--sig_id ' + outF,
+     '--metric wtcs',
+     '--out ' + outIntrospect])
+os.system(cmd)
+
 # sim_set - pert_mfc
 cellList = ['HEPG2', 'A375', 'PC3', 'MCF7', 'HA1E', 'HT29', 'HCC515', 'A549']
 for cell in cellList:
@@ -240,6 +265,140 @@ gmtOut = wkdir + '/roast_ids_all_cell_lines.gmt'
 gmt.write(gmtList,gmtOut)
 
 
-
-#cell_info
 # look up ESR1 and ESR2 baseline expression in each cell line
+MC = mu.MongoContainer()
+ci = MC.gene_info.find({'pr_gene_symbol':'ESR2'},{},toDataFrame=True)
+# exprDict = MC.gene_info.find({'pr_gene_symbol':'ESR1','pr_id':'205225_at'},{'is_expressed':True})
+exprDict = MC.gene_info.find({'pr_gene_symbol':'ESR2','pr_id':'210780_at'},{'is_expressed':True})
+exprSer = pd.Series(exprDict[0])
+exprSer.ix[cellList]
+
+# affyDict = MC.gene_info.find({'pr_gene_symbol':'ESR1','pr_id':'205225_at'},{'basex_affx':True})
+affyDict = MC.gene_info.find({'pr_gene_symbol':'ESR2','pr_id':'210780_at'},{'basex_affx':True})
+affySer = pd.Series(affyDict[0])
+affySer.ix[cellList]
+
+# rSeqDict = MC.gene_info.find({'pr_gene_symbol':'ESR1','pr_id':'205225_at'},{'basex_rnaseq':True})
+rSeqDict = MC.gene_info.find({'pr_gene_symbol':'ESR2','pr_id':'210780_at'},{'basex_rnaseq':True})
+rSeqSer = pd.Series(rSeqDict[0])
+rSeqSer.ix[cellList]
+
+### load in results from sig_introspect - all cps, all cell liens
+ispecDir = '/xchip/cogs/projects/pharm_class/estrodiol_analysis_Oct10/brew_introspect_all_cps_all_cell_lines/oct10/my_analysis.sig_introspect_tool.2013101010482180'
+rnkptFile = '/self_rankpt_n266x266.gctx'
+inF = ispecDir + rnkptFile
+rnkptGCT = gct.GCT()
+rnkptGCT.read(inF)
+rnkpt = rnkptGCT.frame
+# organize cells and sig_ids
+sigIds = rnkpt.index.values
+cells = [x.split('_')[1] for x in sigIds]
+brdColum = [x.split(':')[1] for x in sigIds]
+inames = [pDescDict[x[:13]] for x in brdColum]
+cellSer = pd.Series(sigIds,index=cells)
+sigSer = pd.Series(sigIds,index=sigIds)
+sigFrm = pd.DataFrame(sigSer,columns=['sig_id'])
+sigFrm['brd'] = brdColum
+sigFrm['cell'] = cells 
+sigFrm['iname'] = inames
+# within cell connections
+MCF7vals = []
+notMCF7vals = []
+tickList = []
+rnkptSumList = []
+for cell in set(cells):
+    cellSigs = cellSer.ix[cell]
+    cellMtrx = rnkpt.ix[cellSigs,cellSigs]
+    upMtrx = av_mtrx_upper(cellMtrx.values)
+    flatMtrx = upMtrx.flatten()
+    rnkptArray = flatMtrx[~np.isnan(flatMtrx)]
+    rnkptSumList.append(rnkptArray)
+    if cell == 'MCF7':
+        MCF7vals.extend(rnkptArray)
+    else:
+        notMCF7vals.extend(rnkptArray)
+    tickList.append(cell)
+### within compound, within cell line
+grped = sigFrm.groupby(['brd','cell'])
+GrpSigDict = grped.groups
+keys = GrpSigDict.keys()
+for cell in set(cells):
+    cellKeys = [x for x in keys if x[1] == cell]
+    tickList = []
+    rnkptSumList = []
+    for key in cellKeys:
+        iname = pDescDict[key[0][:13]]
+        sigs = GrpSigDict[key]
+        cellMtrx = rnkpt.ix[sigs,sigs]
+        upMtrx = av_mtrx_upper(cellMtrx.values)
+        flatMtrx = upMtrx.flatten()
+        rnkptArray = flatMtrx[~np.isnan(flatMtrx)]
+        if len(rnkptArray) > 0:
+            rnkptSumList.append(rnkptArray)
+            tickList.append(iname)
+    plt.boxplot(rnkptSumList,vert=0)
+    plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
+    plt.tick_params(labelsize=8)
+    plt.ylabel('compound',fontweight='bold')
+    plt.xlabel('rank point',fontweight='bold')
+    plt.title(cell + ' self connection of estriodiol and related compounds',fontweight='bold')
+    outF = os.path.join(wkdir, cell + '_estriodiol_anologs_boxplot.png')
+    plt.savefig(outF, bbox_inches='tight',dpi=200)
+    plt.close()
+
+### plot raw values
+bMin = 150
+bMax = 200
+binwidth = 1
+tmpBins = range(bMin,bMax+binwidth,binwidth)
+Histbins = np.divide(tmpBins,float(2))
+plt.hist(notMCF7vals,bins=Histbins,normed=True,alpha=.3,color='b')
+plt.hist(MCF7vals,bins=Histbins,normed=True,alpha=.3,color='r')
+plt.xlim([70,100])
+plt.show()
+### plot square
+sqMCF7 = np.power(MCF7vals,7)
+sqNmcf7 = np.power(notMCF7vals,7)
+plt.hist(sqNmcf7,30,normed=True,alpha=.3,color='b')
+plt.hist(sqMCF7,30,normed=True,alpha=.3,color='r')
+# plt.xlim([0,np.power(1000,4)])
+plt.show()
+
+
+
+
+
+#sumscore boxplot
+plt.boxplot(rnkptSumList,vert=0)
+plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
+plt.tick_params(labelsize=8)
+plt.ylabel('cell line',fontweight='bold')
+plt.xlabel('rank point',fontweight='bold')
+plt.title('connection of estriodiol and related compounds',fontweight='bold')
+outF = os.path.join(wkdir, 'estriodiol_anologs_boxplot.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+
+
+def av_mtrx_upper(mtrx):
+    '''
+    take the average of a pairwise matrix - return upper right of matrix
+    
+    '''        
+    nm = len(mtrx)
+    avMtrx = np.zeros((nm,nm))
+    for i1 in range(nm):
+        for i2 in range(nm):
+            val1 = mtrx[i1,i2]
+            val2 = mtrx[i2,i1]
+            if (val1 == -666) or (val2 == -666):
+                avMtrx[i1,i2] = np.nan
+            else:
+                avMtrx[i1,i2] = stats.nanmean([val1,val2])            
+    # avMtrxUp = np.triu(avMtrx,k=1)
+    iUp = np.tril_indices(nm)
+    avMtrx[iUp] = np.nan
+    return avMtrx
+
+
+
+### make a different boxplot for each cell line (cp self connections)
