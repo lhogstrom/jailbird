@@ -107,7 +107,7 @@ for ig, group in enumerate(grouped):
 
 
 ### class analysis
-wkdir = '/xchip/cogs/projects/pharm_class/TTd_Oct16'
+wkdir = '/xchip/cogs/projects/pharm_class/TTd_Oct17'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 reload(pcla)
@@ -122,9 +122,13 @@ po = pcla.PCLA(ttd_cp_dict,
                     cell_match_mode=True)
 po.get_inames()
 po.load_summly_mtrx()
-po.test_groups(make_heatmaps=True,
+po.test_groups(make_heatmaps=False,
             group_size_min=5)
 po.make_summary_boxplot()
+po.test_class_interrelatedness(make_heatmaps=False,
+        make_boxplots=False,
+        make_group_by_cp_mtrx=False)
+po.inter_group_line_graph()
 
 ### Drug-KD connection
 wkdir = '/xchip/cogs/projects/pharm_class/drugBank_Oct16'
@@ -161,3 +165,22 @@ cpList = [item for sublist in subList for item in sublist]
 len(set(cpList))
 
 
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+N = 20
+theta = np.linspace(0.0, 2 * np.pi, N, endpoint=False)
+radii = 10 * np.random.rand(N)
+width = np.pi / 4 * np.random.rand(N)
+
+ax = plt.subplot(111, polar=True)
+bars = ax.bar(theta, radii, width=width, bottom=0.0)
+
+# Use custom colors and opacity
+for r, bar in zip(radii, bars):
+    bar.set_facecolor(plt.cm.jet(r / 10.))
+    bar.set_alpha(0.5)
+
+plt.show()
