@@ -30,7 +30,7 @@ import cmap.plot.colors as colors
 import cmap
 
 # get directory
-dir1 = '/xchip/cogs/projects/TRIB1/' 
+dir1 = '/xchip/cogs/projects/TRIB1' 
 wkdir = dir1 + '/TRIB1_analysis_Oct21'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
@@ -113,12 +113,10 @@ qRes = qRes.merge(pd.DataFrame(trib1Rank),left_index=True,right_index=True)
 # write table to file
 outF = wkdir + '/TRIB1_signature_details.txt'
 qRes.to_csv(outF,sep='\t',index=False)
-
 grped = qRes.groupby(['pert_iname','cell_id'])
 for grp in grped.groups:
     iGroup = grped.groups[grp]
     grpRes = qRes.ix[iGroup,:]
-
 #look at distribution for each compound
 for brd in trib1Cps:
 #     # sigs = qRes['sig_id'].values
@@ -211,6 +209,121 @@ inameGrped.first()
 
 ### 6) what are the other TRIB1 regulators in the DB?
 # rank order perturbations in terms of TRIB1 regulation
+mc = mu.MongoContainer()
+geneInf = mc.gene_info.find({'pr_gene_symbol':'TRIB1'},
+        {'pr_gene_symbol':True,'pr_id':True},
+        toDataFrame=True)
+trib1_affy_ID = geneInf['pr_id'][0]
+sigs = qRes['sig_id'].values
+# look up Z scores for TRIB1 
+afPath = cmap.score_path
+gt = gct.GCT(cmap.score_path)
+rids = gt.get_gctx_rid()
+iTrib1 = rids.index(trib1_affy_ID)
+gt.read_gctx_matrix(row_inds=[iTrib1])
+cids = gt.get_gctx_cid()
+# make Frame/Series of TRIB1 regulation
+trib1Ser = pd.Series(gt.matrix[0,:],index=cids)
+trib1Ser.name = 'z_score'
+#filter gold vs. not gold
+CM = mu.CMapMongo()
+goldQuery = CM.find({'is_gold' : True}, #, 
+        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True},
+        toDataFrame=True)
+goldSigs = goldQuery['sig_id']
+trib1Gold = trib1Ser.reindex(goldSigs.values)
+# order and build Frame
+trib1Sort = trib1Gold.order(ascending=False)
+affSigs = trib1Sort.index.values
+pert_ids = [x.split(':')[1] for x in affSigs]
+pert_id_short = [x.split(':')[1][:13] for x in affSigs]
+cell_ids = [x.split('_')[1] for x in affSigs]
+trib1Frm = pd.DataFrame(trib1Sort)
+trib1Frm['pert_id'] = pert_ids
+trib1Frm['pert_id_short'] = pert_id_short
+trib1Frm['cell_id'] = cell_ids
+trib1Frm['rank'] = np.arange(len(trib1Frm)) + 1 
+trib1Frm['percent_rank'] = trib1Frm['rank']/float(len(trib1Frm))
+outF = wkdir + '/CMAP_top_regulating_signatures.txt'
+topTrib1 = trib1Frm[trib1Frm['z_score'] >= 2]
+topTrib1.to_csv(outF,sep='\t')
+
+## where do the apriori compounds sit?
+# matchFrm = trib1Frm[trib1Frm['pert_id_short'] == brd]
+matchFrm = trib1Frm.reindex(qRes.index)
+#plot overall distribution of TRIB1 connctions
+plt.hist(trib1Sort,30,color='b',normed=True,alpha=.5,range=[-10,10],label='all signatures')
+plt.hist(matchFrm['z_score'],30,color='r',normed=True,alpha=.5,range=[-10,10],label='qPCR hits')
+plt.title('TRIB1 regulation')
+plt.xlabel('TRIB1 z score')
+plt.ylabel('normalized freq')
+plt.legend()
+outF = os.path.join(wkdir,'trib1_z_score_distribution.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+# plot percent ranks of apriori compounds in TRIB1 reulation
+plt.hist(matchFrm['percent_rank'],30,color='r',normed=False,alpha=.5,range=[0,1])
+plt.title('5 compounds, 150 signatures of interest - TRIB1 percent rank \n relative to other is_gold signatures')
+plt.xlabel('percent rank of TRIB1 regulation')
+plt.ylabel('freq')
+outF = os.path.join(wkdir,'trib1_regulation_percent_rank.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+
+# group by cell line
+largeGrped = trib1Frm.groupby('cell_id')
+cell= 'HEPG2'
+iCell = largeGrped.groups[cell]
+cellFrm = trib1Frm.ix[iCell]
+# recalculate the rankings for the specific cell line 
+cellFrm['rank'] = np.arange(len(cellFrm)) + 1 
+cellFrm['percent_rank'] = cellFrm['rank']/float(len(cellFrm))
+cellOrder = cellFrm.sort('rank')
+# cellOrder = cellOrder[cellOrder['z_score'] >= 2]
+outF = wkdir + '/HEPG2_top_regulating_signatures.txt'
+cellFrm.to_csv(outF,sep='\t')
+
+#get results specific to a cell line
+aprioriGrped = qRes.groupby('cell_id')
+iCellSigs = aprioriGrped.groups[cell]
+matchCellFrm = cellFrm.ix[iCellSigs]
+#plot 
+# binSet=np.logspace(-10, 0, 50)
+plt.hist(cellFrm['z_score'],30,color='b',normed=True,alpha=.5,range=[-10,10],label='all signatures')
+plt.hist(matchCellFrm['z_score'],30,color='r',normed=True,alpha=.5,range=[-10,10],label='qPCR hits')
+plt.title('TRIB1 regulation in HEPG2')
+plt.xlabel('TRIB1 z score')
+plt.ylabel('normalized freq')
+plt.legend()
+outF = os.path.join(wkdir,'HEPG2_trib1_z_score_distribution.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+# plot percent ranks of apriori compounds in TRIB1 reulation
+plt.hist(matchCellFrm['percent_rank'],30,color='r',normed=False,alpha=.5,range=[0,1])
+plt.title(cell + ' - 5 compounds, 33 signatures of interest \n TRIB1 percent rank relative to other is_gold signatures')
+plt.xlabel('percent rank of TRIB1 regulation')
+plt.ylabel('freq')
+outF = os.path.join(wkdir,'HEPG2_trib1_regulation_percent_rank.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+
+#put into the frame 
+
+# get pert_inames and pert_ids
+CM = mu.CMapMongo()
+qRes = CM.find({'sig_id':{'$in':list(affSigs)}}, #, 'is_gold' : True
+        {'sig_id':True,'pert_iname':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True},
+        toDataFrame=True)
+
+## double check the trib1Ser 
+# gtCheck = gct.GCT()
+# gtCheck.read(src=afPath,cid=sigs,rid=[trib1_affy_ID])
+# gtCheck.frame.ix[:,'PCLB003_PC3_24H:BRD-K75627148-001-02-4:0.04']
+# trib1Ser['PCLB003_PC3_24H:BRD-K75627148-001-02-4:0.04']
+
+
 
 ### 7) run sig_introspect results
 ### run sig_introspect on all compounds together
@@ -226,7 +339,7 @@ qSer = qRes['sig_id']
 outF = outIntrospect + '/TRIB1_cp_sig_ids.grp'
 qSer.to_csv(outF,index=False,header=False)
 #run sig_introspect
-cmd = ' '.join(['rum -q local',
+cmd = ' '.join(['rum -q hour',
      '-d sulfur_io=100',
      '-o ' + outIntrospect,
      '-x sig_introspect_tool ',
