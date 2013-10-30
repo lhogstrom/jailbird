@@ -95,7 +95,7 @@ pl.show()
 
 
 
-### example 2 
+### example 2  
 # we create 40 separable points
 np.random.seed(0)
 X = np.r_[np.random.randn(20, 2) - [2, 2], np.random.randn(20, 2) + [2, 2]]
@@ -129,6 +129,70 @@ pl.scatter(X[:, 0], X[:, 1], c=Y, cmap=pl.cm.Paired)
 
 pl.axis('tight')
 pl.show()
+
+
+
+## load in cmap data for svm
+# two common drugs - 
+CM = mu.CMapMongo()
+goldQuery = CM.find({'is_gold' : True}, #, 
+        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True},
+        toDataFrame=True)
+grped = goldQuery.groupby(['pert_id','cell_id'])
+grpSize = grped.size()
+grpSize = grpSize.order(ascending=False)
+grp1 = grpSize.index[0]
+grp2 = grpSize.index[1]
+igrp1 = grped.groups[grp1]
+igrp2 = grped.groups[grp2]
+grp1Quer = goldQuery.ix[igrp1]
+grp2Quer = goldQuery.ix[igrp2]
+grp1Sigs = grp1Quer['sig_id']
+grp2Sigs = grp2Quer['sig_id']
+
+sigList = list(grp1Sigs)
+sigList.extend(grp2Sigs)
+#load in expression data for the two sets of signatures
+afPath = cmap.score_path
+gt = gct.GCT()
+gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
+zFrm = gt.frame
+zFrm = zFrm.T
+probeIDs = zFrm.columns
+## asign labels
+pert_ids = [x.split(':')[1][:13] for x in zFrm.index]
+# create labels
+labels = []
+for brd in pert_ids:
+  if brd == 'BRD-A19500257':
+    labels.append(1)
+  else:
+    labels.append(0)
+labels = np.array(labels)
+zFrm['labels'] = labels
+
+### perform leave one out validation
+predictDict = {}
+for sig in zFrm.index:
+  droppedFrm = zFrm[zFrm.index != sig] # remove test signature from training
+  trainFrm = droppedFrm.reindex(columns=probeIDs)
+  labelsTrain = droppedFrm['labels'].values
+  C = 1.0  # SVM regularization parameter
+  svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
+  zTest = zFrm.ix[sig,probeIDs]
+  linPred = svc.predict(zTest.values)
+  predictDict[sig] = linPred[0]
+predSer = pd.Series(predictDict)
+predSer.name = 'svm_prediction'
+zFrm = pd.concat([zFrm,pd.DataFrame(predSer)],axis=1)
+realVPred = zFrm.ix[:,['labels','svm_prediction']]
+accuracyArray = zFrm['labels'] == zFrm['svm_prediction']
+accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
+
+## make dataframe
+# arrayList = [zFrm.values[ix,:] for ix in np.arange(zFrm.shape[0])]
+# pd.DataFrame(arrayList,index=zFrm.index,columns=['z_scores'])
+# train
 
 
 
