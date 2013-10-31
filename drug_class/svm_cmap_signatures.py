@@ -3,6 +3,9 @@ import pylab as pl
 from sklearn import svm, datasets
 from matplotlib import cm
 import cmap.util.mongo_utils as mu
+import test_modules.load_TTD_drug_class as ldc
+import cmap.io.gct as gct
+import pandas as pd
 
 ## load in cmap data for svm
 #pick pick a select group of compounds
@@ -49,6 +52,71 @@ realVPred = zFrm.ix[:,['labels','svm_prediction']]
 accuracyArray = zFrm['labels'] == zFrm['svm_prediction']
 accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
 
+### load in data for individual groups
+llo = ldc.label_loader()
+pclDict = llo.load_TTD()
+## pick 5 groups
+testGroups = ['Histone_deacetylase_1-Inhibitor',
+              'Glucocorticoid_receptor-Agonist',
+              'Proto-oncogene_tyrosine-protein_kinase_ABL1-Inhibitor',
+              'Phosphatidylinositol-4,5-bisphosphate_3-kinase_catalytic_subunit,_delta_isoform-Inhibitor',
+              '3-hydroxy-3-methylglutaryl-coenzyme_A_reductase-Inhibitor']
+brdAllGroups = []
+for group in testGroups:
+  brdAllGroups.extend(pclDict[group])
+### look up data for the compounds
+cellLine = 'MCF7'
+CM = mu.CMapMongo()
+# goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine}, #, 
+#         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True},
+#         toDataFrame=True)
+# set minimum dose
+goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine,'pert_dose':{'$gt':1}}, #, 
+        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True},
+        toDataFrame=True)
+goldQuery.index = goldQuery['sig_id']
+#make labels
+goldQuery['labels'] = np.nan
+goldQuery['pcl_name'] = 'null'
+for igroup,group in enumerate(testGroups):
+    grpMembers = pclDict[group]
+    iMatch = goldQuery['pert_id'].isin(grpMembers)
+    goldQuery['labels'][iMatch] = igroup
+    goldQuery['pcl_name'][iMatch] = group
+# count group members
+grpedBRD = goldQuery.groupby('pert_id')
+keepList = []
+# keep only n instances of each compound
+nKeep = 2
+for brd in grpedBRD.groups:
+    sigs = grpedBRD.groups[brd]
+    keepList.extend(sigs[:nKeep])
+droppedQ = goldQuery.reindex(index=keepList)
+grped = droppedQ.groupby('pcl_name')
+grped.size()
+# iHDAC = grped.groups['Histone_deacetylase_1-Inhibitor']
+# hdacs = goldQuery.ix[iHDAC]
+# hdacGrped = hdacs.groupby('pert_id')
+# hdacGrped.size()
+sigList = droppedQ['sig_id'].values
+
+#load in expression data for the two sets of signatures
+afPath = cmap.score_path
+gt = gct.GCT()
+gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
+zFrm = gt.frame
+zFrm = zFrm.T
+probeIDs = zFrm.columns
+## merge data with 
+zFrm = pd.concat([zFrm,droppedQ],axis=1)
+
+
+
+
+
+#########
+## old ##
+#########
 
 ### first iteration with two common drugs
 CM = mu.CMapMongo()
@@ -86,3 +154,4 @@ for brd in pert_ids:
     labels.append(0)
 labels = np.array(labels)
 zFrm['labels'] = labels
+
