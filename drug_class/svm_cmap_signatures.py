@@ -6,6 +6,7 @@ import cmap.util.mongo_utils as mu
 import test_modules.load_TTD_drug_class as ldc
 import cmap.io.gct as gct
 import pandas as pd
+import cmap
 
 ### current parameters:
 # 1) cell lines
@@ -89,6 +90,8 @@ for cellLine in coreCells:
     accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
     accuracyDict[cellLine] = accuracyRate
 
+## do LOA for all signatures of one compound at a time
+## move down the list of PCLs
 
 # split data into two and train on the rest
 nSigs = combinedFrm.shape[0]
@@ -148,3 +151,4 @@ zFrm = zFrm.T
 probeIDs = zFrm.columns
 ## merge data with 
 zFrm = pd.concat([zFrm,goldQuery],axis=1)
+

@@ -1,4 +1,5 @@
 import pandas as pd
+'parse the TTD file for drug annotations'
 
 class label_loader:
     """load in drug labels"""
@@ -38,4 +39,49 @@ class label_loader:
                     inameDict[brd] = iname
             else:
                 inameDict[brds[0]] = iname
+        return ttd_cp_dict
+
+    def load_drugbank_by_gene(self,group_by_action=True):
+        drugFile = '/xchip/cogs/hogstrom/notes/TTD_annotations/drugbanktarget_pert_id.csv'
+        drugLabels = pd.io.parsers.read_csv(drugFile)
+        drugLabels['action_calc'] = drugLabels['action_calc'].str.replace("other/unknown","other")
+        # specify directionality
+        brdLstLst = drugLabels.pert_ids.str.split('|').tolist()
+        drugLabels['pert_ids'] = brdLstLst
+        # group by gene and action
+        ttd_cp_dict = {}
+        if group_by_action:
+            grouped = drugLabels.groupby(['gene','action_calc'])
+            for group in grouped:
+                groupName = group[1]['gene'].values[0]
+                groupCat = group[1]['action_calc'].values[0]
+                cpLstLst = group[1]['pert_ids'].values
+                cpLst = [item for sublist in cpLstLst for item in sublist] 
+                cpLst = list(set(cpLst)) # make sure list is unique
+                if groupCat == '-666':
+                    ttd_cp_dict[groupName] = cpLst
+                else:
+                    ttd_cp_dict[groupName+'-'+groupCat] = cpLst
+        else:
+            grouped = drugLabels.groupby(['gene'])
+            for group in grouped:
+                groupName = group[1]['gene'].values[0]
+                # groupCat = group[1]['action_calc'].values[0]
+                cpLstLst = group[1]['pert_ids'].values
+                cpLst = [item for sublist in cpLstLst for item in sublist] 
+                cpLst = list(set(cpLst)) # make sure list is unique
+                ttd_cp_dict[groupName] = cpLst
+        # group only be gene
+        grouped = drugLabels.groupby(['gene'])
+        gene_cp_dict = {}
+        for ig, group in enumerate(grouped):
+            # if ig > 40:
+            #     continue
+            if group[0] == '-666':
+                continue    
+            groupName = group[1]['gene'].values[0]
+            cpLstLst = group[1]['pert_ids'].values
+            cpLst = [item for sublist in cpLstLst for item in sublist] 
+            cpLst = list(set(cpLst)) # make sure list is unique
+            gene_cp_dict[groupName] = cpLst
         return ttd_cp_dict
