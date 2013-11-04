@@ -15,6 +15,13 @@ import cmap
 # 4) is_gold vs. non (dose)
 # 5) svm model type: linear, poly, etc
 # 6) C = 1.0  # SVM regularization parameter
+# 7) compounds that belong to more than one group - how to 
+# deal with these?
+
+# Things to try:
+# 1) Testing model on extra signatures (non LOA) - exta signatures from mongo
+# 2) Testing classifier on DOS compounds 
+# 3) build classifiers for each PCL individually (group vs. DMSO) - which PCL works best?
 
 ### load in data for individual groups
 llo = ldc.label_loader()

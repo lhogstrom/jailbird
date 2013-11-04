@@ -122,7 +122,7 @@ po = pcla.PCLA(ttd_cp_dict,
                     cell_match_mode=True)
 po.get_inames()
 po.load_summly_mtrx()
-po.test_groups(make_heatmaps=True,
+po.test_groups(make_heatmaps=False,
             group_size_min=5)
 po.make_summary_boxplot()
 po.test_class_interrelatedness(make_heatmaps=True,

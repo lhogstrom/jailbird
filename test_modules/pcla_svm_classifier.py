@@ -15,6 +15,7 @@ import cmap.io.gct as gct
 import pandas as pd
 import cmap
 import os
+import cmap.analytics.pcla as pcla
 
 class svm_pcla(object):
     '''
@@ -59,9 +60,56 @@ class svm_pcla(object):
         self.all_group_cps = brdAllGroups
         self.test_groups = testGroups
 
+    def test_classes_incrementally(self,rnkpt_med_file,n_test_max=False):
+        '''
+        -start from the most internally consistent PCL - and move down the list 
+        -incrementally increase the number of groups added to the classifier
+
+        Parameters
+        ----------
+        rnkpt_med_file : str
+            path to a file containing the median summly rankpoint values for each
+            group (output from the pcla tool)
+        n_test_max : int
+            -max number of PCL groups to incorporate into the classifier 
+            -if set to False, all groups are tested
+        '''
+        ### load in data for individual groups
+        llo = ldc.label_loader()
+        self.pclDict = llo.load_TTD()
+        #load pcl rankpoint file 
+        groupMedians = pd.io.parsers.read_csv(rnkpt_med_file,sep='\t')
+        groupMedians = groupMedians.sort('median_rankpt',ascending=False)
+        # make sure compounds are not counted mroe than once in a dictionary:
+        extendedCompoundList = []
+        reducedPCLDict = {}
+        for key in groupMedians['PCL_group']:
+            value = self.pclDict[key]
+            for brd in value:
+                if brd in extendedCompoundList:
+                    value.remove(brd)
+            reducedPCLDict[key] = value
+            extendedCompoundList.extend(value)
+        self.pclDict = reducedPCLDict
+        # set incrament of groups
+        if n_test_max:
+            max_groups = n_test_max
+        else:
+            max_groups = groupMedians.shape[0]
+        group_range = np.arange(2,max_groups+1)
+        n_group_accuracy = {}
+        for n_groups in group_range:
+            print "testing " + str(n_groups) + " number of classes"
+            testGroups = groupMedians['PCL_group'][:n_groups].values
+            self.test_groups = testGroups
+            self.classification_across_cell(groups_to_model=testGroups,loo_type='by_cp',max_signatures_per_cp=3)
+            n_group_accuracy[n_groups] = self.model_accuracy_across_cells
+        self.n_group_accuracy = n_group_accuracy
+
     def classification_by_cell(self,loo_type='by_cp'):
         '''
-        specify source of class labels
+        -For each of the specified cell lines, build a separate classifier
+        -evaluate model with leave one out cross val.
         Parameters
         ----------
         loo_type : str
@@ -130,6 +178,82 @@ class svm_pcla(object):
             accuracyDict[cellLine] = accuracyRate
             self.modelFrame = combinedFrm
             self.model_accuracy = accuracyDict
+
+    def classification_across_cell(self,loo_type='by_cp',max_signatures_per_cp=3,groups_to_model=None):
+        '''
+        -build a single classifier treating observations from different
+        cell lines equally
+        -evaluate model with leave one out cross val.
+        Parameters
+        ----------
+        groups_to_model : list
+            -list of group names in the pclDict
+            -default is to use all keys
+        loo_type : str
+            strategy for leave one out validation:
+                'by_cp' - leaves out all signatures for a given compounds
+                'by_sig' - leaves out individual signatures 
+        max_signatures_per_cp : int
+            maximum number of signatures per compound to incorporate into the classifier
+            (to avoid overfitting to compounds with many signatures)
+        '''        
+        if groups_to_model == None:
+            groups_to_model = self.pclDict.keys()
+        brdAllGroups = []
+        for group in groups_to_model:
+            brdAllGroups.extend(self.pclDict[group])
+        CM = mu.CMapMongo()
+        # set minimum dose
+        goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'pert_dose':{'$gt':1}}, #, 
+                {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True},
+                toDataFrame=True)
+        goldQuery.index = goldQuery['sig_id']
+        # asign drug class labels
+        goldQuery = self.set_class_labels(goldQuery)
+        # reduce signatures to prevent overfitting to one compound
+        droppedQ = self.cut_signatures(goldQuery,nKeep=max_signatures_per_cp)
+        sigList = droppedQ['sig_id'].values
+        ### load in expression data for the two sets of signatures
+        afPath = cmap.score_path
+        gt = gct.GCT()
+        gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
+        zFrm = gt.frame
+        zFrm = zFrm.T
+        probeIDs = zFrm.columns
+        ## merge data with 
+        zFrm = pd.concat([zFrm,droppedQ],axis=1)
+        ### perform leave one out validation
+        if loo_type == 'by_cp':
+            zFrm['svm_prediction'] = np.nan
+            cpSet = set(zFrm['pert_id'])
+            # loop through the compounds - leave out in building the model then test
+            for brd in cpSet:
+                brd_match = zFrm['pert_id'] == brd
+                droppedFrm = zFrm[~brd_match] # remove test signature from training
+                trainFrm = droppedFrm.reindex(columns=probeIDs)
+                labelsTrain = droppedFrm['labels'].values
+                C = 1.0  # SVM regularization parameter
+                svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
+                zTest = zFrm.ix[brd_match,probeIDs]
+                linPred = svc.predict(zTest.values)
+                zFrm['svm_prediction'][zTest.index] = linPred
+        if loo_type == 'by_sig':
+            predictDict = {}
+            for sig in zFrm.index:
+                droppedFrm = zFrm[zFrm.index != sig] # remove test signature from training
+                trainFrm = droppedFrm.reindex(columns=probeIDs)
+                labelsTrain = droppedFrm['labels'].values
+                C = 1.0  # SVM regularization parameter
+                svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
+                zTest = zFrm.ix[sig,probeIDs]
+                linPred = svc.predict(zTest.values)
+                predictDict[sig] = linPred[0]
+            predSer = pd.Series(predictDict)
+            predSer.name = 'svm_prediction'
+            zFrm = pd.concat([zFrm,pd.DataFrame(predSer)],axis=1)
+        accuracyArray = zFrm['labels'] == zFrm['svm_prediction']
+        accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
+        self.model_accuracy_across_cells = accuracyRate
 
     def set_class_labels(self,sigInfoFrm):
         '''
