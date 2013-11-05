@@ -9,6 +9,7 @@ import numpy as np
 import pylab as pl
 from sklearn import svm, datasets
 from matplotlib import cm
+import matplotlib.pyplot as plt
 import cmap.util.mongo_utils as mu
 import test_modules.load_TTD_drug_class as ldc
 import cmap.io.gct as gct
@@ -60,6 +61,56 @@ class svm_pcla(object):
         self.all_group_cps = brdAllGroups
         self.test_groups = testGroups
 
+    def PCL_vs_DMSO(self,max_signatures_per_cp=20,n_test_max=False):
+        '''
+        -grab equal amounts of DMSO and signatures from a PCL class
+        -test one PCL at a time
+
+        Parameters
+        ----------
+        n_test_max : int
+            -max number of PCL groups to incorporate into the classifier 
+            -if set to False, all groups are tested
+        '''
+        for group_name in self.test_groups:
+            group_cps = self.pclDict[group_name]
+            CM = mu.CMapMongo()
+            # set minimum dose
+            cpQuery = CM.find({'is_gold' : True,'pert_id':{'$in':group_cps},'pert_dose':{'$gt':1}}, #, 
+                    {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True},
+                    toDataFrame=True)
+            # inameGrped = cpQuery.groupby('pert_iname')
+            cpQuery.index = cpQuery['sig_id']
+            cpQuery = self.set_class_labels(cpQuery)
+            droppedQ = self.cut_signatures(cpQuery,nKeep=max_signatures_per_cp,cut_by='pert_iname')
+            droppedGrped = droppedQ.groupby('pert_iname')
+            droppedGrped.size()
+        # if groups_to_model == None:
+        #     groups_to_model = self.pclDict.keys()
+        # brdAllGroups = []
+        # for group in groups_to_model:
+        #     brdAllGroups.extend(self.pclDict[group])
+        # CM = mu.CMapMongo()
+        # # set minimum dose
+        # goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'pert_dose':{'$gt':1}}, #, 
+        #         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True},
+        #         toDataFrame=True)
+        # goldQuery.index = goldQuery['sig_id']
+        # # asign drug class labels
+        # goldQuery = self.set_class_labels(goldQuery)
+        # # reduce signatures to prevent overfitting to one compound
+        # droppedQ = self.cut_signatures(goldQuery,nKeep=max_signatures_per_cp)
+        # sigList = droppedQ['sig_id'].values
+        # ### load in expression data for the two sets of signatures
+        # afPath = cmap.score_path
+        # gt = gct.GCT()
+        # gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
+        # zFrm = gt.frame
+        # zFrm = zFrm.T
+        # probeIDs = zFrm.columns
+        # ## merge data with 
+        # zFrm = pd.concat([zFrm,droppedQ],axis=1)
+
     def test_classes_incrementally(self,rnkpt_med_file,n_test_max=False):
         '''
         -start from the most internally consistent PCL - and move down the list 
@@ -106,10 +157,31 @@ class svm_pcla(object):
             n_group_accuracy[n_groups] = self.model_accuracy_across_cells
         self.n_group_accuracy = n_group_accuracy
 
+    def incremental_group_size_graph():
+        '''
+        -Graph the results for building SVMs of multiple numbers of groups
+        -XY scatter
+
+        Parameters
+        ----------
+        none
+
+        ''' 
+        groupSer = pd.Series(self.n_group_accuracy)
+        plt.plot(groupSer.index.values, groupSer.values, 'o-')
+        plt.ylim([0,1])
+        plt.xlabel('PCLs classified')
+        plt.ylabel('classification accuracy')
+        plt.title('top most intra-connected PCL groups')
+        outF = os.path.join(self.out,'vary_PCL_groups_classfied.png')
+        plt.savefig(outF, bbox_inches='tight')
+        plt.close()
+
     def classification_by_cell(self,loo_type='by_cp'):
         '''
         -For each of the specified cell lines, build a separate classifier
         -evaluate model with leave one out cross val.
+        
         Parameters
         ----------
         loo_type : str
@@ -184,6 +256,7 @@ class svm_pcla(object):
         -build a single classifier treating observations from different
         cell lines equally
         -evaluate model with leave one out cross val.
+        
         Parameters
         ----------
         groups_to_model : list
@@ -273,7 +346,7 @@ class svm_pcla(object):
             sigInfoFrm['pcl_name'][iMatch] = group
         return sigInfoFrm
 
-    def cut_signatures(self,sigInfoFrm,nKeep=2):
+    def cut_signatures(self,sigInfoFrm,nKeep=2,cut_by='pert_id'):
         '''
         limit the number signatures to prevent over fitting to a single compound
 
@@ -281,6 +354,10 @@ class svm_pcla(object):
         ----------
         sigInfoFrm : pandas dataFrame
             dataFrame of signature info where index are sig_ids
+        nKeep : int
+            number of signatures to keep for each compound
+        cut_by : str
+            sig_info field to group and cut by
         
         Returns
         ----------
@@ -289,7 +366,7 @@ class svm_pcla(object):
             dataFrame of signature info where index are sig_ids
 
         ''' 
-        grpedBRD = sigInfoFrm.groupby('pert_id')
+        grpedBRD = sigInfoFrm.groupby(cut_by)
         keepList = []
         # keep only n instances of each compound
         for brd in grpedBRD.groups:
