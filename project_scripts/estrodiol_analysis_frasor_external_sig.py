@@ -71,13 +71,12 @@ cmd = ' '.join(['rum -q hour -f sig_query_tool',
 
 ### run summly
 summlyMtrx = wkdir + '/Frasor_sig_query_output'
-outdir = wkdir + '/Frasor_sig_summly_output_bing'
+outdir = wkdir + '/Frasor_sig_summly_output'
 if not os.path.exists(outdir):
+    os.mkdir(outdir)
 cmd = ' '.join(['rum -q hour -x sig_summly_tool',
          summlyMtrx,
-         '--query_space ' + querySpace,
-         '--group_query true',
-         '--out ' + outDir])
+         '--out ' + outdir])
 os.system(cmd)
 
 
