@@ -78,3 +78,91 @@ for gene in oneFrm.index:
         halfExpressingFrm = pd.concat([halfExpressingFrm,coreFrm],axis=0)
 outF = '/xchip/cogs/hogstrom/analysis/scratch/baseline_of_drug_targets_in_core_cell_lines.txt'
 halfExpressingFrm.to_csv(outF,headers=True,sep='\t')
+
+### check the baseline expression of target genes in cell lines. Does this predict
+# the connection of the drug?
+
+### asumption: 
+# if a cell line does not express the expected target
+# then any expression consequences of the drug are considered
+# off target
+
+
+##########################################
+### 1 check the ratio of is gold #########
+### for cell lines expressing target #####
+##########################################
+
+#get instances to all drugs that have a target and are in summly space
+qr = MC.sig_info.find({'pert_id':{'$in':po.cpTested}},
+        {'sig_id':True,'pert_iname':True,'pert_id':True,'is_gold':True,'cell_id':True},
+        toDataFrame=True)
+
+goldDrugGrped = qr.groupby(['pert_id','is_gold'])
+drugGrped = qr.groupby('pert_id')
+
+#pick a gene find its expression
+# set dummy frame to establish the index
+goldFrame = pd.DataFrame(np.arange(6),columns=['dummy']) 
+goldFrame = goldFrame.reindex([(False, False), (False, True), (True, False), (True, True), (u'not_measured', False), (u'not_measured', True)])
+# goldFrame.index = [(False, False), (False, True), (True, False), (True, True), (u'not_measured', False), (u'not_measured', True)]
+for gene in oneFrm.index:
+    # gene='BCL2'
+    drugs = summDict[gene]
+    for drug in drugs: 
+        # drug = drugs[0]
+        exprDict = oneFrm.ix[gene].values[0]
+        exprSer = pd.Series(oneFrm.ix[gene].values[0])
+        exprSer.name = gene
+        #make a frame for each drug
+        iDrug = drugGrped.groups[drug]
+        drugFrm = qr.ix[iDrug]
+        drugFrm['baseline_expr'] = 'not_measured'
+        #fill in expression status of target gene
+        cellGrped = drugFrm.groupby('cell_id')
+        for cell in cellGrped.groups.keys():
+            icell = cellGrped.groups[cell]
+            if exprDict.has_key(cell):
+                if exprDict[cell]:
+                    drugFrm.ix[icell,'baseline_expr'] = True
+                else:
+                    drugFrm.ix[icell,'baseline_expr'] = False
+                # drugFrm.ix[icell,'baseline_expr'] = 'cheese'
+        # baseLinGrped = drugFrm.groupby('baseline_expr')
+        # count number of gold in expressing
+        baseGoldGrped = drugFrm.groupby(['baseline_expr','is_gold'])
+        sumSer = baseGoldGrped['is_gold'].size()
+        sumSer.name = gene + ':' + drug
+        sumFrm = pd.DataFrame(sumSer)
+        goldFrame = pd.concat([goldFrame,sumFrm],axis=1)
+        # if goldFrame.shape[1] < 2:
+        #     goldFrame = goldFrame.reindex([(False, False), (False, True), (True, False), (True, True), (u'not_measured', False), (u'not_measured', True)])
+goldFrame.__delitem__('dummy')
+# convert nan to zeros
+goldFrame = goldFrame.replace(np.nan,0)
+
+# what is the percentage of is_gold in cell lines not expressing target gene
+notExprNotGold = goldFrame.ix[0,:] #counts of not gold in cell lines where target is not expressed
+notExprIsGold = goldFrame.ix[1,:] #counts of is_gold in cell lines where target is not expressed
+notExprPercGold = notExprIsGold/ (notExprIsGold + notExprNotGold) * 100
+
+# what is the percentage of is_gold in cell lines expressing target gene
+ExprNotGold = goldFrame.ix[2,:] #counts of not gold in cell lines where target gene is expressed
+ExprIsGold = goldFrame.ix[3,:] #counts of is_gold in cell lines where target is expressed
+ExprPercGold = ExprIsGold/ (ExprIsGold + ExprNotGold) * 100
+
+sortEPG = ExprPercGold.order(ascending=False)
+sortNEPG = notExprPercGold.reindex(sortEPG.index)
+
+plt.plot(sortEPG,'.r',label='target gene expressed')
+plt.plot(sortNEPG,'.b',label='target gene not expressed')
+plt.xlabel('drugs-target pairs')
+plt.ylabel('percent is_gold signatures')
+plt.legend(loc="upper right")
+outF = '/xchip/cogs/hogstrom/analysis/scratch/baseline_of_drug_targets.png'
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+
+
+#what if a gene has multiple targets? which one is most important?
