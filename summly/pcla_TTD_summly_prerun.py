@@ -107,7 +107,7 @@ for ig, group in enumerate(grouped):
 
 
 ### class analysis
-wkdir = '/xchip/cogs/projects/pharm_class/TTd_Oct29'
+wkdir = '/xchip/cogs/projects/pharm_class/TTd_Nov14'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 reload(pcla)
@@ -152,9 +152,9 @@ po.check_shRNA_connection()
 
 
 # po2 = po
-po.sum_scoreMtrx = po2.sum_scoreMtrx
-po.rankptInFrm = po2.rankptInFrm
-po.rankptMtrx = po2.rankptMtrx
+po.sumScoreDict = po2.sumScoreDict
+po.rankptDict = po2.rankptDict
+po.percSummlyDict = po2.percSummlyDict
 po.cp_percent_summlyMtrx = po2.cp_percent_summlyMtrx
 po.pclResultDict = po2.pclResultDict
 po.brdTpDict = po2.brdTpDict

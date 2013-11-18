@@ -23,12 +23,6 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import test_modules.load_TTD_drug_class as ldc
 
-# get directory
-# dir1 = '/xchip/cogs/projects/pharm_class' 
-# wkdir = dir1 + '/estrodiol_analysis_Oct11'
-# if not os.path.exists(wkdir):
-#     os.mkdir(wkdir)
-
 ### load in data for individual groups
 llo = ldc.label_loader()
 pclDict = llo.load_drugbank_by_gene(group_by_action=False)
@@ -95,7 +89,7 @@ halfExpressingFrm.to_csv(outF,headers=True,sep='\t')
 
 #get instances to all drugs that have a target and are in summly space
 qr = MC.sig_info.find({'pert_id':{'$in':po.cpTested}},
-        {'sig_id':True,'pert_iname':True,'pert_id':True,'is_gold':True,'cell_id':True},
+        {'sig_id':True,'pert_iname':True,'pert_id':True,'is_gold':True,'cell_id':True,'distil_ss':True},
         toDataFrame=True)
 
 goldDrugGrped = qr.groupby(['pert_id','is_gold'])
@@ -105,6 +99,9 @@ drugGrped = qr.groupby('pert_id')
 # set dummy frame to establish the index
 goldFrame = pd.DataFrame(np.arange(6),columns=['dummy']) 
 goldFrame = goldFrame.reindex([(False, False), (False, True), (True, False), (True, True), (u'not_measured', False), (u'not_measured', True)])
+ssFrame = pd.DataFrame(np.arange(3),columns=['dummy']) 
+ssFrame = ssFrame.reindex([True,False,'not_measured'])
+
 # goldFrame.index = [(False, False), (False, True), (True, False), (True, True), (u'not_measured', False), (u'not_measured', True)]
 for gene in oneFrm.index:
     # gene='BCL2'
@@ -128,16 +125,22 @@ for gene in oneFrm.index:
                 else:
                     drugFrm.ix[icell,'baseline_expr'] = False
                 # drugFrm.ix[icell,'baseline_expr'] = 'cheese'
-        # baseLinGrped = drugFrm.groupby('baseline_expr')
-        # count number of gold in expressing
+        # count number of gold in cell lines expressing the target gene
         baseGoldGrped = drugFrm.groupby(['baseline_expr','is_gold'])
         sumSer = baseGoldGrped['is_gold'].size()
         sumSer.name = gene + ':' + drug
         sumFrm = pd.DataFrame(sumSer)
         goldFrame = pd.concat([goldFrame,sumFrm],axis=1)
+        #look at the signature strength based on target baseline expression
+        baseGrped = drugFrm.groupby('baseline_expr')
+        ssSer = baseGrped['distil_ss'].mean()
+        ssSer.name = gene + ':' + drug
+        ssFrm = pd.DataFrame(ssSer)
+        ssFrame = pd.concat([ssFrame,ssFrm],axis=1)
         # if goldFrame.shape[1] < 2:
         #     goldFrame = goldFrame.reindex([(False, False), (False, True), (True, False), (True, True), (u'not_measured', False), (u'not_measured', True)])
 goldFrame.__delitem__('dummy')
+ssFrame.__delitem__('dummy')
 # convert nan to zeros
 goldFrame = goldFrame.replace(np.nan,0)
 
@@ -159,10 +162,26 @@ plt.plot(sortNEPG,'.b',label='target gene not expressed')
 plt.xlabel('drugs-target pairs')
 plt.ylabel('percent is_gold signatures')
 plt.legend(loc="upper right")
-outF = '/xchip/cogs/hogstrom/analysis/scratch/baseline_of_drug_targets.png'
+outF = '/xchip/cogs/hogstrom/analysis/scratch/baseline_of_drug_targets_is_gold.png'
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
+# how does this impact SS/CC?
+notExprNotGold = goldFrame.ix[0,:]
+ssExpr = ssFrame.ix[True,:]
+ssNotExpr = ssFrame.ix[False,:]
 
+sortSSE = ssExpr.order(ascending=False)
+sortSSNE = ssNotExpr.reindex(sortSSE.index)
+
+# plot ss
+plt.plot(sortSSE,'.r',label='target gene expressed')
+plt.plot(sortSSNE,'.b',label='target gene not expressed')
+plt.xlabel('drugs-target pairs')
+plt.ylabel('SS')
+plt.legend(loc="upper right")
+outF = '/xchip/cogs/hogstrom/analysis/scratch/baseline_of_drug_targets_SS.png'
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
 
 #what if a gene has multiple targets? which one is most important?
