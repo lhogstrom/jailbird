@@ -14,7 +14,12 @@ import pandas as pd
 import codecs
 
 from pymongo import MongoClient
+from cmap.util.mongo_utils import CredentialsObject
+import cmap.util.mongo_utils as mu
 
+CO = CredentialsObject()
+CO.get_credentials()
+server='23.23.153.188:27017,107.22.174.155:27017'
 c = MongoClient(host=server) #,document_class='dex'
 db = c['dex']
 db.authenticate(CO.user,CO.pw)
@@ -22,30 +27,25 @@ db.authenticate(CO.user,CO.pw)
 collection = db['targets']
 collection.find_one()
 
+g = collection.find()
+# g = collection.find({'gene': 'HDAC1'})
+dictList = list(g)
+rFrame = pd.DataFrame(dictList)
+rFrame.index = rFrame['_id']
 
-# mongo_location='current'
-# class CredentialsObject(object):
-#     '''class to store user credentials for CMap Mongo objects'''
-#     def __init__(self,):
-#         super(CredentialsObject, self).__init__()
-    
-#     def get_credentials(self):
-#         '''
-#         prompt the user for their password if access to CMap's internal 
-#         authorization file is not allowed
-#         '''
-#         try:
-#             mongo_servers = pd.read_table(path.join(cmap.mongo_path, 
-#                                                     'mongo_servers.txt'),
-#                                           index_col = 'mongo_location')
-#             self.user = mongo_servers.loc['current', 'user_id']
-#             self.pw = mongo_servers.loc['current', 'password']
-#         except (IOError,ValueError):
-#             self.user = raw_input('CMap Mongo User Name: ')
-#             self.pw = getpass.getpass('CMap Mongo Password: ')
+sourceSet = set(rFrame['source'])
+DBankFrm = rFrame[rFrame['source'] == 'DrugBank']
 
-# CO = CredentialsObject()
-# CO.get_credentials()
+#how many unique drug-gene pairs?
+drugGenePairs = rFrame['pert_id'] + ':' + rFrame['gene']
+setDGP = set(drugGenePairs)
+
+CatSer = rFrame['Category']
+catFrm = rFrame[~pd.isnull(CatSer)]
+np.isnan(rFrame['Category'].values)
+rFrame['Category'] != np.nan
+
+
 
 # ### copy fields from mongo_utils
 #     _dflt_fields = {entry['id'] : entry['sig'] 
