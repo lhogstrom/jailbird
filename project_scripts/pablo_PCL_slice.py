@@ -37,7 +37,10 @@ def set_class_labels(test_groups,sigInfoFrm,pclDict):
         sigInfoFrm['pcl_name'][iMatch] = group
     return sigInfoFrm
 
-wkdir = '/xchip/cogs/projects/pharm_class/svm_pcla_classifier_NOV1'
+# wkdir = '/xchip/cogs/projects/pharm_class/svm_pcla_classifier_NOV21'
+wkdir = '/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
 #make pso object
 pso = psc.svm_pcla(out=wkdir)
 self=pso
@@ -75,7 +78,7 @@ for group in testGroups:
 brdAllGroups.append('DMSO')
 
 #
-cellLine = 'PC3'
+cellLine = 'MCF7'
 CM = mu.CMapMongo()
 goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine,'pert_dose':{'$gt':1}}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
@@ -85,9 +88,12 @@ goldQuery.index = goldQuery['sig_id']
 dmsoQuery = CM.find({'pert_iname':'DMSO','cell_id':cellLine}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
         toDataFrame=True)
-# goldQuery = pd.concat([goldQuery,dmsoQuery.ix[:50]],axis=0)
-# asign labels
+dmsoQuery['pcl_name'] = 'DMSO'
+dmsoQuery['labels'] = 99
 goldQuery = set_class_labels(testGroups,goldQuery,self.pclDict)
+goldQuery = pd.concat([goldQuery,dmsoQuery.ix[:50]],axis=0)
+# asign labels
+
 
 ### leave only 1 or two signatures for each compound ### 
 nKeep = 2
@@ -103,7 +109,7 @@ for brd in grpedBRD.groups:
         keepList.extend(sigs[:nKeep])
 reducedSigFrm = goldQuery.reindex(index=keepList)
 outF = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes.txt'
-reducedSigFrm.to_csv(outF,sep='\t')
+reducedSigFrm.to_csv(outF,sep='\t',header=False)
 # grped2 = reducedSigFrm.groupby('pert_iname')
 # grped2.size()
 
@@ -115,7 +121,6 @@ sigList = reducedSigFrm['sig_id'].values
 afPath = cmap.score_path
 gt = gct.GCT()
 gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
-
 outGCT = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes'
 gt.write(outGCT,mode='gctx')
 zFrm = gt.frame
@@ -123,6 +128,8 @@ zFrm = gt.frame
 # probeIDs = zFrm.columns
 # ## merge data with 
 # zFrm = pd.concat([zFrm,droppedQ],axis=1)
+
+# convert gctx to gct so it can be read by R "convert-dataset -i MCF7_top_intra_connecting_compound_classes_n130x978.gctx"
 
 ### load in Pablo's dir
 resDir = '/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC'

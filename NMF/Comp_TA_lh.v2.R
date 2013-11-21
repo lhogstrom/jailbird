@@ -8,36 +8,41 @@
   # Pre-processing: rank normalization for CC datasets
   
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
+   path2 <- "/xchip/cogs/projects/NMF/PC3_7_PCLs_w_DMSO"
+   prefix2 <- "PC3_top_intra_connecting_compound_classes_n134x978"
+   cell1 <- "MCF7"
+   path1 <- "/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO"
+   prefix1 <- "MCF7_top_intra_connecting_compound_classes_n130x978"
 
    MSIG.Preprocess.Dataset(
-      input.ds            = "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/MCF7_top_intra_connecting_compound_classes_n79x978.gct",
-      output.ds           = "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/MCF7_top_intra_connecting_compound_classes_n79x978.NORM.gct",
+      input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
+      output.ds           = paste(path1,"/",prefix1,".NORM.gct",sep=""),
       normalization       = 6)   # replace values with rank/total genes.
 
    MSIG.Preprocess.Dataset(
-      input.ds            = "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.gct",
-      output.ds           = "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.NORM.gct",
+      input.ds            = paste(path2,"/",prefix2,".gct",sep=""),
+      output.ds           = paste(path2,"/",prefix2,".NORM.gct",sep=""),
       normalization       = 6)   # replace values with rank/total genes.
 
 
    ##  CMAP Compound Classes ----------------------------------------------------------------------------------------------------------  
       # Input Files
-      L1000.file   <- "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/MCF7_top_intra_connecting_compound_classes_n79x978.NORM.gct"
-      L1000.file2  <- "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.NORM.gct"
-      annot.file   <- "/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes.v2.txt"
+      L1000.file   <- paste(path1,"/",prefix1,".NORM.gct",sep="")
+      L1000.file2  <- paste(path2,"/",prefix2,".NORM.gct",sep="")      
+      annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.txt",sep="")
       # Parameters
       k.comp       <- 9    # Optimal number of components: 9, 20
-      name.column  <- 1     # Column # in annot.file containing the perturbation name
-      class.column <- 9     # Column # in annot.file containing the class or category name
+      name.column  <- 9     # Column # in annot.file containing the perturbation name
+      class.column <- 7     # Column # in annot.file containing the class or category name
       use.prefix   <- F     # Use only prefix before "_" to find association between perturbation names in Input File vs. annot.file
       n.top        <- 35         # Number of top/highest IC associations to display in heatmap
       n.bottom     <- 10      # Number of bottom/lowest IC associations to display in heatmap
       # Output Files
-      pdf.file     <- paste("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.", "k", k.comp, ".pdf", sep="")
-      W.file       <- paste("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.W.", "k", k.comp, ".gct", sep="")
-      H.file       <- paste("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.H.", "k", k.comp, ".gct", sep="")
-      H2.file      <- paste("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.H2.", "k", k.comp, ".gct", sep="")
-      movie.file   <- paste("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CC_lh/PC3_top_intra_connecting_compound_classes_n83x978.Biplot.Movie.", "k", k.comp, ".gct", sep="")
+      pdf.file     <- paste(path1,"/",prefix1, ".k", k.comp, ".pdf", sep="")
+      W.file       <- paste(path1,"/",prefix1, ".W.k", k.comp, ".gct", sep="")
+      H.file       <- paste(path1,"/",prefix1, ".H.k", k.comp, ".gct", sep="")
+      H2.file      <- paste(path1,"/",prefix1, ".H2.k", k.comp, ".gct", sep="")
+      movie.file   <- paste(path1,"/",prefix1, ".Biplot.Movie.k", k.comp, ".gct", sep="")
    ##  --------------------------------------------------------------------------------------------------------------------------------------------
 
    ##  Target Accelerator Ref / 4 pathways ----------------------------------------------------------------------------------------------------------  
@@ -84,7 +89,7 @@
 
    pdf(file=pdf.file, height=8.5, width=11)
 
-   source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
+   source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4_lh.R")
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/OPAM.library.v7.R")   
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/FS.library.v8.6.R")     
    library(RColorBrewer)
