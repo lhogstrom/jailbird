@@ -38,7 +38,7 @@ def set_class_labels(test_groups,sigInfoFrm,pclDict):
     return sigInfoFrm
 
 # wkdir = '/xchip/cogs/projects/pharm_class/svm_pcla_classifier_NOV21'
-wkdir = '/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO'
+wkdir = '/xchip/cogs/projects/NMF/PC3_7_PCLs_w_DMSO'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 #make pso object
@@ -78,7 +78,7 @@ for group in testGroups:
 brdAllGroups.append('DMSO')
 
 #
-cellLine = 'MCF7'
+cellLine = 'PC3'
 CM = mu.CMapMongo()
 goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine,'pert_dose':{'$gt':1}}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
@@ -88,6 +88,7 @@ goldQuery.index = goldQuery['sig_id']
 dmsoQuery = CM.find({'pert_iname':'DMSO','cell_id':cellLine}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
         toDataFrame=True)
+dmsoQuery.index = dmsoQuery['sig_id']
 dmsoQuery['pcl_name'] = 'DMSO'
 dmsoQuery['labels'] = 99
 goldQuery = set_class_labels(testGroups,goldQuery,self.pclDict)

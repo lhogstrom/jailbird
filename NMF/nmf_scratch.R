@@ -1,4 +1,10 @@
 
+### column names are not the same in R data frame as in annotation sheet
+# see:
+mCol <- colnames(m.2)
+gene.table <- annot.table[, 1]
+
+
    # Perform NMF clustering
 
    NMF.out <- NMF.div(V = m.2, k = k.comp, maxniter = 2000, seed = 123, stopconv = 40, stopfreq = 10)

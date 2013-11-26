@@ -36,9 +36,51 @@ rFrame.index = rFrame['_id']
 sourceSet = set(rFrame['source'])
 DBankFrm = rFrame[rFrame['source'] == 'DrugBank']
 
+### make a sheet for input for rajiv's tool
+# class, pert_id, pert_iname, class_size
+
+#DrugBank source
+outFrm = DBankFrm.ix[:,['gene','pert_id']]
+outFrm.columns = ['class','pert_id']
+#eliminate duplicate columns
+outFrm = outFrm.drop_duplicates(['class','pert_id'])
+
+#TTD source
+ttdFrm = rFrame[rFrame['source'] == 'TTD']
+outFrm = ttdFrm.ix[:,['Name','pert_id']]
+outFrm.columns = ['class','pert_id']
+
+#set pert_inames
+pIds = outFrm['pert_id'].values
+CM = mu.CMapMongo()
+inameRes = CM.find({'pert_id':{'$in':list(set(pIds))}}, #, 
+        {'pert_id':True,'pert_iname':True},
+        toDataFrame=True)
+inameRes.index = inameRes['pert_id']
+inameDict = inameRes['pert_iname'].to_dict()
+inameSer = pd.Series(inameDict)
+inameMtch = inameSer.reindex(outFrm['pert_id'])
+outFrm['pert_iname'] = inameMtch.values
+
+# set class_size
+classGrped = outFrm.groupby('class')
+classCounts = classGrped.size()
+countMtch = classCounts.reindex(outFrm['class'])
+outFrm['class_size'] = countMtch.values
+outFrm = outFrm.sort('class_size',ascending=False)
+# outF = '/xchip/cogs/projects/pharm_class/DrugBank_class_list_lh.txt'
+outF = '/xchip/cogs/projects/pharm_class/TTD_class_list_lh.txt'
+outFrm.to_csv(outF,sep='\t',index=False)
+
+
+
+
+
 #how many unique drug-gene pairs?
 drugGenePairs = rFrame['pert_id'] + ':' + rFrame['gene']
 setDGP = set(drugGenePairs)
+
+geneGrped = DBankFrm.groupby('gene')
 
 CatSer = rFrame['Category']
 catFrm = rFrame[~pd.isnull(CatSer)]

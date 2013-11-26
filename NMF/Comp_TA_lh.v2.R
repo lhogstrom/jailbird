@@ -119,7 +119,7 @@
 
    # Read annotation file
 
-   annot.table <- read.table(annot.file, header=T, sep="\t", skip=0, colClasses = "character")
+   annot.table <- read.table(annot.file, header=F, sep="\t", skip=0, colClasses = "character")
    gene.table <- annot.table[, name.column]
    pathway.table <- annot.table[, class.column]
    gene.set <- vector(length=ncol(m.2), mode="character")
