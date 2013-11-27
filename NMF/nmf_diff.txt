@@ -1,0 +1,103 @@
+26d25
+<       L1000.file2  <- "~/CGP2013/TA/CC/MCF7_top_intra_connecting_compound_classes_n79x978.NORM.gct"
+27a27,28
+>       L1000.file2  <- "~/CGP2013/TA/CC/MCF7_top_intra_connecting_compound_classes_n79x978.NORM.gct"
+>       annot.file2  <- "~/CGP2013/TA/CC/MCF7_top_intra_connecting_compound_classes.v2.txt"
+34a36
+>       H.normalize  <- T
+65,66c67,68
+< #      L1000.file   <- "~/CGP2012/signatures/L1000/signatures.QNORM_collapsed_to_symbols.NORM.gct"
+< #      L1000.file2  <- NULL
+---
+> #      L1000.file   <- "~/CGP2013/signatures/components2/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.gct"
+>  #     L1000.file2  <- NULL
+69c71
+< #      k.comp       <- 13    # Optimal number of components from consensus analysis: 7, 11, 22 or 35.
+---
+> #      k.comp       <- 12    # Optimal number of components from consensus analysis
+76,80c78,82
+< #      pdf.file     <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.", "k", k.comp, ".pdf", sep="")
+< #      W.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.W.", "k", k.comp, ".gct", sep="")
+< #      H.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.H.", "k", k.comp, ".gct", sep="")
+< #      H2.file      <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.H2.", "k", k.comp, ".gct", sep="")
+< #      movie.file   <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.Biplot.Movie.", "k", k.comp, ".gct", sep="")
+---
+> #      pdf.file     <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.", "k", k.comp, ".pdf", sep="")
+> #      W.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.W.", "k", k.comp, ".gct", sep="")
+> #      H.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.H.", "k", k.comp, ".gct", sep="")
+> #      H2.file      <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.H2.", "k", k.comp, ".gct", sep="")
+> #      movie.file   <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.Biplot.Movie.", "k", k.comp, ".gct", sep="")
+131d132
+<      
+134a136,158
+>    # Read second dataset and annotation table
+> 
+>    dataset.1 <- MSIG.Gct2Frame(filename = L1000.file2)
+>    m.2.2 <- data.matrix(dataset.1$ds)
+>    dim(m.2.2)
+> 
+>    annot.table2 <- read.table(annot.file2, header=T, sep="\t", skip=0, colClasses = "character")
+>    gene.table2 <- annot.table2[, name.column]
+>    pathway.table2 <- annot.table2[, class.column]
+>    gene.set2 <- vector(length=ncol(m.2.2), mode="character")
+>    if (use.prefix == T) {
+>       for (i in 1:ncol(m.2.2)) {
+>          gene.set2[i] <- strsplit(colnames(m.2.2)[i], split="_")[[1]]
+>       }
+>    } else {
+>       gene.set2 <- colnames(m.2.2)
+>    }
+>    locs <- match(gene.set2, gene.table2)
+>    gene.class2 <- pathway.table2[locs]
+>    for (k in 1:length(gene.class2)) gene.class2[k] <- substr(gene.class2[k], 1, 10)
+>    table(gene.class2)
+>    all.classes2 <- unique(gene.class2)
+> 
+149,152d172
+<    dataset.1 <- MSIG.Gct2Frame(filename = L1000.file2)
+<    m.2.2 <- data.matrix(dataset.1$ds)
+<    dim(m.2.2)
+< 
+181a202,209
+>   # Visualize H2 
+> 
+>    hc <- hclust(dist(t(H2)), "complete")
+>    d1 <- as.dendrogram(hc)
+>    hc2 <- hclust(dist(H2), "complete")
+>    d2 <- as.dendrogram(hc2)
+>    heatmap(t(H2), Colv=d1.W, Rowv = d1,  scale="row", col=mycol, margins=c(15, 15), cexRow=0.35, cexCol=0.55, main="Sorted H2 Matrix", xlab = "Meta-Genes", ylab= " ")
+> 
+216c244
+<    # Merge H matrices
+---
+>    # Normalize H and H2
+218c246,257
+<    #   H <- cbind(H, H2)
+---
+>    if (H.normalize == T) {
+>       Ht <- t(H)
+>       sum.H <- apply(Ht, MARGIN=1, FUN=sum)
+>       for (i in 1:nrow(Ht)) {
+>          Ht[i,] <- Ht[i,]/sum.H[i]
+>       }
+>       H2t <- t(H2)
+>       sum.H2 <- apply(H2t, MARGIN=1, FUN=sum)
+>       for (i in 1:nrow(H2t)) {
+>          H2t[i,] <- H2t[i,]/sum.H2[i]
+>       }
+>     }
+220c259
+<    # Normalize H
+---
+>   # Merge H and H2
+222,226c261,264
+<    Ht <- t(H)
+<    sum.H <- apply(Ht, MARGIN=1, FUN=sum)
+<    for (i in 1:nrow(Ht)) {
+<       Ht[i,] <- Ht[i,]/sum.H[i]
+<    }
+---
+>    H <- cbind(H, H2)
+>    Ht <- rbind(Ht, H2t)
+>    gene.class <- c(gene.class, gene.class2)
+>    all.classes <- unique(c(all.classes, all.classes2))

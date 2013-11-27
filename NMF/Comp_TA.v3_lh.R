@@ -8,17 +8,16 @@
   # Pre-processing: rank normalization for CC datasets
   
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
-   path2 <- "/xchip/cogs/projects/NMF/PC3_7_PCLs_w_DMSO"
+   path2 <- "/xchip/cogs/projects/NMF/projection_PC3_to_MCF7"
    prefix2 <- "PC3_top_intra_connecting_compound_classes_n134x978"
    # path2 <- "/xchip/cogs/projects/NMF/PC3_7_PCLs"
    # prefix2 <- "PC3_top_intra_connecting_compound_classes_n83x978"   
    cell2 <- "PC3"
    cell1 <- "MCF7"
-   path1 <- "/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO"
+   path1 <- "/xchip/cogs/projects/NMF/projection_MCF7_to_PC3"
    prefix1 <- "MCF7_top_intra_connecting_compound_classes_n129x978"
    # path1 <- "/xchip/cogs/projects/NMF/MCF7_7_PCLs"
    # prefix1 <- "MCF7_top_intra_connecting_compound_classes_n79x978"
-
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
@@ -34,8 +33,9 @@
    ##  CMAP Compound Classes ----------------------------------------------------------------------------------------------------------  
       # Input Files
       L1000.file   <- paste(path1,"/",prefix1,".NORM.gct",sep="")
-      L1000.file2  <- paste(path2,"/",prefix2,".NORM.gct",sep="")      
       annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.v2.txt",sep="")
+      L1000.file2  <- paste(path2,"/",prefix2,".NORM.gct",sep="")      
+      annot.file2   <- paste(path2,"/",cell2,"_top_intra_connecting_compound_classes.v2.txt",sep="")
       # Parameters
       k.comp       <- 9    # Optimal number of components: 9, 20
       name.column  <- 1     # Column # in annot.file containing the perturbation name
@@ -43,6 +43,7 @@
       use.prefix   <- F     # Use only prefix before "_" to find association between perturbation names in Input File vs. annot.file
       n.top        <- 35         # Number of top/highest IC associations to display in heatmap
       n.bottom     <- 10      # Number of bottom/lowest IC associations to display in heatmap
+      H.normalize  <- T
       # Output Files
       pdf.file     <- paste(path1,"/",prefix1, ".k", k.comp, ".pdf", sep="")
       W.file       <- paste(path1,"/",prefix1, ".W.k", k.comp, ".gct", sep="")
@@ -73,22 +74,22 @@
 
    ##  Oncogenic signatures ----------------------------------------------------------------------------------------------------------  
       # Input Files
-#      L1000.file   <- "~/CGP2012/signatures/L1000/signatures.QNORM_collapsed_to_symbols.NORM.gct"
-#      L1000.file2  <- NULL
+#      L1000.file   <- "~/CGP2013/signatures/components2/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.gct"
+ #     L1000.file2  <- NULL
 #      annot.file   <- "~/CGP2013/TA/Oncogenic/Oncogenic_annot.txt"
       # Parameters
-#      k.comp       <- 13    # Optimal number of components from consensus analysis: 7, 11, 22 or 35.
+#      k.comp       <- 12    # Optimal number of components from consensus analysis
 #      name.column  <- 1     # Column # in annot.file containing the perturbation name
 #      class.column <- 2     # Column # in annot.file containing the class or category name
 #      use.prefix   <- F     # Use only prefix before "_" to find association between perturbation names in Input File vs. annot.file
 #      n.top        <- 35         # Number of top/highest IC associations to display in heatmap
 #      n.bottom     <- 10      # Number of bottom/lowest IC associations to display in heatmap
       # Output Files
-#      pdf.file     <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.", "k", k.comp, ".pdf", sep="")
-#      W.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.W.", "k", k.comp, ".gct", sep="")
-#      H.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.H.", "k", k.comp, ".gct", sep="")
-#      H2.file      <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.H2.", "k", k.comp, ".gct", sep="")
-#      movie.file   <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.Biplot.Movie.", "k", k.comp, ".gct", sep="")
+#      pdf.file     <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.", "k", k.comp, ".pdf", sep="")
+#      W.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.W.", "k", k.comp, ".gct", sep="")
+#      H.file       <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.H.", "k", k.comp, ".gct", sep="")
+#      H2.file      <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.H2.", "k", k.comp, ".gct", sep="")
+#      movie.file   <- paste("~/CGP2013/TA/Oncogenic/signatures.QNORM_collapsed_to_symbols.CORE2.NORM.Biplot.Movie.", "k", k.comp, ".gct", sep="")
    ##  --------------------------------------------------------------------------------------------------------------------------------------------
  
    # Libraries
@@ -96,8 +97,8 @@
    pdf(file=pdf.file, height=8.5, width=11)
 
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4_lh.R")
-   source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/OPAM.library.v7.R")   
-   source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/FS.library.v8.6.R")     
+   source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/OPAM.library.v7.R")
+   source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/FS.library.v8.6.R")
    library(RColorBrewer)
    library(MASS)
    library(smacof)
@@ -125,7 +126,7 @@
 
    # Read annotation file
 
-   annot.table <- read.table(annot.file, header=F, sep="\t", skip=0, colClasses = "character")
+   annot.table <- read.table(annot.file, header=T, sep="\t", skip=0, colClasses = "character")
    gene.table <- annot.table[, name.column]
    pathway.table <- annot.table[, class.column]
    gene.set <- vector(length=ncol(m.2), mode="character")
@@ -139,9 +140,31 @@
    locs <- match(gene.set, gene.table)
    gene.class <- pathway.table[locs]
    for (k in 1:length(gene.class)) gene.class[k] <- substr(gene.class[k], 1, 10)
-     
    table(gene.class)
    all.classes <- unique(gene.class)
+
+   # Read second dataset and annotation table
+
+   dataset.1 <- MSIG.Gct2Frame(filename = L1000.file2)
+   m.2.2 <- data.matrix(dataset.1$ds)
+   dim(m.2.2)
+
+   annot.table2 <- read.table(annot.file2, header=T, sep="\t", skip=0, colClasses = "character")
+   gene.table2 <- annot.table2[, name.column]
+   pathway.table2 <- annot.table2[, class.column]
+   gene.set2 <- vector(length=ncol(m.2.2), mode="character")
+   if (use.prefix == T) {
+      for (i in 1:ncol(m.2.2)) {
+         gene.set2[i] <- strsplit(colnames(m.2.2)[i], split="_")[[1]]
+      }
+   } else {
+      gene.set2 <- colnames(m.2.2)
+   }
+   locs <- match(gene.set2, gene.table2)
+   gene.class2 <- pathway.table2[locs]
+   for (k in 1:length(gene.class2)) gene.class2[k] <- substr(gene.class2[k], 1, 10)
+   table(gene.class2)
+   all.classes2 <- unique(gene.class2)
 
    # Visualize input matrix
 
@@ -156,10 +179,6 @@
    row.names(W) <- row.names(m.2)
 
    # Obtain H via W: Project original and additional dataset using non-negative solver
-
-   dataset.1 <- MSIG.Gct2Frame(filename = L1000.file2)
-   m.2.2 <- data.matrix(dataset.1$ds)
-   dim(m.2.2)
 
    H <- matrix(0, nrow=k.comp, ncol= ncol(m.2), dimnames=list(colnames(W), colnames(m.2)))
    for (i in 1:ncol(H)) H[, i] <- nnls.fit(W, m.2[, i], wsqrt=1, eps=0, rank.tol=1e-07)
@@ -189,6 +208,14 @@
    hc2 <- hclust(dist(H), "complete")
    d2 <- as.dendrogram(hc2)
    heatmap(t(H), Colv=d1.W, Rowv = d1,  scale="row", col=mycol, margins=c(15, 15), cexRow=0.35, cexCol=0.55, main="Sorted H Matrix", xlab = "Meta-Genes", ylab= " ")
+
+  # Visualize H2 
+
+   hc <- hclust(dist(t(H2)), "complete")
+   d1 <- as.dendrogram(hc)
+   hc2 <- hclust(dist(H2), "complete")
+   d2 <- as.dendrogram(hc2)
+   heatmap(t(H2), Colv=d1.W, Rowv = d1,  scale="row", col=mycol, margins=c(15, 15), cexRow=0.35, cexCol=0.55, main="Sorted H2 Matrix", xlab = "Meta-Genes", ylab= " ")
 
    # Signatures association plot
        
@@ -224,17 +251,27 @@
    mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.30, col=rev(col.classes[match(gc, all.classes)]), line=0, las=1, font=2, family="")
    mtext(colnames(V), at=1:ncol(V), side = 3, cex=0.30, col=col.classes[match(gc, all.classes)], line=0, las=3, font=2, family="")
 
-   # Merge H matrices
+   # Normalize H and H2
 
-   #   H <- cbind(H, H2)
+   if (H.normalize == T) {
+      Ht <- t(H)
+      sum.H <- apply(Ht, MARGIN=1, FUN=sum)
+      for (i in 1:nrow(Ht)) {
+         Ht[i,] <- Ht[i,]/sum.H[i]
+      }
+      H2t <- t(H2)
+      sum.H2 <- apply(H2t, MARGIN=1, FUN=sum)
+      for (i in 1:nrow(H2t)) {
+         H2t[i,] <- H2t[i,]/sum.H2[i]
+      }
+    }
 
-   # Normalize H
+  # Merge H and H2
 
-   Ht <- t(H)
-   sum.H <- apply(Ht, MARGIN=1, FUN=sum)
-   for (i in 1:nrow(Ht)) {
-      Ht[i,] <- Ht[i,]/sum.H[i]
-   }
+   H <- cbind(H, H2)
+   Ht <- rbind(Ht, H2t)
+   gene.class <- c(gene.class, gene.class2)
+   all.classes <- unique(c(all.classes, all.classes2))
 
    for (i in 1:nrow(Ht)) {
       nf <- layout(matrix(c(1, 2, 3, 4), 4, 1, byrow=T), 1, c(4, ceiling(n.top/2) + 2, ceiling(n.bottom/2) + 2, 3),  FALSE)
@@ -337,3 +374,8 @@
 
    my.movie3d(spin3d(axis=c(1,1,1), rpm=2), duration=5, fps = 10, movie = movie.name, dir = paste(dir, collapse="/"),
            convert = TRUE, clean = TRUE, verbose=TRUE, top = TRUE, type = "gif", startTime = 0) 
+
+
+   
+
+

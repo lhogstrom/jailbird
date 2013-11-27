@@ -38,7 +38,7 @@ def set_class_labels(test_groups,sigInfoFrm,pclDict):
     return sigInfoFrm
 
 # wkdir = '/xchip/cogs/projects/pharm_class/svm_pcla_classifier_NOV21'
-wkdir = '/xchip/cogs/projects/NMF/PC3_7_PCLs_w_DMSO'
+wkdir = '/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 #make pso object
@@ -78,17 +78,23 @@ for group in testGroups:
 brdAllGroups.append('DMSO')
 
 #
-cellLine = 'PC3'
+cellLine = 'MCF7'
 CM = mu.CMapMongo()
 goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine,'pert_dose':{'$gt':1}}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
         toDataFrame=True)
-goldQuery.index = goldQuery['sig_id']
+indRep = [x.replace(":",".") for x in goldQuery['sig_id']]
+indRep = [x.replace("-",".") for x in indRep]
+goldQuery.index = indRep
+# goldQuery.index = goldQuery['sig_id']
 # add dmsos to the matrix
 dmsoQuery = CM.find({'pert_iname':'DMSO','cell_id':cellLine}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
         toDataFrame=True)
-dmsoQuery.index = dmsoQuery['sig_id']
+indRep = [x.replace(":",".") for x in dmsoQuery['sig_id']]
+indRep = [x.replace("-",".") for x in indRep]
+dmsoQuery.index = indRep
+# dmsoQuery['sig_id'] = indRep
 dmsoQuery['pcl_name'] = 'DMSO'
 dmsoQuery['labels'] = 99
 goldQuery = set_class_labels(testGroups,goldQuery,self.pclDict)
@@ -109,7 +115,7 @@ for brd in grpedBRD.groups:
     else:
         keepList.extend(sigs[:nKeep])
 reducedSigFrm = goldQuery.reindex(index=keepList)
-outF = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes.txt'
+outF = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes.v2.txt'
 reducedSigFrm.to_csv(outF,sep='\t',header=False)
 # grped2 = reducedSigFrm.groupby('pert_iname')
 # grped2.size()
@@ -130,6 +136,7 @@ zFrm = gt.frame
 # ## merge data with 
 # zFrm = pd.concat([zFrm,droppedQ],axis=1)
 
+#use java-1.7
 # convert gctx to gct so it can be read by R "convert-dataset -i MCF7_top_intra_connecting_compound_classes_n130x978.gctx"
 
 ### load in Pablo's dir
