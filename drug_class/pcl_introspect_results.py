@@ -127,9 +127,10 @@ medRnkpt.sort('median_rankpt', ascending=False)
 # keepNames = medRnkpt.index.values
 outF = '/xchip/cogs/hogstrom/analysis/scratch/pcl_keepers.txt'
 medRnkpt.to_csv(outF,index=True,header=True,sep='\t')
+curratedFile = '/xchip/cogs/hogstrom/analysis/scratch/pcl_keepers_currated.txt'
 #use Rajiv's matlab validvar tool to change list strings
 #write using mkgrp
-nameModFile = '/xchip/cogs/hogstrom/analysis/scratch/pcl_keepers_mod.txt'
+nameModFile = '/xchip/cogs/hogstrom/analysis/scratch/pcl_keepers_mod_currated.txt'
 nameMod = pd.io.parsers.read_csv(nameModFile,sep='\t',header=None)
 nameMod[0].values
 
@@ -138,16 +139,15 @@ fileNames = []
 for pcl in nameMod[0].values:
     fName = 'heatmap_' +pcl + '.png'
     fileNames.append(fName)    
-indexfile = os.path.join(out,'index.html')
+indexfile = '/xchip/cogs/hogstrom/analysis/scratch/index_pcl_lh.html'
 with open(indexfile,'w') as f:
     lineWrite = '<h2>PCLs by median rnkpt </h2>'
     f.write(lineWrite + '\n')
     for fName in fileNames:
-        lineWrite =  '<a href="' + pathName + '/index.html">' + pathName + '</a> <BR>'
-        f.write(lineWrite + '\n')    
-
-
-
+        lineWrite =  '<img src=' + fName + '>'
+        f.write(lineWrite + '\n')
+        lineWrite2=  '<h6>' + fName + '</h6>'
+        f.write(lineWrite2 + '\n')
 def grtr_value_upper_mtrx(mtrx):
     '''
     -take an unsymetric matrix
