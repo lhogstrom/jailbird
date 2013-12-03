@@ -57,6 +57,11 @@ geneCounts = geneCounts.order(ascending=False)
 outF = '/xchip/cogs/hogstrom/analysis/scratch/reactome_gene_freq_in_pathways.txt'
 geneCounts.to_csv(outF,sep='\t',index=True,header=True)
 
+groupSer = iSpectFrm['group_id']
+outF = '/xchip/cogs/hogstrom/analysis/scratch/reactome_group_list.txt'
+groupSer.to_csv(outF,sep='\t',index=False,header=False)
+
+
 #find compounds which overlap in multiple 
 nInm = len(inameDict)
 overlapCount = pd.DataFrame(np.zeros([nInm, nInm]),
@@ -96,3 +101,22 @@ outF = '/xchip/cogs/hogstrom/analysis/scratch/reactome_overlap_proportion_list.t
 overlapSer.to_csv(outF,sep='\t',index=True,header=True)
 # overlapSer[overlapSer > .5]
 
+
+nameModFile = '/xchip/cogs/hogstrom/analysis/scratch/currated_reactome_group_list.txt'
+nameMod = pd.io.parsers.read_csv(nameModFile,sep='\t',header=None)
+nameMod[0].values
+
+#write new index files with groups ordered by median rnkpt:
+fileNames = []
+for pcl in nameMod[0].values:
+    fName = 'heatmap_' +pcl.lower() + '.png'
+    fileNames.append(fName)    
+indexfile = '/xchip/cogs/hogstrom/analysis/scratch/index_reactome_lh.html'
+with open(indexfile,'w') as f:
+    lineWrite = '<h2>PCLs by median rnkpt </h2>'
+    f.write(lineWrite + '\n')
+    for fName in fileNames:
+        lineWrite =  '<img src=' + fName + '>'
+        f.write(lineWrite + '\n')
+        lineWrite2=  '<h6>' + fName + '</h6>'
+        f.write(lineWrite2 + '\n')
