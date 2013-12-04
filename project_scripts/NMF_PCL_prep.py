@@ -45,6 +45,13 @@ def set_class_labels(test_groups,sigInfoFrm,pclDict):
 #               'Phosphatidylinositol-4,5-bisphosphate_3-kinase_catalytic_subunit,_delta_isoform-Inhibitor',
 #               '3-hydroxy-3-methylglutaryl-coenzyme_A_reductase-Inhibitor']
 # load in top groups
+
+wkdir = '/xchip/cogs/hogstrom/analysis/scratch'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
+#make pso object
+pso = psc.svm_pcla(out=wkdir)
+self=pso
 llo = ldc.label_loader()
 self.pclDict = llo.load_TTD()
 #load pcl rankpoint file 
@@ -71,68 +78,64 @@ for group in testGroups:
 brdAllGroups.append('DMSO')
 
 # set cell line and directory 
-# cellList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
-cellLine = 'A375'
-wkdir = '/xchip/cogs/projects/NMF/lincs_core_cell_lines/' + cellLine
-if not os.path.exists(wkdir):
-    os.mkdir(wkdir)
-# get signature annotations from cmap database
-CM = mu.CMapMongo()
-goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine,'pert_dose':{'$gt':1}}, #, 
-        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
-        toDataFrame=True)
-indRep = [x.replace(":",".") for x in goldQuery['sig_id']]
-indRep = [x.replace("-",".") for x in indRep]
-goldQuery.index = indRep
-# goldQuery.index = goldQuery['sig_id']
-dmsoQuery = CM.find({'pert_iname':'DMSO','cell_id':cellLine,'distil_nsample':{'$gte':2,'$lt':5}}, #, 
-        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
-        toDataFrame=True)
-indRep = [x.replace(":",".") for x in dmsoQuery['sig_id']]
-indRep = [x.replace("-",".") for x in indRep]
-dmsoQuery.index = indRep
-# dmsoQuery['sig_id'] = indRep
-dmsoQuery['pcl_name'] = 'DMSO'
-dmsoQuery['labels'] = 99
-goldQuery = set_class_labels(testGroups,goldQuery,self.pclDict)
-#combine dmsos with drug perturbations
-nDMSOs = dmsoQuery.shape[0]
-iRandDmso = np.random.choice(nDMSOs-1,50,replace=False)
-goldQuery = pd.concat([goldQuery,dmsoQuery.ix[iRandDmso]],axis=0)
-
-### leave only 1 or two signatures for each compound ### 
-nKeep = 2
-cut_by = 'pert_iname'
-grpedBRD = goldQuery.groupby(cut_by)
-keepList = []
-# keep only n instances of each compound
-for brd in grpedBRD.groups:
-    sigs = grpedBRD.groups[brd]
-    if brd == 'DMSO':
-        keepList.extend(sigs) # keep all DMSO sigs
-    else:
-        keepList.extend(sigs[:nKeep])
-reducedSigFrm = goldQuery.reindex(index=keepList)
-outF = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes.v2.txt'
-reducedSigFrm.to_csv(outF,sep='\t',header=False)
-# grped2 = reducedSigFrm.groupby('pert_iname')
-# grped2.size()
-
-
-### read in signatures ###
-### write to file ####
-sigList = reducedSigFrm['sig_id'].values
-### load in expression data for the two sets of signatures
-afPath = cmap.score_path
-gt = gct.GCT()
-gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
-outGCT = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes'
-gt.write(outGCT,mode='gctx')
-zFrm = gt.frame
-# zFrm = zFrm.T
-# probeIDs = zFrm.columns
-# ## merge data with 
-# zFrm = pd.concat([zFrm,droppedQ],axis=1)
+cellList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
+for cellLine in cellList:
+    # cellLine = 'A375'
+    wkdir = '/xchip/cogs/projects/NMF/lincs_core_cell_lines/' + cellLine
+    if not os.path.exists(wkdir):
+        os.mkdir(wkdir)
+    # get signature annotations from cmap database
+    CM = mu.CMapMongo()
+    goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':cellLine,'pert_dose':{'$gt':1}}, #, 
+            {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
+            toDataFrame=True)
+    indRep = [x.replace(":",".") for x in goldQuery['sig_id']]
+    indRep = [x.replace("-",".") for x in indRep]
+    goldQuery.index = indRep
+    # goldQuery.index = goldQuery['sig_id']
+    dmsoQuery = CM.find({'pert_iname':'DMSO','cell_id':cellLine,'distil_nsample':{'$gte':2,'$lt':5}}, #, 
+            {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
+            toDataFrame=True)
+    indRep = [x.replace(":",".") for x in dmsoQuery['sig_id']]
+    indRep = [x.replace("-",".") for x in indRep]
+    dmsoQuery.index = indRep
+    # dmsoQuery['sig_id'] = indRep
+    dmsoQuery['pcl_name'] = 'DMSO'
+    dmsoQuery['labels'] = 99
+    goldQuery = set_class_labels(testGroups,goldQuery,self.pclDict)
+    #combine dmsos with drug perturbations
+    nDMSOs = dmsoQuery.shape[0]
+    iRandDmso = np.random.choice(nDMSOs-1,50,replace=False)
+    goldQuery = pd.concat([goldQuery,dmsoQuery.ix[iRandDmso]],axis=0)
+    ### leave only 1 or two signatures for each compound ### 
+    nKeep = 2
+    cut_by = 'pert_iname'
+    grpedBRD = goldQuery.groupby(cut_by)
+    keepList = []
+    # keep only n instances of each compound
+    for brd in grpedBRD.groups:
+        sigs = grpedBRD.groups[brd]
+        if brd == 'DMSO':
+            keepList.extend(sigs) # keep all DMSO sigs
+        else:
+            keepList.extend(sigs[:nKeep])
+    reducedSigFrm = goldQuery.reindex(index=keepList)
+    outF = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes.v2.txt'
+    reducedSigFrm.to_csv(outF,sep='\t',header=False)
+    ### read in signatures ###
+    ### write to file ####
+    sigList = reducedSigFrm['sig_id'].values
+    ### load in expression data for the two sets of signatures
+    afPath = cmap.score_path
+    gt = gct.GCT()
+    gt.read(src=afPath,cid=sigList,rid='lm_epsilon')
+    outGCT = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes'
+    gt.write(outGCT,mode='gctx')
+    zFrm = gt.frame
+    # zFrm = zFrm.T
+    # probeIDs = zFrm.columns
+    # ## merge data with 
+    # zFrm = pd.concat([zFrm,droppedQ],axis=1)
 
 # convert gctx to gct
 #use java-1.7
