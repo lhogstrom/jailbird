@@ -71,17 +71,38 @@ for key in groupMedians['PCL_group']:
 self.pclDict = reducedPCLDict
 n_groups = 7
 testGroups = groupMedians['PCL_group'][:n_groups].values
-#
+# make list of all compounds in a class of interest
 brdAllGroups = []
 for group in testGroups:
     brdAllGroups.extend(self.pclDict[group])
 brdAllGroups.append('DMSO')
 
+### get BRAF and MEK inhibitors
+filePCLgrps = '/xchip/cogs/projects/pharm_class/pcl_shared_target.txt'
+pclFrm = pd.io.parsers.read_csv(filePCLgrps,sep='\t')
+brafs = pclFrm[pclFrm['class'] == 'BRAF']
+meks = pclFrm[pclFrm['class'] == 'MEK2']
+self.pclDict = {}
+# for i1 in brafs.index:
+#     brd = brafs.ix[:,'pert_id'].values
+#     group = 'BRAF'
+#     self.pclDict[group] = brd
+brd = brafs.ix[:,'pert_id'].values
+self.pclDict['BRAF'] = list(brd)
+self.pclDict['MEK1'] = ['BRD-K12343256']
+brdAllGroups = []
+for group in self.pclDict:
+    brdAllGroups.extend(self.pclDict[group])
+brdAllGroups.append('DMSO')
+testGroups = ['BRAF',
+              'MEK1']
+# mek inhibitor BRD-K12343256 , 
+
 # set cell line and directory 
 cellList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
 for cellLine in cellList:
     # cellLine = 'A375'
-    wkdir = '/xchip/cogs/projects/NMF/lincs_core_cell_lines/' + cellLine
+    wkdir = '/xchip/cogs/projects/NMF/BRAF_PCL/' + cellLine
     if not os.path.exists(wkdir):
         os.mkdir(wkdir)
     # get signature annotations from cmap database
@@ -143,6 +164,8 @@ for cellLine in cellList:
 cmd1 = 'use Java-1.7'
 os.system(cmd1)
 globRes = glob.glob(outGCT+'*.gctx')
+outF = wkdir + '/' + cellLine + '_top_intra_connecting_compound_classes.v2.txt'
+outF = cellLine + '_top_intra_connecting_compound_classes.v2.txt'
 cmd2 = 'convert-dataset -i ' + globRes[0]
 os.system(cmd2)
 
@@ -178,7 +201,7 @@ outIntrospect = '/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/' + cellLine 
 if not os.path.exists(outIntrospect):
     os.mkdir(outIntrospect)
 qSer = reducedSigFrm['sig_id']
-outF = outIntrospect + '/sig_ids_'+ cellLine + '.grp'
+os.chdir(wkdir)
 qSer.to_csv(outF,index=False,header=False)
 #run sig_introspect
 cmd = ' '.join(['rum -q hour',

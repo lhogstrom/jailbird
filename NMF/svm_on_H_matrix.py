@@ -33,8 +33,8 @@ annotFrm = pd.io.parsers.read_csv('/'.join([resDir,annotFile]),sep='\t',index_co
 
 Hmtrx = pd.io.parsers.read_csv('/'.join([resDir,H9file]),sep='\t',skiprows=1,header=1,index_col=0) #,header=True, index_col=0
 Hmtrx = Hmtrx.drop('Description',1)
-Hmtrx = Hmtrx.T
 sigs = Hmtrx.columns.values
+Hmtrx = Hmtrx.T
 
 annotFrm = annotFrm.reindex(list(sigs))
 labels = annotFrm.ix[:,5]
@@ -51,9 +51,11 @@ for sig in Hmtrx.index:
     labelsTrain = labels[labels.index != sig]
     # trainFrm = droppedFrm.reindex(columns=probeIDs)
     C = 1.0  # SVM regularization parameter
-    svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain.values)
+    svc = svm.SVC(kernel='linear', C=C,probability=True).fit(trainFrm.values, labelsTrain.values)
     zTest = Hmtrx.ix[sig,:]
     linPred = svc.predict(zTest.values)
+    linPred_prob = svc.predict_proba(zTest.values)
+    linPred_df = svc.decision_function(zTest.values)
     predictDict[sig] = linPred[0]
 predSer = pd.Series(predictDict)
 predSer.name = 'svm_prediction'

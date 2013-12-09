@@ -50,6 +50,7 @@ CM = mu.CMapMongo()
 dosQuery = CM.find({'pert_id':{'$in':list(dosBrds)},'pert_type':'trt_cp'}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
         toDataFrame=True)
+dosQuery.index = dosQuery['sig_id']
 dosSetLen = len(set(dosQuery['pert_id']))
 dosGrped = dosQuery.groupby(['pert_id'])
 countDict = {}
@@ -78,6 +79,7 @@ CM = mu.CMapMongo()
 dosGold = CM.find({'pert_id':{'$in':list(dosBrds)},'pert_type':'trt_cp','is_gold':True}, #, 
         {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
         toDataFrame=True)
+dosGold.index = dosGold['sig_id']
 dosGoldLen = len(set(dosGold['pert_id']))
 dosGrped = dosGold.groupby(['pert_id'])
 countGoldDict = {}
@@ -130,7 +132,42 @@ outF = os.path.join(wkdir, 'DOS_summly_cell_line_distribution.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
+### make summary table:
+# 1) pert_id
+# 2) times_profiled_in_a2
+# 3) times_gold_in_a2
+# 4) is_gold_cell lines
+goldGrped = dosGold.groupby('pert_id')
+allGrped = dosQuery.groupby('pert_id')
+#with vcap
+sFrm = pd.DataFrame()
+for brd in multiGold.index:
+    allSigs = allGrped.groups[brd]
+    nTested = len(allSigs)
+    goldSigs = goldGrped.groups[brd]
+    nGold = len(goldSigs)
+    goldCells = dosGold.ix[goldSigs,'cell_id']
+    goldCellSet = set(goldCells)
+    noVCAP = goldCellSet.copy()
+    if 'VCAP' in noVCAP:
+        noVCAP.remove('VCAP')
+    #which compounds are is gold in two cell lines OTHER than VCAP
+    if len(noVCAP) > 1:
+        nDict = {}
+        nDict['times_profiled_in_a2'] = nTested
+        nDict['times_gold_in_a2'] = nGold
+        nDict['is_gold_cell_lines'] = list(goldCellSet)
+        brdFrm = pd.DataFrame({brd:nDict})
+        sFrm = pd.concat([sFrm,brdFrm],axis=1)
+sFrm = sFrm.T
+#convert list of cell lines to a comma seperated strings
+sFrm['is_gold_cell_lines'] = sFrm['is_gold_cell_lines'].str.join(',')
+sFrm = sFrm.reindex(columns=['times_profiled_in_a2','times_gold_in_a2','is_gold_cell_lines'])
+outF = os.path.join(wkdir, 'DOS_gold_cell_line_summary.txt')
+sFrm.to_csv(outF,sep='\t', header=True)
+
 # ### for the 200 in summly space ---> run sig_introspect 
+
 
 # ### run summly for bioactives - first in matched mode for the 234, then in independent mode
 
