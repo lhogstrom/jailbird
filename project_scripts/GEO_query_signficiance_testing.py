@@ -66,6 +66,7 @@ shF = sFrm.reindex(index=shPerts)
 #calculate p-value of expected connections
 geoNoSummly = []
 geoNoRes = []
+geoList = []
 resDict = {}
 for igeoID in summIDs:
     geoID = aFrm.ix[igeoID,'series']
@@ -184,6 +185,9 @@ noRes = pd.Series(geoNoRes)
 noRes.name = 'no_expected_connections'
 outF = wkdir+'/no_expected_connections.txt'
 noRes.to_csv(outF,sep='\t',header=True,index=False)
+outF = wkdir+'/no_expected_connections_table.txt'
+noExpectFrm = aFrm.reindex(geoNoRes)
+noExpectFrm.to_csv(outF,sep='\t',header=True,index=False)
 
 def calc_ranks(cpF,oeF,shF,lmID):
     'calculate the rank and percent rank of summly results'
@@ -243,7 +247,6 @@ plt.title('DMSO signatures - LINCS core cell lines (n = 7182)')
 outF = path.join(wkdir, 'LINCS_DMSOs_cc_by_distil_nsample.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
-
 
 
 # simple SC plot

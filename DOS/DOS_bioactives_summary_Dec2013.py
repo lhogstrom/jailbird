@@ -12,6 +12,7 @@ import cmap.io.gct as gct
 import pandas as pd
 import cmap
 import os
+from matplotlib.ticker import NullFormatter
 
 wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Dec2013'
 
@@ -102,13 +103,71 @@ plt.xticks(bins)
 outF = os.path.join(wkdir, 'DOS_isGold_cell_line_distribution.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
-
 #which compounds are is_gold in more than one cell line?
 multiGold = countSerGold[countSerGold > 1]
 
+########################
+## make SC Plots #######
+########################
+
+x = dosGold['distil_cc_q75'].values
+y = dosGold['distil_ss'].values
+# y = nsample
+nullfmt   = NullFormatter()         # no labels
+# definitions for the axes
+left, width = 0.1, 0.65
+bottom, height = 0.1, 0.65
+bottom_h = left_h = left+width+0.02
+#
+rect_scatter = [left, bottom, width, height]
+rect_histx = [left, bottom_h, width, 0.2]
+rect_histy = [left_h, bottom, 0.2, height]
+# start with a rectangular Figure
+plt.figure(1, figsize=(8,8))
+axScatter = plt.axes(rect_scatter)
+axHistx = plt.axes(rect_histx)
+axHisty = plt.axes(rect_histy)
+# no labels
+axHistx.xaxis.set_major_formatter(nullfmt)
+axHisty.yaxis.set_major_formatter(nullfmt)
+# the scatter plot:
+axScatter.scatter(x, y, marker=".", alpha=.1) #,marker='.'
+binwidth = 0.25
+# xymax = np.max( [np.max(np.fabs(x)), np.max(np.fabs(y))] )
+xymax = np.max(np.fabs(y))
+# lim = ( int(xymax/binwidth) + 1) * binwidth
+lim = ( int(xymax/binwidth) + xymax) * binwidth
+#set 
+xMin = -.3
+xMax = 1
+xBinwidth = .025
+axScatter.set_xlim( (xMin, xMax) )
+axScatter.set_ylim( (0, lim) )
+#make hist
+binsX = np.arange(xMin, xMax + xBinwidth, xBinwidth)
+binsY = np.arange(0, lim + binwidth, binwidth)
+# axHistx.hist(x, bins=bins)
+axHistx.hist(x, bins=binsX, range=[xMin,xMax])
+axHisty.hist(y, bins=binsY, orientation='horizontal')
+axHistx.axis('off')
+axHisty.axis('off')
+#set lims
+axScatter.set_ylabel('ss',fontweight='bold')
+axScatter.set_xlabel('CC_q75',fontweight='bold')
+# axScatter.set_title('DMSO signatures - LINCS core cell lines (n = 6471)')
+outF = os.path.join(wkdir, 'DOS_SC_plot_all_is_gold.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+
+
+
 ## which DOS compounds are in summly space?
 mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_sym_n7322x7322.gctx'
+# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
 gt = gct.GCT()
+# gt.read_gctx_col_meta(mtrxSummly)
+# gt.read_gctx_row_meta(mtrxSummly)
 gt.read(mtrxSummly)
 columnPerts = gt.get_column_meta('pert_id')
 summFrm = gt.frame
@@ -131,6 +190,23 @@ plt.xticks(bins)
 outF = os.path.join(wkdir, 'DOS_summly_cell_line_distribution.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
+
+#which compounds are in independent mode space?
+mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+gt = gct.GCT()
+gt.read_gctx_col_meta(mtrxSummly)
+gt.read_gctx_row_meta(mtrxSummly)
+indSummSigs = gt.get_column_meta('sig_id')
+indSummInames = gt.get_column_meta('pert_iname')
+sigSer = pd.Series(index=indSummSigs, data=indSummInames)
+#which dos cps are in the summly indpend
+summBrds = set(sigSer.index)
+goldDosBrds = set(dosGold['sig_id'].values)
+summGold = summBrds.intersection(goldDosBrds)
+
+
+dosSer = sigSer.reindex(dosGold['sig_id'].values)
+
 
 ### make summary table:
 # 1) pert_id
