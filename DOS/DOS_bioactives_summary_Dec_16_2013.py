@@ -20,122 +20,150 @@ wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Dec2013'
 ## get DOS collection ##
 ########################
 
-#get all cps from DOS collection
-mc = mu.MongoContainer()
-pertInfo = mc.pert_info.find({'pert_icollection':'DOS'},
-            {},toDataFrame=True)
-#check that it doesn't have a known pert_iname
-inameSer = pertInfo['pert_iname']
-inameFrm = pd.DataFrame(inameSer)
-#which values do not start with BRD?
-notBRDiname = pertInfo[~inameSer.str.contains('BRD')]
-isBRDiname = pertInfo[inameSer.str.contains('BRD')]
-dosBrds = isBRDiname['pert_id']
+def get_dos_BRDs():
+    'return Series of all DOS compounds - use the DOS icollection'
+    #get all cps from DOS collection
+    mc = mu.MongoContainer()
+    pertInfo = mc.pert_info.find({'pert_icollection':'DOS'},
+                {},toDataFrame=True)
+    #check that it doesn't have a known pert_iname
+    inameSer = pertInfo['pert_iname']
+    inameFrm = pd.DataFrame(inameSer)
+    #which values do not start with BRD?
+    notBRDiname = pertInfo[~inameSer.str.contains('BRD')]
+    isBRDiname = pertInfo[inameSer.str.contains('BRD')]
+    dosBrds = isBRDiname['pert_id']
+    return dosBrds
 
 ########################
 ## all DOS signatures ##
 ########################
 
-# get signatures for all DOS compounds
-CM = mu.CMapMongo()
-dosQuery = CM.find({'pert_id':{'$in':list(dosBrds)},'pert_type':'trt_cp'}, #, 
-        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
-        toDataFrame=True)
-dosQuery.index = dosQuery['sig_id']
-dosSetLen = len(set(dosQuery['pert_id']))
-dosGrped = dosQuery.groupby(['pert_id'])
-countDict = {}
-for grp in dosGrped:
-    grpName = grp[0]
-    cellSet = set(grp[1]['cell_id'])
-    nCells = len(cellSet)
-    countDict[grpName] = nCells
-countSer = pd.Series(countDict)
-countMax = max(countSer)
+def get_dos_signatures(dosBrds):
+    "1) return signature info for all DOS compounds \
+    2) return list counts of number of cell lines tested"
+    CM = mu.CMapMongo()
+    dosQuery = CM.find({'pert_id':{'$in':list(dosBrds)},'pert_type':'trt_cp'}, #, 
+            {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
+            toDataFrame=True)
+    dosQuery.index = dosQuery['sig_id']
+    dosSetLen = len(set(dosQuery['pert_id']))
+    dosGrped = dosQuery.groupby(['pert_id'])
+    countDict = {}
+    for grp in dosGrped:
+        grpName = grp[0]
+        cellSet = set(grp[1]['cell_id'])
+        nCells = len(cellSet)
+        countDict[grpName] = nCells
+    countSer = pd.Series(countDict)
+    countMax = max(countSer)
+    return dosQuery, countSer
 
 #####################
 ## is_gold DOS ######
 #####################
 
-CM = mu.CMapMongo()
-dosGold = CM.find({'pert_id':{'$in':list(dosBrds)},'pert_type':'trt_cp','is_gold':True}, #, 
-        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
-        toDataFrame=True)
-dosGold.index = dosGold['sig_id']
-dosGoldLen = len(set(dosGold['pert_id']))
-dosGrped = dosGold.groupby(['pert_id'])
-countGoldDict = {}
-for grp in dosGrped:
-    grpName = grp[0]
-    cellSet = set(grp[1]['cell_id'])
-    nCells = len(cellSet)
-    countGoldDict[grpName] = nCells
-countSerGold = pd.Series(countGoldDict)
-countSerGold.name = 'n_cell_lines'
+def get_dos_gold_signatures(dosBrds):
+    "1) return signature info for all Gold DOS compounds \
+    2) return list counts of number of cell lines tested"
+    CM = mu.CMapMongo()
+    dosGold = CM.find({'pert_id':{'$in':list(dosBrds)},'pert_type':'trt_cp','is_gold':True}, #, 
+            {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
+            toDataFrame=True)
+    dosGold.index = dosGold['sig_id']
+    dosGoldLen = len(set(dosGold['pert_id']))
+    dosGrped = dosGold.groupby(['pert_id'])
+    countGoldDict = {}
+    for grp in dosGrped:
+        grpName = grp[0]
+        cellSet = set(grp[1]['cell_id'])
+        nCells = len(cellSet)
+        countGoldDict[grpName] = nCells
+    countSerGold = pd.Series(countGoldDict)
+    countSerGold.name = 'n_cell_lines'
+    return dosGold, countSerGold
 
 #which compounds are in independent mode space?
-mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
-gt = gct.GCT()
-gt.read_gctx_col_meta(mtrxSummly)
-gt.read_gctx_row_meta(mtrxSummly)
-indSummSigs = gt.get_column_meta('sig_id')
-indSummInames = gt.get_column_meta('pert_iname')
-sigSer = pd.Series(index=indSummSigs, data=indSummInames)
-#which dos cps are in the summly indpend
-summBrds = set(sigSer.index)
-goldDosBrds = set(dosGold['sig_id'].values)
-summGold = summBrds.intersection(goldDosBrds)
+def get_summly_dos_indeces(dosGold,mtrxSummly):
+    "1) obtain indices for all DOS compounds in the pre computed \
+    summly matrix"
+    gt = gct.GCT()
+    gt.read_gctx_col_meta(mtrxSummly)
+    gt.read_gctx_row_meta(mtrxSummly)
+    indSummSigs = gt.get_column_meta('sig_id')
+    indSummInames = gt.get_column_meta('pert_iname')
+    sigSer = pd.Series(index=indSummSigs, data=indSummInames)
+    #which dos cps are in the summly indpend
+    summBrds = set(sigSer.index)
+    goldDosBrds = set(dosGold['sig_id'].values)
+    summGold = summBrds.intersection(goldDosBrds)
+    # for the what is the median of the top n connections in summly independent mode?
+    #get indices of gold DOS
+    indSummSer = pd.Series(indSummSigs)
+    indSer = pd.Series(index=indSummSer.values,data=indSummSer.index)
+    iGold = indSer.reindex(list(summGold))
+    return iGold
 
-# for the what is the median of the top n connections in summly independent mode?
-#get indices of gold DOS
-indSummSer = pd.Series(indSummSigs)
-indSer = pd.Series(index=indSummSer.values,data=indSummSer.index)
-iGold = indSer.reindex(list(summGold))
+#load summly independent mode results
+def load_summly_independent(iGold,mtrxSummly):
+    "load dos compounds that have independent mode results - return dataframe"
+    IST = gct.GCT(mtrxSummly)
+    IST.read(col_inds=list(iGold.values))
+    inSum = IST.frame
+    gctSigs = IST.get_column_meta('sig_id')
+    inSum.columns = gctSigs
+    return inSum #return dataframe of rankpt values
 
-n_top = 25
-n_load = 1000
-loadSigs = iGold[:n_load]
-IST = gct.GCT(mtrxSummly)
-IST.read(col_inds=list(loadSigs.values))
-inSum = IST.frame
-gctSigs = IST.get_column_meta('sig_id')
-inSum.columns = gctSigs
-resMtx = inSum.values.copy()
-resMtx.sort(axis=0)
-topVals = resMtx[-n_top:,:]
-topMedians = np.median(topVals,axis=0)
-medianSer = pd.Series(data=topMedians,index=gctSigs)
-medianSer.name = 'median_of_top_25_connections'
-medianSer.index.name = 'sig_id'
+def median_n_connections(inSum,n_top=25):
+    "what is the median rnkpt value of the n_top connections for each"
+    resMtx = inSum.values.copy()
+    resMtx.sort(axis=0)
+    topVals = resMtx[-n_top:,:]
+    topMedians = np.median(topVals,axis=0)
+    medianSer = pd.Series(data=topMedians,index=inSum.columns)
+    medianSer.name = 'median_of_top_25_connections'
+    medianSer.index.name = 'sig_id'
+    return medianSer
 
 ########################
 ## DOS sig_introspect ##
 ########################
 
 ### load sig_introspect precalculated result file
-resPreCalc = '/xchip/cogs/projects/connectivity/introspect/introspect_connectivity.txt'
-specFrm =pd.io.parsers.read_csv(resPreCalc,sep='\t')
-specFrm.index = specFrm['pert_id']
-#which of these are dos cps?
-goldSet = countSerGold.index.values
-iSpecSet = set(specFrm['pert_id'])
-spectGold = iSpecSet.intersection(goldSet)
-#dos compounds for which we have introspect results
-dosFrm = specFrm[specFrm.pert_id.isin(spectGold)]
-metric = 'q25_rankpt'
-iRnkpt = dosFrm[metric]
-# countMax = max(overlapSer)
-# bins = np.arange(countMax+1)
-h1 = plt.hist(specFrm[metric],30,color='b',range=[-80,100],label=['all_introspect_results'],alpha=.4,normed=True)
-h2 = plt.hist(iRnkpt,30,color='r',range=[-80,100],label='DOS_results',alpha=.3,normed=True)
-plt.legend()
-plt.ylabel('freq',fontweight='bold')
-plt.xlabel(metric,fontweight='bold')
-# plt.title('summlySpace DOS compounds (' + str(overlapCount) + ') - cell lines is_gold')
-# plt.xticks(bins)
-outF = os.path.join(wkdir, 'DOS_sig_introspect_'+ metric+ '.png')
-plt.savefig(outF, bbox_inches='tight',dpi=200)
-plt.close()
+def dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True):
+    "1) load pre-calculated sig_introspect results "
+    specFrm =pd.io.parsers.read_csv(resPreCalc,sep='\t')
+    specFrm.index = specFrm['pert_id']
+    #which of these are dos cps?
+    goldSet = countSerGold.index.values
+    iSpecSet = set(specFrm['pert_id'])
+    spectGold = iSpecSet.intersection(goldSet)
+    #dos compounds for which we have introspect results
+    dosFrm = specFrm[specFrm.pert_id.isin(spectGold)]
+    if graph:
+        iRnkpt = dosFrm[graph_metric]
+        h1 = plt.hist(specFrm[graph_metric],30,color='b',range=[-80,100],label=['all_introspect_results'],alpha=.4,normed=True)
+        h2 = plt.hist(iRnkpt,30,color='r',range=[-80,100],label='DOS_results',alpha=.3,normed=True)
+        plt.legend()
+        plt.ylabel('freq',fontweight='bold')
+        plt.xlabel(graph_metric,fontweight='bold')
+        # plt.title('summlySpace DOS compounds (' + str(overlapCount) + ') - cell lines is_gold')
+        outF = os.path.join(wkdir, 'DOS_sig_introspect_'+ graph_metric+ '.png')
+        plt.savefig(outF, bbox_inches='tight',dpi=200)
+        plt.close()
+    return specFrm, dosFrm # all results, dos only results
+
+### run functions to retrieve DOS info 
+dosBrds = get_dos_BRDs()
+dosQuery, countSer = get_dos_signatures(dosBrds)
+dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
+mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
+inSum = load_summly_independent(iGold,mtrxSummly)
+#get median rnkpt of n_top connections
+medianSer = median_n_connections(inSum,n_top=25)
+resPreCalc = '/xchip/cogs/projects/connectivity/introspect/introspect_connectivity.txt' #
+specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True)
 
 
 
