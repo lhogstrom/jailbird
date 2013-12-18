@@ -111,8 +111,26 @@ def load_summly_independent(iGold,mtrxSummly):
     IST.read(col_inds=list(iGold.values))
     inSum = IST.frame
     gctSigs = IST.get_column_meta('sig_id')
-    inSum.columns = gctSigs
-    return inSum #return dataframe of rankpt values
+    gctPertIDs = IST.get_column_meta('pert_id')
+    # inSum.columns = gctSigs #index is just sig_id
+    # hierarchical index - sig_id and pert_id
+    iZip = zip(*[gctPertIDs,gctSigs])
+    mCol = pd.MultiIndex.from_tuples(iZip, names=['pert_id','sig_id'])
+    inSum.columns = mCol
+    #read all non-dos summlies
+    gt = gct.GCT()
+    gt.read_gctx_col_meta(mtrxSummly)
+    gt.read_gctx_row_meta(mtrxSummly)
+    indSummSigs = gt.get_column_meta('sig_id')
+    iNonDos = np.arange(len(indSummSigs))
+    iNonDos = np.delete(iNonDos,iGold.values)
+    # read in 
+    ISO = gct.GCT(mtrxSummly)
+    ISO.read(col_inds=list(iNonDos))
+    outSum = ISO.frame
+    gctSigs = ISO.get_column_meta('sig_id')
+    outSum.columns = gctSigs
+    return inSum, outSum #return dataframe of rankpt values
 
 def median_n_connections(inSum,n_top=25):
     "what is the median rnkpt value of the n_top connections for each"
@@ -124,6 +142,34 @@ def median_n_connections(inSum,n_top=25):
     medianSer.name = 'median_of_top_25_connections'
     medianSer.index.name = 'sig_id'
     return medianSer
+
+def summ_connections_pass_thresh(inSum,rnkpt_thresh=90,graph=True):
+    "1) what is the number of connections past a given rnkpt threshold \
+    how do DOS compounds compare to other compounds in summly space?"
+    passMask = np.zeros_like(inSum.values)
+    passMask[np.where(inSum.values > rnkpt_thresh)] = 1
+    # count connections passed theshold
+    passSum = np.sum(passMask,axis=0)
+    passSer = pd.Series(data=passSum,index=inSum.columns)
+    passSer.name = 'number_of_connections_pass_' + str(rnkpt_thresh) + '_rnkpt'
+    passSer.index.name = 'sig_id'
+    # repeat calculation for non-dos compounds
+    passMaskNon = np.zeros_like(outSum.values)
+    passMaskNon[np.where(outSum.values > rnkpt_thresh)] = 1
+    passSumNon = np.sum(passMaskNon,axis=0)
+    if graph:
+        min1 = np.min([np.min(passSer.values),np.min(passSumNon)])
+        max1 = np.max([np.max(passSer.values),np.max(passSumNon)])
+        h1 = plt.hist(passSumNon,30,color='b',range=[min1,max1],label=['non_DOS n=' + str(len(passSumNon))],alpha=.4,normed=True)
+        h2 = plt.hist(passSer,30,color='r',range=[min1,max1],label=['DOS n=' + str(passSer.shape[0])],alpha=.3,normed=True) #
+        plt.legend()
+        plt.ylabel('normed freq',fontweight='bold')
+        plt.xlabel('counts (rnkpt_indp_lass > ' + str(rnkpt_thresh) + ')',fontweight='bold')
+        plt.title('DOS compounds with summly connections pass rnkpt ' + str(rnkpt_thresh))
+        outF = os.path.join(wkdir, 'DOS_summly_counts_pass_threshold.png')
+        plt.savefig(outF, bbox_inches='tight',dpi=200)
+        plt.close()
+    return passSer
 
 ########################
 ## DOS sig_introspect ##
@@ -159,13 +205,36 @@ dosQuery, countSer = get_dos_signatures(dosBrds)
 dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
 mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
 iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
-inSum = load_summly_independent(iGold,mtrxSummly)
+inSum,outSum = load_summly_independent(iGold,mtrxSummly)
 #get median rnkpt of n_top connections
 medianSer = median_n_connections(inSum,n_top=25)
+passSer = summ_connections_pass_thresh(inSum,rnkpt_thresh=90,graph=True)
 resPreCalc = '/xchip/cogs/projects/connectivity/introspect/introspect_connectivity.txt' #
 specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True)
 
 
+#how consistent are the observed connections across cell lines?
+# overlap among top_n connections
+n_top = 100
+unBrd = set(inSum.columns.get_level_values(level=0)) #unique brds
+for brd in unBrd:
+    brdFrm = inSum[brd]
+    nSigs = brdFrm.shape[1]
+    if nSigs < 2: #skip if only one signature for that brd
+        continue
+    #what were to top n_connections for each signature
+    brdFrm.idxmax()
+    brdFrm
+
+brdGrped = inSum.groupby(level='pert_id',axis=1)
+
+def find_top(df, n_top=50, column='tip_pct'):
+    # return df.sort_index(by=column)[-n:]
+    ranked = df.rank(axis=0,ascending=False)
+    mask = pd.DataFrame(data=np.zeros_like(df),index=df.index,columns=df.columns)
+    mask[ranked<=n_top] = 1
+
+    nTop = df[ranked<=n_top]
 
 ## which DOS compounds are in summly space?
 # mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_sym_n7322x7322.gctx'
