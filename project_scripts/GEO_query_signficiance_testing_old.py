@@ -18,21 +18,22 @@ from statsmodels.stats.multitest import fdrcorrection as fdr
 wkdir = '/xchip/cogs/projects/GEO_summly'
 
 ### load GEO hypotheses being tested ####
-def get_expected_connection_frame():
-    CO = CredentialsObject()
-    CO.get_credentials()
-    server='23.23.153.188:27017,107.22.174.155:27017'
-    c = MongoClient(host=server) #,document_class='dex'
-    db = c['dex']
-    db.authenticate(CO.user,CO.pw)
-    collection = db['summly_tags']
-    #run query and organize results
-    g = collection.find()
-    dictList = list(g)
-    rFrame = pd.DataFrame(dictList)
-    rFrame.index = rFrame['_id']
-    return rFrame
-rFrame = get_expected_connection_frame()
+CO = CredentialsObject()
+CO.get_credentials()
+server='23.23.153.188:27017,107.22.174.155:27017'
+c = MongoClient(host=server) #,document_class='dex'
+db = c['dex']
+db.authenticate(CO.user,CO.pw)
+# db.database['sig_info']
+# collection = db['targets']
+collection = db['summly_tags']
+# collection.find_one()
+
+g = collection.find()
+# g = collection.find({'gene': 'HDAC1'})
+dictList = list(g)
+rFrame = pd.DataFrame(dictList)
+rFrame.index = rFrame['_id']
 
 #load in summly results
 summFile = '/xchip/cogs/projects/GEO_summly/ext_summlies_mod.gctx'
@@ -72,7 +73,6 @@ for igeoID in summIDs:
     aName = aFrm.ix[igeoID,'a_name']
     if igeoID in rFrame.source.values:
         qFrm = rFrame[rFrame.source == igeoID]
-        qFrm['geo_id'] = geoID
         geoList.append(igeoID)
     else:
         geoNoRes.append(igeoID)
@@ -393,9 +393,3 @@ gt.read(larger_query_matrix,)
 
 
 
-#look up for GEO ids
-geoDict = {}
-for ix in aFrm.index:
-    id1 = aFrm.ix[ix,'_id']
-    geoID = aFrm.ix[ix,'series']
-    geoDict[id1] = geoID
