@@ -318,29 +318,60 @@ specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=T
 
 
 #how consistent are the observed connections across cell lines?
-# overlap among top_n connections
-n_top = 100
-unBrd = set(inSum.columns.get_level_values(level=0)) #unique brds
-for brd in unBrd:
-    brdFrm = inSum[brd]
-    nSigs = brdFrm.shape[1]
-    if nSigs < 2: #skip if only one signature for that brd
-        continue
-    #what were to top n_connections for each signature
-    brdFrm.idxmax()
-    brdFrm
+def f5(x,nTop=50):
+    'make a set of the top summly connections'
+    iTop = x[x<nTop]
+    iList = set(iTop.index.values)
+    return iList
+rankedFrm = inSum.rank(axis=0,ascending=False)
+#must eliminate multi indexing to get this to work
+rankedFrm.columns = rankedFrm.columns.get_level_values('sig_id')
+topConnections = rankedFrm.apply(f5,axis=0)
+if (topConnections.index == inSum.columns.get_level_values('sig_id')).all():
+    topConnections.index = inSum.columns
+tcGrped = topConnections.groupby(level='pert_id')
+# grp1 = tcGrped.get_group('BRD-A36411721')
+def test_overlap(xSer):
+    'test the set overlap among items in a Series \
+    -return set of all pairwise overlap values'
+    ns = len(xSer)
+    if ns >1:
+        # overlapMtrx = pd.DataFrame(data=np.zeros([ns,ns]),
+        #         index=xSer.index,
+        #         columns=xSer.index)
+        overlapMtrx = np.zeros([ns,ns])
+        for i1, ix1 in enumerate(xSer.index):
+            s1 = xSer[ix1]
+            for i2, ix2 in enumerate(xSer.index):
+                s2 = xSer[ix2]
+                nO = len(s1.intersection(s2))
+                # overlapMtrx.ix[ix1,ix2] = nO
+                # overlapMtrx.ix[ix2,ix1] = nO
+                overlapMtrx[i1,i2] = nO
+                overlapMtrx[i2,i1] = nO                
+        iUp = np.tril_indices(ns)
+        overlapMtrx[iUp] = np.nan
+        overlapArray = overlapMtrx.flatten()
+        overlapArray = overlapArray[~np.isnan(overlapArray)]
+        #
+        return overlapArray
+    else:
+        # return pd.DataFrame()
+        return np.zeros(0)
+matrixSer = tcGrped.apply(test_overlap)
+overlapMed = matrixSer.apply(get_medians)
+overlapMed = overlapMed[~np.isnan(overlapMed)]
+plt.hist(overlapMed,30)
+plt.xlabel('median summly connection overlap (out of 50)')
+plt.ylabel('freq')
+plt.title('connection consistency across signatures')
+outF = os.path.join(wkdir, 'median_summly_connection_consistency.png')
+plt.savefig(outF, bbox_inches=0)
+plt.close
 
-brdGrped = inSum.groupby(level='pert_id',axis=1)
+def get_medians(x):
+    return np.median(x)
 
-def find_top(df, n_top=50, column='tip_pct'):
-    # return df.sort_index(by=column)[-n:]
-    ranked = df.rank(axis=0,ascending=False)
-    mask = pd.DataFrame(data=np.zeros_like(df),index=df.index,columns=df.columns)
-    mask[ranked<=n_top] = 1
-
-    nTop = df[ranked<=n_top]
-
-passGrped = passSer.groupby(level='pert_id')
 
 ## which DOS compounds are in summly space?
 # mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_sym_n7322x7322.gctx'
@@ -610,3 +641,76 @@ wtcsFrm = gt.frame
 # plt.savefig(outF, bbox_inches='tight',dpi=200)
 # plt.close()
 
+
+
+
+#### scratch for apply methods
+
+# overlap among top_n connections
+n_top = 100
+unBrd = set(inSum.columns.get_level_values(level=0)) #unique brds
+for brd in unBrd:
+    brdFrm = inSum[brd]
+    nSigs = brdFrm.shape[1]
+    if nSigs < 2: #skip if only one signature for that brd
+        continue
+    #what were to top n_connections for each signature
+    brdFrm.idxmax()
+    brdFrm
+
+brdGrped = inSum.groupby(level='pert_id',axis=1)
+pertFrm = brdGrped.get_group('BRD-A36411721')
+ranked = pertFrm.rank(axis=0,ascending=False)
+# mask = pd.DataFrame(data=np.zeros_like(ranked),index=ranked.index,columns=ranked.columns)
+mask = ranked.copy()
+mask.ix[:,:] = np.zeros_like(ranked)
+n_top=50
+mask[ranked<=n_top] = 1
+
+
+def find_top_ind(x):
+    iTop = x[x == 1]
+    iList = list(iTop.index.values)
+    return iList
+mask.apply(find_top_ind, axis=0,raw=False)
+
+def f(x):
+    return pd.Series([ x, x**2 ], index = ['x', 'x^s'])
+def f2(x):
+    return x>.5
+def f3(x):
+    return [max(x), 3]
+def f4(x):
+    iTop = x[x>.5]
+    iList = list(iTop.index.values)
+    return iList
+def f5(x):
+    iTop = x[x<50]
+    iList = list(iTop.index.values)
+    return iList
+
+rankedFrm = inSum.rank(axis=0,ascending=False)
+rankedFrm.columns = rankedFrm.columns.get_level_values('sig_id')
+g = rankedFrm.apply(f5,axis=0)
+
+s = pd.Series(np.random.rand(5),index=['a','b','c','d','e'])
+r = pd.DataFrame(np.random.rand(5,5),index=['a','b','c','d','e'],columns=['a1','b1','c1','d1','e1'])
+r.apply(f2,axis=0)
+
+
+def find_top(df, n_top=50, column='tip_pct'):
+    # return df.sort_index(by=column)[-n:]
+    ranked = df.rank(axis=0,ascending=False)
+    mask = pd.DataFrame(data=np.zeros_like(df),index=df.index,columns=df.columns)
+    mask[ranked<=n_top] = 1
+
+
+def find_top(df, n_top=50, column='tip_pct'):
+    # return df.sort_index(by=column)[-n:]
+    ranked = df.rank(axis=0,ascending=False)
+    mask = pd.DataFrame(data=np.zeros_like(df),index=df.index,columns=df.columns)
+    mask[ranked<=n_top] = 1
+
+    nTop = df[ranked<=n_top]
+
+passGrped = passSer.groupby(level='pert_id')

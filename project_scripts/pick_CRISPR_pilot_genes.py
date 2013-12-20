@@ -64,8 +64,26 @@ largeNsample = medNsample[medNsample>10]
 ci = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
             {'is_expressed':True,'pr_gene_symbol':True},
             toDataFrame=True)
-gsGrped = ci.groupby('pr_gene_symbol')
-oneFrm = gsGrped.first()
+#retrieve info for all genes which have been KD
+# ci = mc.gene_info.find({'pr_gene_symbol':{'$in':list(medNsample.index)}},
+#             {'is_expressed':True,'pr_gene_symbol':True},
+#             toDataFrame=True)
+beFrm = pd.DataFrame()
+for ix1 in ci.index:
+    gene = ci.ix[ix1,'pr_gene_symbol']
+    bEx = ci.ix[ix1,'is_expressed']
+    bSer = pd.Series(bEx)
+    bSer.name = gene
+    bFrm = pd.DataFrame(bSer)
+    beFrm = pd.concat([beFrm,bFrm],axis=1)
+# coreList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
+coreList = ['A375','A549', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # take out HA1E since there is no info for that
+# reindex to just core cell lines
+coreFrm = beFrm.reindex(coreList)
+coreFrm = coreFrm.T
+coreFrac = coreFrm.sum(axis=1)/float(len(coreList))
+dynamicExpr = coreFrac[coreFrac == .5]
+dynamicExpr = coreFrac[(coreFrac > .25) & (coreFrac < .7)]
 
 ###########################
 ### targets with Drugs ####
@@ -81,16 +99,62 @@ targetSet = set(targetList)
 targetFrm = mc.sig_info.find({'pert_type':'trt_sh.cgs','pert_iname':{'$in':list(targetSet)}},
             {'sig_id':True,'pert_iname':True},toDataFrame=True)
 cgsTargetdSet = set(targetFrm['pert_iname'])
+#drugs targeting each gene
+matchDrugFrm = drugFrm[drugFrm['class'].isin(list(targetSet))]
+drgGrped = matchDrugFrm.groupby('class')
+nDrugsTargetd = drgGrped.size()
+
+###########################
+### combine selection criteria 
+###########################
+
+# include these guys:
+includeSet = set()
+#large number of hairpins tested
+includeSet = includeSet.union(set(largeNsample.index))
+# is targeted by a drug
+includeSet = includeSet.union(cgsTargetdSet)
+# hairpins that connect well
+includeSet = includeSet.union(set(KDwell.index))
+# hairpins that connect well
+includeSet = includeSet.union(set(KDbad.index))
+# dynamic expression of target
+includeSet = includeSet.union(set(dynamicExpr.index))
 
 
 #crisprFrm 
+crisprFrm = mc.gene_info.find({'pr_gene_symbol':{'$in':list(includeSet)}},
+            {'is_expressed':True,'pr_gene_symbol':True,'is_lm':True},
+            toDataFrame=True)
+geneGrped = crisprFrm.groupby('pr_gene_symbol')
+crisprFrm = geneGrped.first()
+crisprFrm['target_KD'] = '-'
+crisprFrm.ix[list(KDbad.index),'target_KD'] = 'poor'
+crisprFrm.ix[list(KDwell.index),'target_KD'] = 'very_good'
+# add nsample info to table
+nSampleMatch = medNsample.reindex(crisprFrm.index)
+nSampleMatch.name = 'median_distil_nsample'
+nsFrm = pd.DataFrame(nSampleMatch)
+crisprFrm = pd.concat([crisprFrm,nsFrm],axis=1)
+# baseline expression to table
+mcoreFrace = coreFrac.reindex(crisprFrm.index)
+mcoreFrace.name = 'fraction_baseline_expr_in_core_lines'
+mcFrm = pd.DataFrame(mcoreFrace)
+crisprFrm = pd.concat([crisprFrm,mcFrm],axis=1)
+# median target KD
+mDiffMatch = medianTargetExpr.reindex(crisprFrm.index)
+mDiffMatch.name = 'median_z_of_lm_target'
+mdFrm = pd.DataFrame(mDiffMatch)
+crisprFrm = pd.concat([crisprFrm,mdFrm],axis=1)
+#drug target n
+mnDrugsTargetd = nDrugsTargetd.reindex(crisprFrm.index)
+mnDrugsTargetd.name = 'n_drugbank_drugs'
+mtFrm = pd.DataFrame(mnDrugsTargetd)
+crisprFrm = pd.concat([crisprFrm,mtFrm],axis=1)
 
-# include these guys:
-largeNsample.index #could add more of these
-cgsTargetdSet
-KDwell
-KDbad
-
+#write to table to file
+outF = os.path.join(wkdir, 'L1000_CRISPR_selection_table.txt')
+crisprFrm.to_csv(outF,sep='\t',index=True,header=True)
 #get all lm genes 
 # mc = mu.MongoContainer()
 # geneInfo = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
