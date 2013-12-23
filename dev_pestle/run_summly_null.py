@@ -18,4 +18,4 @@ reload(SN)
 
 wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Dec2013'
 sn = SN.SummNull(out=wkdir)
-sn.load_dmso_summ_results()
+sn.load_dmso_summ_results(index_row_by_pert_type=True)

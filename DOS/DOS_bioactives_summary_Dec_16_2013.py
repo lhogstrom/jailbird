@@ -14,6 +14,7 @@ import cmap
 import os
 from matplotlib.ticker import NullFormatter
 import cmap.analytics.summly_null as SN
+from statsmodels.distributions import ECDF
 
 wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Dec182013'
 if not os.path.exists(wkdir):
@@ -108,7 +109,7 @@ def get_summly_dos_indeces(dosGold,mtrxSummly):
     return iGold
 
 #load summly independent mode results
-def load_summly_independent(iGold,mtrxSummly):
+def load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=False):
     "load dos compounds that have independent mode results - return dataframe"
     IST = gct.GCT(mtrxSummly)
     IST.read(col_inds=list(iGold.values))
@@ -120,6 +121,12 @@ def load_summly_independent(iGold,mtrxSummly):
     iZip = zip(*[gctPertIDs,gctSigs])
     mCol = pd.MultiIndex.from_tuples(iZip, names=['pert_id','sig_id'])
     inSum.columns = mCol
+    if index_row_by_pert_type:
+        rowPertType = IST.get_row_meta('pert_type')
+        rowPertIDs = IST.get_row_meta('id')
+        iZip = zip(*[rowPertType,rowPertIDs])
+        mRow = pd.MultiIndex.from_tuples(iZip, names=['pert_type','pert_id'])
+        inSum.index = mRow
     #read all non-dos summlies
     gt = gct.GCT()
     gt.read_gctx_col_meta(mtrxSummly)
@@ -200,7 +207,7 @@ def summ_conn_pass_thresh_vs_DMSO(inSum,dmsoSum,rnkpt_thresh=90,graph=True):
         plt.legend()
         plt.ylabel('normed freq',fontweight='bold')
         plt.xlabel('counts ('+ matrixType + ' > ' + str(rnkpt_thresh) + ')',fontweight='bold')
-        plt.title('DOS compounds with summly connections pass rnkpt ' + str(rnkpt_thresh))
+        plt.title('DOS signatures with summly connections pass rnkpt ' + str(rnkpt_thresh))
         outF = os.path.join(wkdir, 'DOS_DMSO_summly_counts_pass_threshold.png')
         plt.savefig(outF, bbox_inches='tight',dpi=200)
         plt.close()
@@ -217,12 +224,13 @@ def median_summ_conn_pass_thresh(inSum,outSum,dmsoSum,matrixType,rnkpt_thresh=90
     passSer.name = 'number_of_connections_pass_' + str(rnkpt_thresh) + '_rnkpt'
     passGrped = passSer.groupby(level='pert_id')
     dosMedConnect = passGrped.median()
+    dosMedConnect.name = 'median_number_of_connections_above_' + str(rnkpt_thresh) + '_rnkpt'
     # repeat calculation for DMSOs
     passMaskDMSO = np.zeros_like(dmsoSum.values)
     passMaskDMSO[np.where(dmsoSum.values > rnkpt_thresh)] = 1
     passSumDMSO = np.sum(passMaskDMSO,axis=0)
     dmsoSer = pd.Series(data=passSumDMSO,index=dmsoSum.columns)
-    dmsoSer.name = 'number_of_connections_pass_' + str(rnkpt_thresh) + '_rnkpt'
+    dmsoSer.name = 'number_of_connections_above_' + str(rnkpt_thresh) + '_rnkpt'
     # repeat calculation for non-dos compounds
     passMaskNon = np.zeros_like(outSum.values)
     passMaskNon[np.where(outSum.values > rnkpt_thresh)] = 1
@@ -231,17 +239,17 @@ def median_summ_conn_pass_thresh(inSum,outSum,dmsoSum,matrixType,rnkpt_thresh=90
     nonSer.name = 'number_of_connections_pass_' + str(rnkpt_thresh) + '_rnkpt'
     nonSer.index.name = 'sig_id'
     nonGrped = nonSer.groupby(level='pert_id')
-    nonMedConnect = nonGrped.median()
+    nonMedConnect = nonGrped.median()    
     if graph:
         min1 = np.min([np.min(passSer.values),np.min(passSumNon),np.min(dmsoSer.values)])
         max1 = np.max([np.max(passSer.values),np.max(passSumNon),np.min(dmsoSer.values)])
         h1 = plt.hist(dmsoSer,30,color='b',range=[min1,max1],label=['DMSO n=' + str(len(dmsoSer))],alpha=.4,normed=True)
-        h2 = plt.hist(nonMedConnect,30,color='g',range=[min1,max1],label=['non_DOS n=' + str(len(nonMedConnect))],alpha=.4,normed=True)
+        # h2 = plt.hist(nonMedConnect,30,color='g',range=[min1,max1],label=['non_DOS n=' + str(len(nonMedConnect))],alpha=.4,normed=True)
         h3 = plt.hist(dosMedConnect,30,color='r',range=[min1,max1],label=['DOS n=' + str(len(dosMedConnect))],alpha=.3,normed=True) #
         plt.legend()
         plt.ylabel('normed freq',fontweight='bold')
         plt.xlabel('median counts ('+ matrixType + ' > ' + str(rnkpt_thresh) + ')',fontweight='bold')
-        plt.title('median connections pass rnkpt ' + str(rnkpt_thresh))
+        plt.title('median connections (compounds collapsed by pert_id) - pass rnkpt ' + str(rnkpt_thresh))
         outF = os.path.join(wkdir, 'median_summly_counts_pass_threshold.png')
         plt.savefig(outF, bbox_inches='tight',dpi=200)
         plt.close()
@@ -255,7 +263,7 @@ def median_summ_conn_pass_thresh(inSum,outSum,dmsoSum,matrixType,rnkpt_thresh=90
         obsNon = nonEcdf(vals)
         a1 = plt.plot(vals,obsDos,color='b',label=['DOS n=' + str(len(dosMedConnect))])
         a2 = plt.plot(vals,obsNon,color='g',label=['non_DOS n=' + str(len(nonMedConnect))])
-        a3 = plt.plot(vals,obsDmso,color='r--',label=['DMSO n=' + str(len(dmsoSer))]) #
+        a3 = plt.plot(vals,obsDmso,color='r',label=['DMSO n=' + str(len(dmsoSer))]) #
         # plt.legend()
         plt.ylabel('F(x)',fontweight='bold')
         plt.xlabel('median counts ('+ matrixType + ' > ' + str(rnkpt_thresh) + ')',fontweight='bold')
@@ -263,7 +271,42 @@ def median_summ_conn_pass_thresh(inSum,outSum,dmsoSum,matrixType,rnkpt_thresh=90
         outF = os.path.join(wkdir, 'median_summly_counts_cdf.png')
         plt.savefig(outF, bbox_inches='tight',dpi=200)
         plt.close()
-    # return passSer
+    return dosMedConnect, dmsoSer
+
+def median_conn_by_pert_type(inSum,dmsoSum,matrixType,rnkpt_thresh=90,graph=True):
+    "1) what is the number of connections past a given rnkpt threshold \
+    -what is the median for each unique pert"
+    for pType in set(inSum.index.get_level_values('pert_type')): #loop through each pert_type
+        pSum = inSum.ix[pType] #set matrix to summly results for a single pert_type
+        pDMSO = dmsoSum.ix[pType]
+        passMask = np.zeros_like(pSum.values)
+        passMask[np.where(pSum.values > rnkpt_thresh)] = 1
+        # count connections passed theshold
+        passSum = np.sum(passMask,axis=0)
+        passSer = pd.Series(data=passSum,index=pSum.columns)
+        passSer.name = 'number_of_connections_pass_' + str(rnkpt_thresh) + '_rnkpt'
+        passGrped = passSer.groupby(level='pert_id')
+        dosMedConnect = passGrped.median()
+        dosMedConnect.name = 'median_number_of_connections_above_' + str(rnkpt_thresh) + '_rnkpt'
+        # repeat calculation for DMSOs
+        passMaskDMSO = np.zeros_like(pDMSO.values)
+        passMaskDMSO[np.where(pDMSO.values > rnkpt_thresh)] = 1
+        passSumDMSO = np.sum(passMaskDMSO,axis=0)
+        dmsoSer = pd.Series(data=passSumDMSO,index=pDMSO.columns)
+        dmsoSer.name = 'number_of_connections_above_' + str(rnkpt_thresh) + '_rnkpt'
+        if graph:
+            min1 = np.min([np.min(dmsoSer.values),np.min(dosMedConnect)])
+            max1 = np.max([np.max(dmsoSer.values),np.max(dosMedConnect)])
+            h1 = plt.hist(dmsoSer,30,color='b',range=[min1,max1],label=['DMSO n=' + str(len(dmsoSer))],alpha=.4,normed=True)
+            h3 = plt.hist(dosMedConnect,30,color='r',range=[min1,max1],label=['DOS n=' + str(len(dosMedConnect))],alpha=.3,normed=True) #
+            plt.legend()
+            plt.ylabel('normed freq',fontweight='bold')
+            plt.xlabel('median counts ('+ matrixType + ' > ' + str(rnkpt_thresh) + ')',fontweight='bold')
+            plt.title(pType + ' median connections (compounds collapsed by pert_id)')
+            outF = os.path.join(wkdir, pType + '_median_summly_counts_pass_threshold.png')
+            plt.savefig(outF, bbox_inches='tight',dpi=200)
+            plt.close()
+        # return dosMedConnect, dmsoSer
 
 ########################
 ## DOS sig_introspect ##
@@ -296,7 +339,7 @@ def dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True):
 ### run functions to retrieve DOS info 
 #get dmso results
 sn = SN.SummNull(out=wkdir)
-sn.load_dmso_summ_results()
+sn.load_dmso_summ_results(index_row_by_pert_type=True)
 dosBrds = get_dos_BRDs()
 dosQuery, countSer = get_dos_signatures(dosBrds)
 dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
@@ -307,15 +350,31 @@ dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
 mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
 matrixType = 'mrp4'
 iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
-inSum,outSum = load_summly_independent(iGold,mtrxSummly)
+inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=True)
 #get median rnkpt of n_top connections
 medianSer = median_n_connections(inSum,n_top=25)
 passSer = summ_connections_pass_thresh(inSum,outSum,rnkpt_thresh=90,graph=True)
 passSer = summ_conn_pass_thresh_vs_DMSO(inSum,sn.dmsoFrm,rnkpt_thresh=90,graph=True)
-median_summ_conn_pass_thresh(inSum,outSum,sn.dmsoFrm,matrixType,rnkpt_thresh=90,graph=True)
+dosMedConnect, dmsoSer = median_summ_conn_pass_thresh(inSum,
+                                                outSum,
+                                                sn.dmsoFrm,
+                                                matrixType,
+                                                rnkpt_thresh=90,
+                                                graph=True)
+median_conn_by_pert_type(inSum,sn.dmsoFrm,matrixType,rnkpt_thresh=90,graph=True)
 resPreCalc = '/xchip/cogs/projects/connectivity/introspect/introspect_connectivity.txt' #
 specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True)
 
+#save results to file
+outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
+passSer.to_csv(outF,index=True,header=True,sep='\t')
+outF = os.path.join(wkdir, 'DOS_compounds_median_counts_above_90_mrp4.txt')
+dosMedConnect.to_csv(outF,index=True,header=True,sep='\t')
+outF = os.path.join(wkdir, 'DMSO_signatures_counts_above_90_mrp4.txt')
+dmsoSer.to_csv(outF,index=True,header=True,sep='\t')
+
+#seperate out by pert_type: 1) trt_cp vs. trt_sh
+#seperate out by pert_id, look at only unique compounds
 
 #how consistent are the observed connections across cell lines?
 def f5(x,nTop=50):
