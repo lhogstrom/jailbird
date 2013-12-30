@@ -308,6 +308,90 @@ def median_conn_by_pert_type(inSum,dmsoSum,matrixType,rnkpt_thresh=90,graph=True
             plt.close()
         # return dosMedConnect, dmsoSer
 
+###################################
+## summly connection consistency ##
+###################################
+
+def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph=True):
+    "how consistent are the observed connections across cell lines? \
+    -For all signatures of a given compound, calculate the pairwise \
+    overlap among summly results \
+    -take the median for each compound \
+    -compare to DMSO overlap results "
+    def get_top_set(x,nTop=nTop_connections):
+        'make a set of the top summly connections'
+        iTop = x[x<nTop]
+        iList = set(iTop.index.values)
+        return iList
+    for pType in set(inSum.index.get_level_values('pert_type')): #loop through each pert_type
+        pSum = inSum.ix[pType] #set matrix to summly results for a single pert_type
+        pDMSO = dmsoSum.ix[pType]
+        ### calculate median overlap for compound data
+        rankedFrm = pSum.rank(axis=0,ascending=False)
+        rankedFrm.columns = rankedFrm.columns.get_level_values('sig_id')
+        topConnections = rankedFrm.apply(get_top_set,axis=0)
+        if (topConnections.index == pSum.columns.get_level_values('sig_id')).all():
+            topConnections.index = pSum.columns
+        tcGrped = topConnections.groupby(level='pert_id')
+        matrixSer = tcGrped.apply(test_overlap)
+        overlapMed = matrixSer.apply(np.median)
+        overlapMed = overlapMed[~np.isnan(overlapMed)]
+        ### calculate median overlap for DMSO data
+        #make DMSO groupings of the same size
+        idGrped = pSum.groupby(level='pert_id',axis=1)
+        pairSize = idGrped.size() # signature counts for each compound
+        pairSize = pairSize[pairSize > 1]
+        tmpFrm = pSum.reindex(columns=pairSize.index,level='pert_id')
+        # make random dmso pairings to match compound pairing
+        dmsoSigs = np.random.choice(pDMSO.columns.values,size=tmpFrm.shape[1])
+        iZip = zip(*[tmpFrm.columns.get_level_values('pert_id'),dmsoSigs])
+        mRow = pd.MultiIndex.from_tuples(iZip, names=['dos_pert_id','dmso_sig_id'])
+        # rank DMSO summly results and calcualte overlap 
+        rankedDmso = pDMSO.rank(axis=0,ascending=False)
+        topDMSOConn = rankedDmso.apply(get_top_set,axis=0)
+        mtchDMSOtop = topDMSOConn.reindex(dmsoSigs)
+        mtchDMSOtop.index = mRow # match DMSO index to be like compounds
+        tcDMSO = mtchDMSOtop.groupby(level='dos_pert_id')
+        dmSer = tcDMSO.apply(test_overlap)
+        oMedDMSO = dmSer.apply(np.median)
+        oMedDMSO = oMedDMSO[~np.isnan(oMedDMSO)]
+        if graph:
+            min1 = np.min([np.min(oMedDMSO),np.min(overlapMed)])
+            max1 = np.max([np.max(oMedDMSO),np.max(overlapMed)])
+            h1 = plt.hist(oMedDMSO,30,color='b',range=[min1,max1],label=['DMSO'],alpha=.4,normed=True)
+            h3 = plt.hist(overlapMed,30,color='r',range=[min1,max1],label=['DOS'],alpha=.3,normed=True) #
+            plt.legend()
+            plt.xlabel(pType + ' - median summly connection overlap (out of 50)')
+            plt.ylabel('freq')
+            plt.title('connection consistency across signatures')
+            outF = os.path.join(wkdir, pType +  '_median_summly_connection_consistency.png')
+            plt.savefig(outF, bbox_inches=0)
+            plt.close()
+def test_overlap(xSer):
+    'test the set overlap among items in a Series \
+    -return set of all pairwise overlap values'
+    ns = len(xSer)
+    if ns >1:
+        overlapMtrx = np.zeros([ns,ns])
+        for i1, ix1 in enumerate(xSer.index):
+            s1 = xSer[ix1]
+            if isinstance(s1,pd.Series):
+                s1 = s1[0]
+            for i2, ix2 in enumerate(xSer.index):
+                s2 = xSer[ix2]
+                if isinstance(s2,pd.Series):
+                    s2 = s2[0]
+                nO = len(s1.intersection(s2))
+                overlapMtrx[i1,i2] = nO
+                overlapMtrx[i2,i1] = nO                
+        iUp = np.tril_indices(ns)
+        overlapMtrx[iUp] = np.nan
+        overlapArray = overlapMtrx.flatten()
+        overlapArray = overlapArray[~np.isnan(overlapArray)]
+        return overlapArray
+    else:
+        return np.zeros(0)
+
 ########################
 ## DOS sig_introspect ##
 ########################
@@ -380,81 +464,7 @@ connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=
 # #seperate out by pert_type: 1) trt_cp vs. trt_sh
 # #seperate out by pert_id, look at only unique compounds
 
-def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph=True):
-    "how consistent are the observed connections across cell lines? \
-    -For all signatures of a given compound, calculate the pairwise \
-    overlap among summly results \
-    -take the median for each compound \
-    -compare to DMSO overlap results "
-    def get_top_set(x,nTop=nTop_connections):
-        'make a set of the top summly connections'
-        iTop = x[x<nTop]
-        iList = set(iTop.index.values)
-        return iList
-    for pType in set(inSum.index.get_level_values('pert_type')): #loop through each pert_type
-        pSum = inSum.ix[pType] #set matrix to summly results for a single pert_type
-        pDMSO = dmsoSum.ix[pType]
-        ### calculate median overlap for compound data
-        rankedFrm = pSum.rank(axis=0,ascending=False)
-        rankedFrm.columns = rankedFrm.columns.get_level_values('sig_id')
-        topConnections = rankedFrm.apply(get_top_set,axis=0)
-        if (topConnections.index == pSum.columns.get_level_values('sig_id')).all():
-            topConnections.index = pSum.columns
-        tcGrped = topConnections.groupby(level='pert_id')
-        matrixSer = tcGrped.apply(test_overlap)
-        overlapMed = matrixSer.apply(np.median)
-        overlapMed = overlapMed[~np.isnan(overlapMed)]
-        ### calculate median overlap for DMSO data
-        #make DMSO groupings of the same size
-        idGrped = pSum.groupby(level='pert_id',axis=1)
-        pairSize = idGrped.size() # signature counts for each compound
-        pairSize = pairSize[pairSize > 1]
-        tmpFrm = pSum.reindex(columns=pairSize.index,level='pert_id')
-        # make random dmso pairings to match compound pairing
-        dmsoSigs = np.random.choice(pDMSO.columns.values,size=tmpFrm.shape[1])
-        iZip = zip(*[tmpFrm.columns.get_level_values('pert_id'),dmsoSigs])
-        mRow = pd.MultiIndex.from_tuples(iZip, names=['dos_pert_id','dmso_sig_id'])
-        # rank DMSO summly results and calcualte overlap 
-        rankedDmso = pDMSO.rank(axis=0,ascending=False)
-        topDMSOConn = rankedDmso.apply(get_top_set,axis=0)
-        mtchDMSOtop = topDMSOConn.reindex(dmsoSigs)
-        mtchDMSOtop.index = mRow # match DMSO index to be like compounds
-        tcDMSO = mtchDMSOtop.groupby(level='dos_pert_id')
-        dmSer = tcDMSO.apply(test_overlap)
-        oMedDMSO = dmSer.apply(np.median)
-        oMedDMSO = oMedDMSO[~np.isnan(oMedDMSO)]
 
-
-
-
-        if graph:
-            plt.hist(overlapMed,30)
-            plt.xlabel(pType + ' - median summly connection overlap (out of 50)')
-            plt.ylabel('freq')
-            plt.title('connection consistency across signatures')
-            outF = os.path.join(wkdir, pType +  '_median_summly_connection_consistency.png')
-            plt.savefig(outF, bbox_inches=0)
-            plt.close()
-def test_overlap(xSer):
-    'test the set overlap among items in a Series \
-    -return set of all pairwise overlap values'
-    ns = len(xSer)
-    if ns >1:
-        overlapMtrx = np.zeros([ns,ns])
-        for i1, ix1 in enumerate(xSer.index):
-            s1 = xSer[ix1]
-            for i2, ix2 in enumerate(xSer.index):
-                s2 = xSer[ix2]
-                nO = len(s1.intersection(s2))
-                overlapMtrx[i1,i2] = nO
-                overlapMtrx[i2,i1] = nO                
-        iUp = np.tril_indices(ns)
-        overlapMtrx[iUp] = np.nan
-        overlapArray = overlapMtrx.flatten()
-        overlapArray = overlapArray[~np.isnan(overlapArray)]
-        return overlapArray
-    else:
-        return np.zeros(0)
 
 ## what is the relationship between median overlap and median CC or SS
 
