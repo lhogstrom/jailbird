@@ -15,6 +15,7 @@ import os
 from matplotlib.ticker import NullFormatter
 import cmap.analytics.summly_null as SN
 from statsmodels.distributions import ECDF
+import cmap.io.gmt as gmt
 
 wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Dec182013'
 if not os.path.exists(wkdir):
@@ -367,6 +368,7 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
             outF = os.path.join(wkdir, pType +  '_median_summly_connection_consistency.png')
             plt.savefig(outF, bbox_inches=0)
             plt.close()
+        return overlapMed, oMedDMSO
 def test_overlap(xSer):
     'test the set overlap among items in a Series \
     -return set of all pairwise overlap values'
@@ -391,6 +393,43 @@ def test_overlap(xSer):
         return overlapArray
     else:
         return np.zeros(0)
+
+###############################
+## PCLS & DOS summly results ##
+###############################
+
+def load_pcls():
+    "-load pcl groups \
+    limit groups to a set of pre-curated PCLS \
+    -return of pandas Series of these groups (index= group name, column is BRDs"
+    classGMT = '/xchip/cogs/projects/pharm_class/pcl_shared_target_pid.gmt'
+    gmtDict = gmt.read(classGMT)
+    drugLabels = pd.DataFrame(gmtDict)
+    drugLabels['id'] = drugLabels['id'].str.replace("/","_")
+    drugLabels['id'] = drugLabels['id'].str.replace("-","_")
+    drugLabels['id'] = drugLabels['id'].str.replace(" ","_")
+    drugLabels['id'] = drugLabels['id'].str.replace("&","_")
+    drugLabels['id'] = drugLabels['id'].str.replace("?","_")
+    drugLabels['id'] = drugLabels['id'].str.replace("(","_")
+    drugLabels['id'] = drugLabels['id'].str.replace(")","_")
+    drugLabels['id'] = drugLabels['id'].str.replace("'","_")
+    drugLabels['id'] = drugLabels.id.str.lower() # convert to lower case
+    #load curated list of groups
+    curatedFile = '/xchip/cogs/hogstrom/analysis/scratch/pcl_keepers_mod_currated.txt'
+    curFrm = pd.read_csv(curratedFile,header=None)
+    curFrm.columns = ['curated_groups']
+    dlSer = pd.Series(data=drugLabels['sig'])
+    dlSer.index = drugLabels['id']
+    #which of the curated groups are have pairings
+    isCur = curFrm.curated_groups.isin(dlSer.index)
+    curGroups = dlSer.reindex(curFrm.ix[isCur,'curated_groups'])
+    return curGroups
+
+def pcls(pcls_Series,inSum,dmsoFrm):
+    "-take pcl groups \
+    -check to see what proportion of the group is at the top of a DOS result"
+    # pcls_Series
+    
 
 ########################
 ## DOS sig_introspect ##
@@ -452,7 +491,8 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
 # median_conn_by_pert_type(inSum,sn.dmsoFrm,matrixType,rnkpt_thresh=90,graph=True)
 # resPreCalc = '/xchip/cogs/projects/connectivity/introspect/introspect_connectivity.txt' #
 # specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True)
-connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=True)
+## test for overlap summly results in repeated signatures of compounds
+overlapMedian, dmsoOverlapMedian = connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=True)
 # #save results to file
 # outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
 # passSer.to_csv(outF,index=True,header=True,sep='\t')
@@ -461,8 +501,6 @@ connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=
 # outF = os.path.join(wkdir, 'DMSO_signatures_counts_above_90_mrp4.txt')
 # dmsoSer.to_csv(outF,index=True,header=True,sep='\t')
 
-# #seperate out by pert_type: 1) trt_cp vs. trt_sh
-# #seperate out by pert_id, look at only unique compounds
 
 
 
