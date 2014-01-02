@@ -313,7 +313,7 @@ def median_conn_by_pert_type(inSum,dmsoSum,matrixType,rnkpt_thresh=90,graph=True
 ## summly connection consistency ##
 ###################################
 
-def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph=True):
+def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph=True,return_top_sets=False):
     "how consistent are the observed connections across cell lines? \
     -For all signatures of a given compound, calculate the pairwise \
     overlap among summly results \
@@ -368,7 +368,10 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
             outF = os.path.join(wkdir, pType +  '_median_summly_connection_consistency.png')
             plt.savefig(outF, bbox_inches=0)
             plt.close()
-        return overlapMed, oMedDMSO
+        if return_top_sets == True:
+            return topConnections, mtchDMSOtop, overlapMed, oMedDMSO
+        else:
+            return overlapMed, oMedDMSO
 def test_overlap(xSer):
     'test the set overlap among items in a Series \
     -return set of all pairwise overlap values'
@@ -492,7 +495,13 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
 # resPreCalc = '/xchip/cogs/projects/connectivity/introspect/introspect_connectivity.txt' #
 # specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True)
 ## test for overlap summly results in repeated signatures of compounds
-overlapMedian, dmsoOverlapMedian = connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=True)
+# overlapMedian, dmsoOverlapMedian = connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=True)
+topConnections, mtchDMSOtop, overlapMed, oMedDMSO = connection_overlap_median(inSum,
+                                                            sn.dmsoFrm,
+                                                            matrixType,
+                                                            nTop_connections=100,
+                                                            graph=False,
+                                                            return_top_sets=True)
 # #save results to file
 # outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
 # passSer.to_csv(outF,index=True,header=True,sep='\t')
