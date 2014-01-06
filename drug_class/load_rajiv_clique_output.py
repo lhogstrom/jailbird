@@ -13,7 +13,13 @@ import pandas as pd
 import cmap
 import os
 import cmap.io.gmt as gmt
+import scipy.cluster
 
+wkdir = '/xchip/cogs/projects/pharm_class/lh_clique_6Jan14'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
+
+#load in clique annotations and matrix
 cFile = '/xchip/cogs/sig_tools/sig_cliquescore_tool/sample/cp_clique_n69/clique.gmt'
 cliqueGMT = gmt.read(cFile)
 cliqFrm = pd.DataFrame(cliqueGMT)
@@ -25,63 +31,58 @@ pIDs = cliqueGCT.get_row_meta('pert_id')
 cmFrm = cliqueGCT.frame
 cmFrm.index = pIDs
 
-
-
-# try to duplicate the PCLxPCL matrix by correlating PCL vectors
+# duplicate the PCLxPCL matrix by correlating PCL vectors
 corrMtrx = np.corrcoef(cmFrm.values,rowvar=0)
 corrFrm = pd.DataFrame(data=corrMtrx,index=cmFrm.columns,columns=cmFrm.columns)
-
-
 #perform hierarchical clustering
-import scipy.cluster
-pDist = scipy.spatial.distance.pdist(corrMtrx)
-z = scipy.cluster.hierarchy.single(pDist)
-
-
 Y = scipy.cluster.hierarchy.linkage(corrMtrx, method='centroid')
 Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
 cOrder = Z['leaves']
 iPCL = corrFrm.index[cOrder]
 clustered = corrFrm.reindex(index=iPCL,columns=iPCL)
-
 #make heatmap
 plt.imshow(clustered.values,interpolation='nearest')
 ytcks = list(clustered.index.values)
-plt.xticks(np.arange(len(yticks)), ytcks,rotation=75)
-plt.yticks(np.arange(len(yticks)),ytcks)
+plt.xticks(np.arange(len(ytcks)), ytcks,rotation=75)
+plt.yticks(np.arange(len(ytcks)),ytcks)
 plt.colorbar()
+outF = os.path.join(wkdir,'pcl_by_pcl_matrix')
+plt.savefig(outF, bbox_inches='tight')
+# does this replicate with cmap.analytics.cluster? 
 
+# how much overlap is there among groups? 
+# Are there specific compound-compound pairs that are driving intra PCL relatedness?
+inameDict = {}
+for x in cliqFrm.iterrows():
+    inameDict[x[1]['id']] = set(x[1]['sig'])
 
-plt.title('sum_score')
+#find compounds which overlap in multiple 
+nInm = len(inameDict)
+overlapCount = pd.DataFrame(np.zeros([nInm, nInm]),
+    index=inameDict.keys(),
+    columns=inameDict.keys())
+overlapProp = pd.DataFrame(np.zeros([nInm, nInm]),
+    index=inameDict.keys(),
+    columns=inameDict.keys())
+for iname1 in inameDict:
+    grp1Set = inameDict[iname1]
+    for iname2 in inameDict:
+        grp2Set = inameDict[iname2]
+        interSect = grp1Set.intersection(grp2Set)
+        nIntersect = len(interSect)
+        overlapCount.ix[iname1,iname2] = nIntersect #overlap counts
+        propIntersect = nIntersect/float(len(grp1Set)) #proportion of overlap
+        overlapProp.ix[iname1,iname2] = propIntersect
+outF = wkdir + '/PCL_overlap_proportion_matrix.txt'
+overlapProp.to_csv(outF,sep='\t',index=True,header=True)
+## what are the top overlaps between groups?
+upperFrm = overlapProp.copy()
+np.fill_diagonal(upperFrm.values, np.nan)
+overlapSer = upperFrm.unstack()
+overlapSer = overlapSer[~overlapSer.isnull()] #remove nulls 
+overlapSer.sort(ascending=False)
+overlapSer.name = 'percent_overlap_among_pair'
+overlapSer.index.name = 'PCL_pairs'
+outF = wkdir +  '/PCL_overlap_proportion_list.txt'
+overlapSer.to_csv(outF,sep='\t',index=True,header=True)
 
-
-
-d = scipy.cluster.hierarchy.distance.pdist(corrMtrx)   # vector of (100 choose 2) pairwise distances
-# L = scipy.cluster.hierarchy.linkage(d, method='complete')
-L = scipy.cluster.hierarchy.linkage(d, method='complete')
-ind = scipy.cluster.hierarchy.fcluster(L, 0.5*d.max(), 'distance')
-
-
-
-#compute the histogram of the linkage distances and find the first empty bin. Use that
-#bin to set the cutoff for cluster separation
-zdist = [z[i,2] for i in range(len(z))]
-n,bins,patches = plt.hist(zdist,bins=bins) #@UnusedVariable
-plt.clf()
-try:
-    distance_cutoff = bins[np.where(n == 0)][0]
-except IndexError:
-    distance_cutoff = np.max(bins)
-
-#cut the linkage hierarchy at the computed distance cutoff and assign cluster membership
-t = scipy.cluster.hierarchy.fcluster(z, distance_cutoff, criterion='distance')
-#build a 2D list in which each entry is a list of data points that fall in each cluster
-num_clusters = np.max(t)
-clusters = []
-cluster_data = []
-for i in range(num_clusters):
-    clusters.append([labels[j] for j in range(len(t)) if t[j] == i+1])
-    cluster_data.append([input_sequence[j] for j in range(len(t)) if t[j] == i+1])
-
-# #return the list of clusters
-# return (clusters,cluster_data)
