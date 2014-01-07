@@ -1,7 +1,7 @@
 #!/bin/sh
 use java-1.7
 
-wkdir=/xchip/cogs/projects/NMF/lincs_core_cell_lines
+wkdir=/xchip/cogs/projects/NMF/clique_n69
 
 
 for CELL in A375 A549 HA1E HCC515 HEPG2 HT29 MCF7 PC3 VCAP
