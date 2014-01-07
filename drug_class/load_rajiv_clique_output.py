@@ -56,7 +56,7 @@ inameDict = {}
 for x in cliqFrm.iterrows():
     inameDict[x[1]['id']] = set(x[1]['sig'])
 
-#find compounds which overlap in multiple 
+## find compounds which overlap in multiple 
 nInm = len(inameDict)
 overlapCount = pd.DataFrame(np.zeros([nInm, nInm]),
     index=inameDict.keys(),
@@ -75,6 +75,8 @@ for iname1 in inameDict:
         overlapProp.ix[iname1,iname2] = propIntersect
 outF = wkdir + '/PCL_overlap_proportion_matrix.txt'
 overlapProp.to_csv(outF,sep='\t',index=True,header=True)
+outF = wkdir + '/PCL_overlap_count_matrix.txt'
+overlapCount.to_csv(outF,sep='\t',index=True,header=True)
 ## what are the top overlaps between groups?
 upperFrm = overlapProp.copy()
 np.fill_diagonal(upperFrm.values, np.nan)
