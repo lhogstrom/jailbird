@@ -130,21 +130,45 @@ for cellLine in cellList:
 # os.system(cmd2)
 
 # ### load in Pablo's dir
-Hfile = '/xchip/cogs/projects/NMF/clique_n69/A375/A375_clique_compound_classes_n328x978.H.k9.txt'
-WFile = '/xchip/cogs/projects/NMF/clique_n69/A375/A375_clique_compound_classes_n328x978.W.k9.txt'
+# cellLine = 'A375'
+# wkdir = '/xchip/cogs/projects/NMF/clique_n69/' + cellLine
+# Hfile = '/xchip/cogs/projects/NMF/clique_n69/A375/A375_clique_compound_classes_n328x978.H.k9.txt'
+# WFile = '/xchip/cogs/projects/NMF/clique_n69/A375/A375_clique_compound_classes_n328x978.W.k9.txt'
+# aFile = '/xchip/cogs/projects/NMF/clique_n69/A375/A375_clique_compound_classes.v2.txt'
+cellLine = 'A549'
+wkdir = '/xchip/cogs/projects/NMF/clique_n69/' + cellLine
+Hfile = '/xchip/cogs/projects/NMF/clique_n69/A549/A549_clique_compound_classes_n436x978.H.k9.txt'
+WFile = '/xchip/cogs/projects/NMF/clique_n69/A549/A549_clique_compound_classes_n436x978.W.k9.txt'
+aFile = '/xchip/cogs/projects/NMF/clique_n69/A549/A549_clique_compound_classes.v2.txt'
 Hmtrx = pd.io.parsers.read_csv(Hfile,sep='\t',index_col=0) #,header=True
+Hmtrx = Hmtrx.T
 Wmtrx = pd.io.parsers.read_csv(WFile,sep='\t',index_col=0) #,header=True
-aFile = '/xchip/cogs/projects/NMF/clique_n69/A375/A375_clique_compound_classes.v2.txt'
 anntFrm = pd.read_csv(aFile,sep='\t',header=False,index_col=0)
 anntFrm.columns = reducedSigFrm.columns
-groupSer = pd.Series()
+groupSer = pd.Series(index=anntFrm.index,data=anntFrm.pcl_name)
+if (groupSer.index == Hmtrx.index).all():
+    iZip = zip(*[groupSer.values,groupSer.index.values])
+    mCol = pd.MultiIndex.from_tuples(iZip, names=['pcl_name','sig_id'])
+    Hmtrx.index = mCol
+pclGrped = Hmtrx.groupby(level='pcl_name')
+graphDir = wkdir + '/graphs'
+if not os.path.exists(graphDir):
+    os.mkdir(graphDir)
+for grp in pclGrped.groups.keys():
+    grpH = pclGrped.get_group(grp)
+    plt.imshow(grpH,
+        interpolation='nearest',
+        cmap=cm.gray_r)
+    ytcks = list(grpH.index.get_level_values('sig_id'))
+    xtcks = list(grpH.columns)
+    plt.xticks(np.arange(len(xtcks)), xtcks,rotation=75)
+    plt.yticks(np.arange(len(ytcks)),ytcks)
+    plt.colorbar()
+    grpMod = grpMod = ''.join(e for e in grp if e.isalnum())
+    outF = os.path.join(graphDir,grpMod+'.png')
+    plt.savefig(outF, bbox_inches='tight')
+    plt.close()
 
-Hmtrx = Hmtrx.T
-componentIndex = Hmtrx.columns
-## add drug labels
-labelFrm = reducedSigFrm.ix[:,['labels','pcl_name']]
-# labelFrm = labelFrm.reindex(Hmtrx.index)
-Hmtrx = pd.concat([Hmtrx,labelFrm],axis=0,ignore_index=False)
 
 # #assume sig by component
 # ### run classifier on the 
@@ -228,3 +252,68 @@ Hmtrx = pd.concat([Hmtrx,labelFrm],axis=0,ignore_index=False)
 
 # # screen for instances were drug-gene relationships are higher in 
 # # are higher in cell lines with baseline expression of a given gene
+
+### Write a big matrix for all cell lines ####
+
+wkdir = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
+# get signature annotations from cmap database
+CM = mu.CMapMongo()
+goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':{'$in':cellList},'pert_dose':{'$gt':1}}, #, 
+        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
+        toDataFrame=True)
+indRep = [x.replace(":",".") for x in goldQuery['sig_id']]
+indRep = [x.replace("-",".") for x in indRep]
+goldQuery.index = indRep
+# goldQuery.index = goldQuery['sig_id']
+dmsoQuery = CM.find({'pert_iname':'DMSO','cell_id':{'$in':cellList},'distil_nsample':{'$gte':2,'$lt':5}}, #, 
+        {'sig_id':True,'pert_id':True,'cell_id':True,'pert_time':True,'is_gold':True,'pert_iname':True,'distil_ss':True,'distil_cc_q75':True},
+        toDataFrame=True)
+indRep = [x.replace(":",".") for x in dmsoQuery['sig_id']]
+indRep = [x.replace("-",".") for x in indRep]
+dmsoQuery.index = indRep
+# dmsoQuery['sig_id'] = indRep
+dmsoQuery['pcl_name'] = 'DMSO'
+dmsoQuery['labels'] = 99
+goldQuery = set_class_labels(testGroups,goldQuery,pclDict)
+# group by cell line
+cellGoldGrped = goldQuery.groupby('cell_id')
+cellDMSOGrped = dmsoQuery.groupby('cell_id')
+reducedSigFrm = pd.DataFrame()
+for cell in cellGrped.groups.keys():
+    goldCell = cellGoldGrped.get_group(cell)
+    ### leave only 1 or two signatures for each compound ### 
+    nKeep = 2
+    cut_by = 'pert_iname'
+    grpedBRD = goldCell.groupby(cut_by)
+    keepList = []
+    # keep only n instances of each compound
+    for brd in grpedBRD.groups:
+        sigs = grpedBRD.groups[brd]
+        if brd == 'DMSO':
+            keepList.extend(sigs) # keep all DMSO sigs
+        else:
+            keepList.extend(sigs[:nKeep])
+    goldCell = goldCell.reindex(index=keepList)
+    # compounds only
+    reducedSigFrm = pd.concat([reducedSigFrm,goldCell],axis=0)
+    #combine dmsos with drug perturbations
+    # dmsoCell = cellDMSOGrped.get_group(cell)
+    # nDMSOs = dmsoCell.shape[0]
+    # iRandDmso = np.random.choice(nDMSOs-1,50,replace=False)
+    # reducedSigFrm = pd.concat([reducedSigFrm,goldCell,dmsoQuery.ix[iRandDmso]],axis=0)
+outF = wkdir + '/clique_compound_classes.v2.txt'
+reducedSigFrm.to_csv(outF,sep='\t',header=False)
+### read in signatures ###
+### write to file ####
+sigList = list(set(reducedSigFrm['sig_id'].values))
+### load in expression data for the two sets of signatures
+afPath = cmap.score_path
+gt = gct.GCT()
+gt.read(src=afPath,cid=sigList,rid='lm_epsilon') # lm
+# gt.read(src=afPath,cid=sigList,rid='bing') # bing
+outGCT = wkdir + '/clique_compound_classes'
+gt.write(outGCT,mode='gctx')
+zFrm = gt.frame
+
