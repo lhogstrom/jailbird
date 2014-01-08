@@ -7,6 +7,7 @@ Larson Hogstrom, 1/2014
 '''
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
 import pandas as pd
@@ -64,19 +65,28 @@ overlapCount = pd.DataFrame(np.zeros([nInm, nInm]),
 overlapProp = pd.DataFrame(np.zeros([nInm, nInm]),
     index=inameDict.keys(),
     columns=inameDict.keys())
+JaccardIndex = pd.DataFrame(np.zeros([nInm, nInm]),
+    index=inameDict.keys(),
+    columns=inameDict.keys())
 for iname1 in inameDict:
     grp1Set = inameDict[iname1]
     for iname2 in inameDict:
         grp2Set = inameDict[iname2]
         interSect = grp1Set.intersection(grp2Set)
+        unioN = grp1Set.union(grp2Set)
         nIntersect = len(interSect)
+        nUnion = len(unioN)
         overlapCount.ix[iname1,iname2] = nIntersect #overlap counts
         propIntersect = nIntersect/float(len(grp1Set)) #proportion of overlap
         overlapProp.ix[iname1,iname2] = propIntersect
+        jaccardI = nIntersect/float(nUnion)
+        JaccardIndex.ix[iname1,iname2] = jaccardI
 outF = wkdir + '/PCL_overlap_proportion_matrix.txt'
 overlapProp.to_csv(outF,sep='\t',index=True,header=True)
 outF = wkdir + '/PCL_overlap_count_matrix.txt'
 overlapCount.to_csv(outF,sep='\t',index=True,header=True)
+outF = wkdir + '/PCL_Jaccard_index_matrix.txt'
+JaccardIndex.to_csv(outF,sep='\t',index=True,header=True)
 ## what are the top overlaps between groups?
 upperFrm = overlapProp.copy()
 np.fill_diagonal(upperFrm.values, np.nan)
@@ -88,3 +98,19 @@ overlapSer.index.name = 'PCL_pairs'
 outF = wkdir +  '/PCL_overlap_proportion_list.txt'
 overlapSer.to_csv(outF,sep='\t',index=True,header=True)
 
+### make heatmap of Jaccard Index Matrix
+fig = plt.figure(figsize=(20, 20), dpi=50)
+plt.imshow(JaccardIndex,
+    interpolation='nearest',
+    cmap=cm.gray_r)
+# ytcks = list(JaccardIndex.index.values)
+ytcks = [x[:30] for x in JaccardIndex.index.values]
+xtcks = ytcks
+# plt.xticks(np.arange(len(xtcks)), xtcks,rotation=75)
+plt.xticks(np.arange(len(xtcks)),xtcks,rotation=90)
+plt.yticks(np.arange(len(ytcks)),ytcks)
+plt.colorbar()
+outF = os.path.join(wkdir,'jaccard_index_matrix.png')
+# plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
