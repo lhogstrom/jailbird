@@ -8,9 +8,12 @@
   # Pre-processing: rank normalization for CC datasets
   
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
-   cell1 <- "HCC515"
-   path1 <- "/xchip/cogs/projects/NMF/clique_n69/HCC515"
-   prefix1 <- "HCC515_clique_compound_classes_n369x978"
+   # cell1 <- "HCC515"
+   # path1 <- "/xchip/cogs/projects/NMF/clique_n69/HCC515"
+   # prefix1 <- "HCC515_clique_compound_classes_n369x978"
+
+   path1 <- "/xchip/cogs/projects/NMF/clique_n69_all_cell_lines"
+   prefix1 <- "clique_compound_classes_n2873x978"
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
@@ -26,7 +29,8 @@
       # Input Files
       L1000.file   <- paste(path1,"/",prefix1,".NORM.gct",sep="")
       # L1000.file2  <- paste(path2,"/",prefix2,".NORM.gct",sep="")      
-      annot.file   <- paste(path1,"/",cell1,"_clique_compound_classes.v2.txt",sep="")
+      # annot.file   <- paste(path1,"/",cell1,"_clique_compound_classes.v2.txt",sep="")
+      annot.file   <- paste(path1,"/clique_compound_classes.v2.txt",sep="")
       # Parameters
       k.comp       <- 9    # Optimal number of components: 9, 20
       name.column  <- 1     # Column # in annot.file containing the perturbation name
