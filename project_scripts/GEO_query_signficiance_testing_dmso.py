@@ -107,21 +107,27 @@ shF = sFrm.reindex(index=shPerts)
 sn = SN.SummNull(out=wkdir)
 sn.load_dmso_summ_results(index_row_by_pert_type=True)
 dmsoFrm = sn.dmsoFrm
+nDMSO = dmsoFrm.shape[1]
+nCP = cpF.shape[1]
 dmsoGrped = dmsoFrm.groupby(level='pert_type')
 cpDmso = dmsoGrped.get_group('trt_cp')
 cpDmsoRnk = cpDmso.rank(ascending=False)
+cpDmsoRnkP = cpDmsoRnk/float(cpDmso.shape[0])
 oeDmso = dmsoGrped.get_group('trt_oe')
 oeDmsoRnk = oeDmso.rank(ascending=False)
+oeDmsoRnkP = oeDmsoRnk/float(oeDmso.shape[0])
 shDmso = dmsoGrped.get_group('trt_sh.cgs')
 shDmsoRnk = shDmso.rank(ascending=False)
-
+shDmsoRnkP = shDmsoRnk/float(shDmso.shape[0])
 
 #loop through the summly result for each GEO query
 #calculate p-value of expected connections
 geoNoSummly = []
 geoNoRes = []
 geoList = []
+notDMSOsumm = []
 resDict = {}
+pMin = 
 for igeoID in summIDs:
     geoID = aFrm.ix[igeoID,'series']
     aName = aFrm.ix[igeoID,'a_name']
@@ -142,21 +148,39 @@ for igeoID in summIDs:
     for ipID in qFrm.index:
         eSer = qFrm.ix[ipID,:]
         pID = eSer['sum_id']
+        if not pID in dmsoFrm.index.get_level_values('pert_id'):
+            print pID + ' not in DMSO summly space'
+            notDMSOsumm.append(pID)
+            continue
         pType = eSer['pert_type']
         eDir = eSer['direction']
         if pType == 'trt_cp':
             ePerc = cpPercent[pID]
             eRank = cpRank[pID]
             eRnkpt = cpF.ix[pID,lmID]
-            #
+            dmsoDist = cpDmsoRnkP.ix[(u'trt_cp', pID)]
+            if eDir == 'Negatively connected':
+                dmsoP = ((dmsoDist > ePerc).sum() + 1) / float(nDMSO)
+            else:
+                dmsoP = ((dmsoDist < ePerc).sum() + 1) / float(nDMSO)           
         if pType == 'trt_sh.cgs':
             ePerc = shPercent[pID]
             eRank = shRank[pID]
             eRnkpt = shF.ix[pID,lmID]
+            dmsoDist = shDmsoRnkP.ix[(u'trt_sh.cgs', pID)]
+            if eDir == 'Negatively connected':
+                dmsoP = ((dmsoDist > ePerc).sum() + 1) / float(nDMSO)
+            else:
+                dmsoP = ((dmsoDist < ePerc).sum() + 1) / float(nDMSO)
         if pType == 'trt_oe':
             ePerc = oePercent[pID]
             eRank = oeRank[pID]
             eRnkpt = oeF.ix[pID,lmID]
+            dmsoDist = oeDmsoRnkP.ix[(u'trt_oe', pID)]
+            if eDir == 'Negatively connected':
+                dmsoP = ((dmsoDist > ePerc).sum() + 1) / float(nDMSO)
+            else:
+                dmsoP = ((dmsoDist < ePerc).sum() + 1) / float(nDMSO)
         #make table of expected connections
         #GEO, pert_id (expected), pert_type, rank, percent (p-value)
         resDict[geoID + ' - ' + pID] = {'geo_id':geoID,
@@ -165,6 +189,7 @@ for igeoID in summIDs:
                                 'rnkpt4':eRnkpt,
                                 'rank':eRank,
                                 'perc_rank_within_pert_type':ePerc,
+                                'p_val_dmso':dmsoP,
                                 'expected_direc':eDir,
                                 'a_name':aName}
 expectedFrm = pd.DataFrame(resDict)
@@ -176,6 +201,10 @@ isPos = expectedFrm['expected_direc'] == 'Positively connected'
 isNeg = expectedFrm['expected_direc'] == 'Negatively connected'
 expectedFrm.ix[isPos,'percent_rank_by_direction'] = expectedFrm['perc_rank_within_pert_type']
 expectedFrm.ix[~isPos,'percent_rank_by_direction'] = 1-expectedFrm['perc_rank_within_pert_type']
+
+#check wich of the brds not in the dmso summspace
+#are flagged as expected connections
+summOut = matchFrm[matchFrm.sum_id.isin(notDMSOsumm)]
 
 # plt.hist(expectedFrm['perc_rank'],30)
 #check FDR using percent ranks
