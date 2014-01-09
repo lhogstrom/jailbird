@@ -127,3 +127,44 @@ outGCT = wkdir + '/clique_compound_classes'
 gt.write(outGCT,mode='gctx')
 zFrm = gt.frame
 
+### Analyze W matrix ###
+wkdir = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines'
+Hfile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes_n2873x978.H.k9.txt'
+WFile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes_n2873x978.W.k9.txt'
+aFile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes.v2.txt'
+Hmtrx = pd.io.parsers.read_csv(Hfile,sep='\t',index_col=0) #,header=True
+Hmtrx = Hmtrx.T
+Wmtrx = pd.io.parsers.read_csv(WFile,sep='\t',index_col=0) #,header=True
+anntFrm = pd.read_csv(aFile,sep='\t',header=False,index_col=0)
+anntFrm.columns = reducedSigFrm.columns
+# groupSer = pd.Series(index=anntFrm.index,data=anntFrm.pcl_name)
+# if (groupSer.index == Hmtrx.index).all():
+#     iZip = zip(*[groupSer.values,groupSer.index.values])
+#     mCol = pd.MultiIndex.from_tuples(iZip, names=['pcl_name','sig_id'])
+#     Hmtrx.index = mCol
+# pclGrped = Hmtrx.groupby(level='pcl_name')
+graphDir = wkdir + '/graphs_uniform_max'
+if not os.path.exists(graphDir):
+    os.mkdir(graphDir)
+# flH = np.float64(Hmtrx.values)
+maxVal = Hmtrx.max(axis=1).max()
+for r in cliqFrm.iterrows():
+    grp = r[1]['id']
+    brds = r[1]['sig']
+    anntMtch = anntFrm[anntFrm.pert_id.isin(brds)]
+    grpH = Hmtrx.reindex(anntMtch.index)
+    Hfloat = np.float64(grpH.values)
+    fig = plt.figure(figsize=(40, 20), dpi=50)
+    plt.imshow(Hfloat,
+        interpolation='nearest',
+        cmap=cm.gray_r,
+        vmax=maxVal)
+    ytcks = list(grpH.index)
+    xtcks = list(grpH.columns)
+    plt.xticks(np.arange(len(xtcks)), xtcks,rotation=75)
+    plt.yticks(np.arange(len(ytcks)),ytcks)
+    plt.colorbar()
+    grpMod = grpMod = ''.join(e for e in grp if e.isalnum())
+    outF = os.path.join(graphDir,grpMod+'.png')
+    plt.savefig(outF, bbox_inches='tight')
+    plt.close()
