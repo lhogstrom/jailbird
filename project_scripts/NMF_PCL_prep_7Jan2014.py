@@ -40,7 +40,7 @@ def set_class_labels(test_groups,sigInfoFrm,pclDict):
         sigInfoFrm['pcl_name'][iMatch] = group
     return sigInfoFrm
 
-wkdir = '/xchip/cogs/projects/NMF/clique_n69_bing'
+wkdir = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -65,9 +65,6 @@ testGroups = cliqFrm['id'].values
 # for each cell line
 cellList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
 ### Write a big matrix for all cell lines ####
-wkdir = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines'
-if not os.path.exists(wkdir):
-    os.mkdir(wkdir)
 # get signature annotations from cmap database
 CM = mu.CMapMongo()
 goldQuery = CM.find({'is_gold' : True,'pert_id':{'$in':brdAllGroups},'cell_id':{'$in':cellList},'pert_dose':{'$gt':1}}, #, 
@@ -91,7 +88,7 @@ goldQuery = set_class_labels(testGroups,goldQuery,pclDict)
 cellGoldGrped = goldQuery.groupby('cell_id')
 cellDMSOGrped = dmsoQuery.groupby('cell_id')
 reducedSigFrm = pd.DataFrame()
-for cell in cellGrped.groups.keys():
+for cell in cellGoldGrped.groups.keys():
     goldCell = cellGoldGrped.get_group(cell)
     ### leave only 1 or two signatures for each compound ### 
     nKeep = 2
@@ -130,7 +127,7 @@ zFrm = gt.frame
 ### Analyze W matrix ###
 wkdir = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines'
 Hfile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes_n2873x978.H.k9.txt'
-WFile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes_n2873x978.W.k9.txt'
+WFile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes_n2873x978.W.k9.gct'
 aFile = '/xchip/cogs/projects/NMF/clique_n69_all_cell_lines/clique_compound_classes.v2.txt'
 Hmtrx = pd.io.parsers.read_csv(Hfile,sep='\t',index_col=0) #,header=True
 Hmtrx = Hmtrx.T
@@ -168,3 +165,5 @@ for r in cliqFrm.iterrows():
     outF = os.path.join(graphDir,grpMod+'.png')
     plt.savefig(outF, bbox_inches='tight')
     plt.close()
+
+
