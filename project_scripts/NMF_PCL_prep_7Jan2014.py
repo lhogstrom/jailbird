@@ -140,7 +140,7 @@ anntFrm.columns = reducedSigFrm.columns
 #     mCol = pd.MultiIndex.from_tuples(iZip, names=['pcl_name','sig_id'])
 #     Hmtrx.index = mCol
 # pclGrped = Hmtrx.groupby(level='pcl_name')
-graphDir = wkdir + '/graphs_uniform_max'
+graphDir = wkdir + '/graphs_uniform_max_sort'
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
 # flH = np.float64(Hmtrx.values)
@@ -150,6 +150,17 @@ for r in cliqFrm.iterrows():
     brds = r[1]['sig']
     anntMtch = anntFrm[anntFrm.pert_id.isin(brds)]
     grpH = Hmtrx.reindex(anntMtch.index)
+    meanVec = grpH.describe().ix['mean']
+    ### correlate each observed sigature with mean vector
+    # corrMtrx = np.corrcoef(meanVec,grpH)
+    # corrVec = corrMtrx[:-1,-1]
+    # iSort = np.argsort(corrVec)
+    # grpH = grpH.ix[iSort,:] # sort acording to corr with mean
+    ### take top three components - order acording to their strenght
+    iTop3 = meanVec.order(ascending=False).index[:3]
+    sortedTop = grpH.ix[:,iTop3].sort()
+    topSum = sortedTop.sum(axis=1).order(ascending=False)
+    grpH = grpH.ix[topSum.index,:] # sort acording to corr with mean
     Hfloat = np.float64(grpH.values)
     fig = plt.figure(figsize=(40, 20), dpi=50)
     plt.imshow(Hfloat,
