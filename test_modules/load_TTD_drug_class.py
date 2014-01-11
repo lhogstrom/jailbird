@@ -1,4 +1,5 @@
 import pandas as pd
+import cmap.io.gmt as gmt
 'parse the TTD file for drug annotations'
 
 class label_loader:
@@ -85,3 +86,18 @@ class label_loader:
             cpLst = list(set(cpLst)) # make sure list is unique
             gene_cp_dict[groupName] = cpLst
         return ttd_cp_dict
+
+    def load_clique_set_n69(self):
+        ''' 
+        load drug label set currated by Rajiv
+
+        '''
+        #load in clique annotations and matrix
+        cFile = '/xchip/cogs/sig_tools/sig_cliquescore_tool/sample/cp_clique_n69/clique.gmt'
+        cliqueGMT = gmt.read(cFile)
+        cliqFrm = pd.DataFrame(cliqueGMT)
+        # set grouping structures 
+        pclDict = {}
+        for x in cliqFrm.iterrows():
+            pclDict[x[1]['id']] = set(x[1]['sig'])
+        return pclDict

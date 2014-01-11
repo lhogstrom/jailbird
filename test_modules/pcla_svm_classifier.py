@@ -61,6 +61,19 @@ class svm_pcla(object):
         self.all_group_cps = brdAllGroups
         self.test_groups = testGroups
 
+    def set_clique_n69(self):
+        '''
+        load 69 PCLs currated by Rajiv 
+
+        Parameters
+        ----------
+        '''
+        ### load in data for individual groups
+        llo = ldc.label_loader()
+        self.pclDict = llo.load_clique_set_n69()
+        self.all_group_cps = self.pclDict.values()
+        self.test_groups = self.pclDict.keys()
+
     def PCL_vs_DMSO(self,max_signatures_per_cp=20,n_test_max=False):
         '''
         -grab equal amounts of DMSO and signatures from a PCL class
