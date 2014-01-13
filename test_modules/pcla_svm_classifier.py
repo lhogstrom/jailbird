@@ -17,6 +17,7 @@ import pandas as pd
 import cmap
 import os
 import cmap.analytics.pcla as pcla
+import cmap.util.progress as update
 
 class svm_pcla(object):
     '''
@@ -283,6 +284,9 @@ class svm_pcla(object):
             maximum number of signatures per compound to incorporate into the classifier
             (to avoid overfitting to compounds with many signatures)
         '''        
+        #start a update indicator
+        progress_bar = update.DeterminateProgressBar('SVM calculation')
+
         if groups_to_model == None:
             groups_to_model = self.pclDict.keys()
         brdAllGroups = []
@@ -313,7 +317,8 @@ class svm_pcla(object):
             zFrm['svm_prediction'] = np.nan
             cpSet = set(zFrm['pert_id'])
             # loop through the compounds - leave out in building the model then test
-            for brd in cpSet:
+            for ii,brd in enumerate(cpSet):
+                progress_bar.update('running SVM and compound validation - ' brd, ii, len(cpSet))
                 brd_match = zFrm['pert_id'] == brd
                 droppedFrm = zFrm[~brd_match] # remove test signature from training
                 trainFrm = droppedFrm.reindex(columns=probeIDs)
@@ -325,7 +330,8 @@ class svm_pcla(object):
                 zFrm['svm_prediction'][zTest.index] = linPred
         if loo_type == 'by_sig':
             predictDict = {}
-            for sig in zFrm.index:
+            for ii,sig in enumerate(zFrm.index):
+                progress_bar.update('running SVM and signature validation - ' sig, ii, len(zFrm.index))
                 droppedFrm = zFrm[zFrm.index != sig] # remove test signature from training
                 trainFrm = droppedFrm.reindex(columns=probeIDs)
                 labelsTrain = droppedFrm['labels'].values
@@ -340,6 +346,26 @@ class svm_pcla(object):
         accuracyArray = zFrm['labels'] == zFrm['svm_prediction']
         accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
         self.model_accuracy_across_cells = accuracyRate
+        self.signature_frame = zFrm
+
+    def _svm_worker(self,sigInfoFrm):
+        '''
+        worker to build SVM model and validation for one drug
+
+        Parameters
+        ----------
+        sigInfoFrm : pandas dataFrame
+            dataFrame of signature info where index are sig_ids
+        ''' 
+        brd_match = zFrm['pert_id'] == brd
+        droppedFrm = zFrm[~brd_match] # remove test signature from training
+        trainFrm = droppedFrm.reindex(columns=probeIDs)
+        labelsTrain = droppedFrm['labels'].values
+        C = 1.0  # SVM regularization parameter
+        svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
+        zTest = zFrm.ix[brd_match,probeIDs]
+        linPred = svc.predict(zTest.values)
+        zFrm['svm_prediction'][zTest.index] = linPred
 
     def set_class_labels(self,sigInfoFrm):
         '''
