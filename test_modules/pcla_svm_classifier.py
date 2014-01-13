@@ -267,27 +267,25 @@ class svm_pcla(object):
             self.modelFrame = combinedFrm
             self.model_accuracy = accuracyDict
 
-    def classification_across_cell(self,loo_type='by_cp',max_signatures_per_cp=3,groups_to_model=None):
+    def load_expression_data(self,max_signatures_per_cp=3,groups_to_model=None,keep_by_cell_line=False):
         '''
-        -build a single classifier treating observations from different
-        cell lines equally
-        -evaluate model with leave one out cross val.
+        -search for z-score data of compounds that fall into one of the different classes
+        -limit the number of signatures per compound
+        -load in z-score data signatures
         
         Parameters
         ----------
         groups_to_model : list
             -list of group names in the pclDict
             -default is to use all keys
-        loo_type : str
-            strategy for leave one out validation:
-                'by_cp' - leaves out all signatures for a given compounds
-                'by_sig' - leaves out individual signatures 
         max_signatures_per_cp : int
             maximum number of signatures per compound to incorporate into the classifier
             (to avoid overfitting to compounds with many signatures)
-        '''        
-        #start a update indicator
-        progress_bar = update.DeterminateProgressBar('SVM calculation')
+        keep_by_cell_line : bool
+            -if True - keep n number of signatues per cell line
+            -if False - keep first n signatures regardless of cell line
+
+        '''
         if groups_to_model == None:
             groups_to_model = self.pclDict.keys()
         brdAllGroups = []
@@ -302,7 +300,7 @@ class svm_pcla(object):
         # asign drug class labels
         goldQuery = self.set_class_labels(goldQuery)
         # reduce signatures to prevent overfitting to one compound
-        droppedQ = self.cut_signatures(goldQuery,nKeep=max_signatures_per_cp)
+        droppedQ = self.cut_signatures(goldQuery,nKeep=max_signatures_per_cp,keep_by_cell_line=keep_by_cell_line)
         sigList = droppedQ['sig_id'].values
         ### load in expression data for the two sets of signatures
         afPath = cmap.score_path
@@ -311,16 +309,34 @@ class svm_pcla(object):
         zFrm = gt.frame
         zFrm = zFrm.T
         probeIDs = zFrm.columns
+        self.probe_ids = probeIDs
         ## merge data with 
         zFrm = pd.concat([zFrm,droppedQ],axis=1)
+        self.signature_frame = zFrm
+
+    def classification_across_cell(self,loo_type='by_cp',n_procs=9):
+        '''
+        -build a single classifier treating observations from different
+        cell lines equally
+        -evaluate model with leave one out cross val.
+        
+        Parameters
+        ----------
+        loo_type : str
+            strategy for leave one out validation:
+                'by_cp' - leaves out all signatures for a given compounds
+                'by_sig' - leaves out individual signatures 
+        n_procs : int
+            number of cores to be used for analysis
+        '''        
+        zFrm = self.signature_frame
         ### perform leave one out validation
         if loo_type == 'by_cp':
             zFrm['svm_prediction'] = np.nan
             cpSet = set(zFrm['pert_id'])
-            tupList = [(zFrm,brd,probeIDs) for brd in cpSet]
+            tupList = [(zFrm,brd,self.probe_ids) for brd in cpSet]
             # run SVM in parallel
             prog = update.DeterminateProgressBar('self-connection graph builder')
-            n_procs=8
             pool = multiprocessing.Pool(n_procs)
             rs = pool.map_async(_svm_worker,tupList)
             pool.close() # No more work
@@ -335,15 +351,17 @@ class svm_pcla(object):
                 predictedSer = predictedSer.append(result)
             zFrm['svm_prediction'] = predictedSer
         if loo_type == 'by_sig':
+            #start a update indicator
+            progress_bar = update.DeterminateProgressBar('SVM calculation')
             predictDict = {}
             for ii,sig in enumerate(zFrm.index):
                 progress_bar.update('running SVM and signature validation - ' + sig, ii, len(zFrm.index))
                 droppedFrm = zFrm[zFrm.index != sig] # remove test signature from training
-                trainFrm = droppedFrm.reindex(columns=probeIDs)
+                trainFrm = droppedFrm.reindex(columns=self.probe_ids)
                 labelsTrain = droppedFrm['labels'].values
                 C = 1.0  # SVM regularization parameter
                 svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
-                zTest = zFrm.ix[sig,probeIDs]
+                zTest = zFrm.ix[sig,self.probe_ids]
                 linPred = svc.predict(zTest.values)
                 predictDict[sig] = linPred[0]
             predSer = pd.Series(predictDict)
@@ -353,6 +371,27 @@ class svm_pcla(object):
         accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
         self.model_accuracy_across_cells = accuracyRate
         self.signature_frame = zFrm
+
+    def model_accuracy_description(self):
+        '''
+        which groups were most accurately predicted
+
+        Parameters
+        ----------
+        ''' 
+        pclGrped = self.signature_frame.groupby('pcl_name')
+        accuracyDict = {}
+        sizeDict = {}
+        for grp in pclGrped:
+            grpName = grp[0]
+            grpFrm = grp[1]
+            accuracyArray = grpFrm['labels'] == grpFrm['svm_prediction']
+            accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
+            accuracyDict[grpName] = accuracyRate
+            sizeDict[grpName] = grpFrm.shape[0]
+        accuracySer = pd.Series(accuracyDict)
+        self.group_model_accuracy = accuracySer
+        self.group_size = pd.Series(sizeDict)
 
     def set_class_labels(self,sigInfoFrm):
         '''
@@ -372,7 +411,7 @@ class svm_pcla(object):
             sigInfoFrm['pcl_name'][iMatch] = group
         return sigInfoFrm
 
-    def cut_signatures(self,sigInfoFrm,nKeep=2,cut_by='pert_id'):
+    def cut_signatures(self,sigInfoFrm,nKeep=2,cut_by='pert_id',keep_by_cell_line=False):
         '''
         limit the number signatures to prevent over fitting to a single compound
 
@@ -384,6 +423,9 @@ class svm_pcla(object):
             number of signatures to keep for each compound
         cut_by : str
             sig_info field to group and cut by
+        keep_by_cell_line : bool
+            -if True - keep n number of signatues per cell line
+            -if False - keep first n signatures regardless of cell line
         
         Returns
         ----------
@@ -392,12 +434,21 @@ class svm_pcla(object):
             dataFrame of signature info where index are sig_ids
 
         ''' 
-        grpedBRD = sigInfoFrm.groupby(cut_by)
-        keepList = []
-        # keep only n instances of each compound
-        for brd in grpedBRD.groups:
-            sigs = grpedBRD.groups[brd]
-            keepList.extend(sigs[:nKeep])
+        if keep_by_cell_line:
+            # keep only n instances of each compound per cell line
+            grpedBRD = sigInfoFrm.groupby([cut_by,'cell_id'])
+            keepList = []
+            # keep only n instances of each compound
+            for grp in grpedBRD.groups:
+                sigs = grpedBRD.groups[grp]
+                keepList.extend(sigs[:nKeep])   
+        else:
+            grpedBRD = sigInfoFrm.groupby(cut_by)
+            keepList = []
+            # keep only n instances of each compound
+            for brd in grpedBRD.groups:
+                sigs = grpedBRD.groups[brd]
+                keepList.extend(sigs[:nKeep])        
         reducedSigFrm = sigInfoFrm.reindex(index=keepList)
         # grped = reducedSigFrm.groupby('pcl_name')
         # grped.size()
