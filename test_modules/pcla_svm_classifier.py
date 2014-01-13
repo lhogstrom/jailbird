@@ -18,6 +18,8 @@ import cmap
 import os
 import cmap.analytics.pcla as pcla
 import cmap.util.progress as update
+import multiprocessing
+import time
 
 class svm_pcla(object):
     '''
@@ -286,7 +288,6 @@ class svm_pcla(object):
         '''        
         #start a update indicator
         progress_bar = update.DeterminateProgressBar('SVM calculation')
-
         if groups_to_model == None:
             groups_to_model = self.pclDict.keys()
         brdAllGroups = []
@@ -316,22 +317,27 @@ class svm_pcla(object):
         if loo_type == 'by_cp':
             zFrm['svm_prediction'] = np.nan
             cpSet = set(zFrm['pert_id'])
-            # loop through the compounds - leave out in building the model then test
-            for ii,brd in enumerate(cpSet):
-                progress_bar.update('running SVM and compound validation - ' brd, ii, len(cpSet))
-                brd_match = zFrm['pert_id'] == brd
-                droppedFrm = zFrm[~brd_match] # remove test signature from training
-                trainFrm = droppedFrm.reindex(columns=probeIDs)
-                labelsTrain = droppedFrm['labels'].values
-                C = 1.0  # SVM regularization parameter
-                svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
-                zTest = zFrm.ix[brd_match,probeIDs]
-                linPred = svc.predict(zTest.values)
-                zFrm['svm_prediction'][zTest.index] = linPred
+            tupList = [(zFrm,brd,probeIDs) for brd in cpSet]
+            # run SVM in parallel
+            prog = update.DeterminateProgressBar('self-connection graph builder')
+            n_procs=8
+            pool = multiprocessing.Pool(n_procs)
+            rs = pool.map_async(_svm_worker,tupList)
+            pool.close() # No more work
+            while (True):
+                if (rs.ready()): break
+                remaining = rs._number_left
+                prog.show_message('SVM evaluation - {0} tasks to complete'.format(remaining))
+                time.sleep(0.1)
+            results = rs.get()
+            predictedSer = pd.Series()
+            for result in results:
+                predictedSer = predictedSer.append(result)
+            zFrm['svm_prediction'] = predictedSer
         if loo_type == 'by_sig':
             predictDict = {}
             for ii,sig in enumerate(zFrm.index):
-                progress_bar.update('running SVM and signature validation - ' sig, ii, len(zFrm.index))
+                progress_bar.update('running SVM and signature validation - ' + sig, ii, len(zFrm.index))
                 droppedFrm = zFrm[zFrm.index != sig] # remove test signature from training
                 trainFrm = droppedFrm.reindex(columns=probeIDs)
                 labelsTrain = droppedFrm['labels'].values
@@ -347,25 +353,6 @@ class svm_pcla(object):
         accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
         self.model_accuracy_across_cells = accuracyRate
         self.signature_frame = zFrm
-
-    def _svm_worker(self,sigInfoFrm):
-        '''
-        worker to build SVM model and validation for one drug
-
-        Parameters
-        ----------
-        sigInfoFrm : pandas dataFrame
-            dataFrame of signature info where index are sig_ids
-        ''' 
-        brd_match = zFrm['pert_id'] == brd
-        droppedFrm = zFrm[~brd_match] # remove test signature from training
-        trainFrm = droppedFrm.reindex(columns=probeIDs)
-        labelsTrain = droppedFrm['labels'].values
-        C = 1.0  # SVM regularization parameter
-        svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
-        zTest = zFrm.ix[brd_match,probeIDs]
-        linPred = svc.predict(zTest.values)
-        zFrm['svm_prediction'][zTest.index] = linPred
 
     def set_class_labels(self,sigInfoFrm):
         '''
@@ -415,3 +402,40 @@ class svm_pcla(object):
         # grped = reducedSigFrm.groupby('pcl_name')
         # grped.size()
         return reducedSigFrm
+
+def _svm_worker(argTup):
+    '''
+    worker to build SVM model and validation for one drug
+
+    Parameters
+    ----------
+    argTup : tuple
+        contains this set of arguments:
+            zFrm : pandas dataFrame
+                dataFrame of signature info z score expression data
+            brd : str
+                string of a pert_id
+            probeIDs : list or index of probeIDs
+                probe space to perform calculations (eg, all landmark genes)
+    Returns
+    ----------
+    predSer : pandas Series
+        index = sig_ids
+        values = predicted drug class
+    ''' 
+    zFrm = argTup[0]
+    brd = argTup[1]
+    probeIDs = argTup[2]
+    brd_match = zFrm['pert_id'] == brd
+    droppedFrm = zFrm[~brd_match] # remove test signature from training
+    trainFrm = droppedFrm.reindex(columns=probeIDs)
+    labelsTrain = droppedFrm['labels'].values
+    C = 1.0  # SVM regularization parameter
+    svc = svm.SVC(kernel='linear', C=C).fit(trainFrm.values, labelsTrain)
+    zTest = zFrm.ix[brd_match,probeIDs]
+    linPred = svc.predict(zTest.values)
+    predSer = pd.Series(linPred,index=zTest.index)
+    predSer.index.name = brd
+    return predSer
+
+
