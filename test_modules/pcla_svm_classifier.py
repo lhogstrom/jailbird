@@ -369,6 +369,7 @@ class svm_pcla(object):
             zFrm = pd.concat([zFrm,pd.DataFrame(predSer)],axis=1)
         accuracyArray = zFrm['labels'] == zFrm['svm_prediction']
         accuracyRate = accuracyArray.sum()/float(accuracyArray.shape[0])
+        zFrm['correct_prediction'] = accuracyArray
         self.model_accuracy_across_cells = accuracyRate
         self.signature_frame = zFrm
 
@@ -410,6 +411,25 @@ class svm_pcla(object):
             sigInfoFrm['labels'][iMatch] = igroup
             sigInfoFrm['pcl_name'][iMatch] = group
         return sigInfoFrm
+
+    def write_results(self):
+        '''
+        -write results to text file
+        -must have run model_accuracy_description
+
+        Parameters
+        ----------
+        ''' 
+        outF = self.out + '/classification_table.txt'
+        isPid = self.signature_frame.columns.isin(self.probe_ids)
+        ResTable = self.signature_frame.ix[:,~isPid]
+        ResTable.to_csv(outF,sep='\t')
+        # accuracy and group size
+        outF = self.out + '/model_accuracy_by_group.txt'
+        accSize = pd.DataFrame({'group_size':self.group_size,
+                'group_model_accuracy':self.group_model_accuracy})
+        accSize = accSize.sort('group_model_accuracy',ascending=False)
+        accSize.to_csv(outF,sep='\t')
 
     def cut_signatures(self,sigInfoFrm,nKeep=2,cut_by='pert_id',keep_by_cell_line=False):
         '''
@@ -488,5 +508,3 @@ def _svm_worker(argTup):
     predSer = pd.Series(linPred,index=zTest.index)
     predSer.index.name = brd
     return predSer
-
-
