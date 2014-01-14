@@ -17,6 +17,7 @@ import cmap.analytics.summly_null as SN
 from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
 import cmap.util.progress as update
+from matplotlib import cm
 
 wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan122014'
 if not os.path.exists(wkdir):
@@ -400,6 +401,7 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,nTop_connections=5
         # summly space: dmso connection rate
         obsToDmso = connRate/dConnRate
         falsePosR = dConnRate / (dConnRate + connRate) # dmso / (dmso + obs)
+        falsePosR.name = rnkpt_thresh
         fpFrame = pd.concat([fpFrame,pd.DataFrame(falsePosR)],axis=1)
         highRatioCount = (obsToDmso >= ratioThresh).sum()
         ratioDict[rnkpt_thresh] = highRatioCount
@@ -408,6 +410,29 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,nTop_connections=5
         # isInf = np.isinf(obsToDmso)
         # obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
         # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan    
+    #heatmap
+    #perform hierarchical clustering on 
+    # Y = scipy.cluster.hierarchy.linkage(fpFrame, method='centroid')
+    # Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
+    # cOrder = Z['leaves']
+    # iPCL = fpFrame.index[cOrder]
+    # clustered = fpFrm.reindex(index=iPCL,columns=iPCL)
+    # plot result
+    fig = plt.figure(1, figsize=(10, 10))
+    plt.imshow(fpFrame.values,
+        interpolation='nearest',
+        vmin=0, 
+        vmax=1,
+        aspect='auto',
+        cmap=cm.gray_r)
+    xtcks = [str(x) for x in fpFrame.columns]
+    plt.xticks(np.arange(len(xtcks)), xtcks)
+    # plt.yticks(np.arange(len(ytcks)),ytcks)
+    plt.colorbar()
+    plt.xlabel('mrp4 threshold')
+    out = wkdir + '/false_positive_matrix_rnkpt_threshold.png'
+    plt.savefig(out, bbox_inches='tight')
+    plt.close()
     # graph false positive rate
     fpSer = pd.Series(fpDict)
     plt.plot(fpSer.index,fpSer.values)
