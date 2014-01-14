@@ -16,6 +16,7 @@ from matplotlib.ticker import NullFormatter
 import cmap.analytics.summly_null as SN
 from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
+import cmap.util.progress as update
 
 wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan122014'
 if not os.path.exists(wkdir):
@@ -379,26 +380,60 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,nTop_connections=5
 
     '''
     # goldSum = pd.concat([inSum,outSum],axis=0)
-    rnkpt_thresh = 90
-    grtrThresh = inSum >= rnkpt_thresh
-    grtrSum = grtrThresh.sum(axis=1)
-    connRate = grtrSum/float(len(grtrSum))
-    # dmso
-    grtrDMSO = dmsoSum >= rnkpt_thresh
-    dSum = grtrDMSO.sum(axis=1)
-    dConnRate = dSum/float(len(dmsoSum))
-    # summly space: dmso connection rate
-    obsToDmso = connRate/dConnRate
-    isInf = np.isinf(obsToDmso)
-    obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
-    obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan
-    h1 = plt.hist(obsToDmso.values,30,color='b',alpha=.6)
-    plt.xlabel('connection count ratio, summly space signatures : DMSO signatures')
-    plt.ylabel('freq')
-    plt.title('connection ratio mrp4 - ' + str(rnkpt_thresh))
-    outF = os.path.join(wkdir,'connection_ratio_mrp4_' + str(rnkpt_thresh) +'_.png')
+    ratioThresh = 3 #
+    fpThresh = .25
+    ratioDict = {}
+    fpDict = {}
+    fpFrame = pd.DataFrame()
+    progress_bar = update.DeterminateProgressBar('connection ratio-calculation')
+    rnkptRange = range(60,100)
+    for ii,rnkpt_thresh in enumerate(rnkptRange):
+        progress_bar.update('observed to dmso', ii, len(rnkptRange))
+        # rnkpt_thresh = 90
+        grtrThresh = inSum >= rnkpt_thresh
+        grtrSum = grtrThresh.sum(axis=1)
+        connRate = grtrSum/float(inSum.shape[1])
+        # dmso
+        grtrDMSO = dmsoSum >= rnkpt_thresh
+        dSum = grtrDMSO.sum(axis=1)
+        dConnRate = dSum/float(dmsoSum.shape[1])        
+        # summly space: dmso connection rate
+        obsToDmso = connRate/dConnRate
+        falsePosR = dConnRate / (dConnRate + connRate) # dmso / (dmso + obs)
+        fpFrame = pd.concat([fpFrame,pd.DataFrame(falsePosR)],axis=1)
+        highRatioCount = (obsToDmso >= ratioThresh).sum()
+        ratioDict[rnkpt_thresh] = highRatioCount
+        fpDict[rnkpt_thresh] = (falsePosR <= fpThresh).sum()
+        # deal with inf
+        # isInf = np.isinf(obsToDmso)
+        # obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
+        # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan    
+    # graph false positive rate
+    fpSer = pd.Series(fpDict)
+    plt.plot(fpSer.index,fpSer.values)
+    plt.ylabel('number of perturbations')
+    plt.xlabel('mrp4 threshold')
+    plt.title('false positive rates above .25 - (out of 7147)')
+    outF = os.path.join(wkdir,'false_positive_rates_by_mrp4_threshold.png')
     plt.savefig(outF, bbox_inches=0)
     plt.close()
+    # graph - obs:dmso ratio
+    ratioSer = pd.Series(ratioDict)
+    plt.plot(ratioSer.index,ratioSer.values)
+    plt.ylabel('number of connections')
+    plt.xlabel('mrp4 threshold')
+    plt.title('observed:dmso connection ratios above 3 - (out of 7147)')
+    outF = os.path.join(wkdir,'connection_ratio_by_mrp4_threshold.png')
+    plt.savefig(outF, bbox_inches=0)
+    plt.close()
+    # #plot
+    # h1 = plt.hist(obsToDmso.values,30,range=[0,20],color='b',alpha=.6)
+    # plt.xlabel('connection count ratio, summly space signatures : DMSO signatures')
+    # plt.ylabel('freq')
+    # plt.title('connection ratio mrp4 - ' + str(rnkpt_thresh))
+    # outF = os.path.join(wkdir,'connection_ratio_mrp4_' + str(rnkpt_thresh) +'_.png')
+    # plt.savefig(outF, bbox_inches=0)
+    # plt.close()
 
 def test_overlap(xSer):
     'test the set overlap among items in a Series \
