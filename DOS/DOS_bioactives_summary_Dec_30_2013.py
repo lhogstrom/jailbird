@@ -17,7 +17,7 @@ import cmap.analytics.summly_null as SN
 from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
 
-wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Dec182013'
+wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan122014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -372,6 +372,34 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
             return topConnections, mtchDMSOtop, overlapMed, oMedDMSO
         else:
             return overlapMed, oMedDMSO
+
+def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,nTop_connections=50,graph=True,return_top_sets=False):
+    '''
+    -For each unique perturbation type, at what point would you expect to see 25%\ false connections
+
+    '''
+    # goldSum = pd.concat([inSum,outSum],axis=0)
+    rnkpt_thresh = 90
+    grtrThresh = inSum >= rnkpt_thresh
+    grtrSum = grtrThresh.sum(axis=1)
+    connRate = grtrSum/float(len(grtrSum))
+    # dmso
+    grtrDMSO = dmsoSum >= rnkpt_thresh
+    dSum = grtrDMSO.sum(axis=1)
+    dConnRate = dSum/float(len(dmsoSum))
+    # summly space: dmso connection rate
+    obsToDmso = connRate/dConnRate
+    isInf = np.isinf(obsToDmso)
+    obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
+    obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan
+    h1 = plt.hist(obsToDmso.values,30,color='b',alpha=.6)
+    plt.xlabel('connection count ratio, summly space signatures : DMSO signatures')
+    plt.ylabel('freq')
+    plt.title('connection ratio mrp4 - ' + str(rnkpt_thresh))
+    outF = os.path.join(wkdir,'connection_ratio_mrp4_' + str(rnkpt_thresh) +'_.png')
+    plt.savefig(outF, bbox_inches=0)
+    plt.close()
+
 def test_overlap(xSer):
     'test the set overlap among items in a Series \
     -return set of all pairwise overlap values'
