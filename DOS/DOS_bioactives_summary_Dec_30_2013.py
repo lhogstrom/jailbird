@@ -375,7 +375,7 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
         else:
             return overlapMed, oMedDMSO
 
-def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,nTop_connections=50,graph=True,return_top_sets=False):
+def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
     '''
     -For each unique perturbation type, at what point would you expect to see 25%\ false connections
 
@@ -412,24 +412,50 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,nTop_connections=5
         # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan    
     #heatmap
     #perform hierarchical clustering on 
+    # import scipy.cluster
     # Y = scipy.cluster.hierarchy.linkage(fpFrame, method='centroid')
     # Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
     # cOrder = Z['leaves']
     # iPCL = fpFrame.index[cOrder]
     # clustered = fpFrm.reindex(index=iPCL,columns=iPCL)
+    # test 2
+    # m1 = np.random.rand(10,10)
+    # m1 = pd.DataFrame(m1)
+    # Y = scipy.cluster.hierarchy.linkage(m1, method='centroid')    
+    # Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
+    # cOrder = Z['leaves']
+    # iPCL = m1.index[cOrder]
+    # clustered = m1.reindex(index=iPCL,columns=iPCL)    
+    # #use cmap clustering tool
+    # import cmap.analytics.cluster as clst
+    # m1 = np.random.rand(6,3)
+    # a1 = np.random.rand(6,2)
+    # l1 = ['a','b','c','d','e','f']
+    # m1 = pd.DataFrame(m1)
+    # m1.index = l1
+    # # m1.columns = l1
+    # annots1 = pd.DataFrame(l1,index=l1)
+    # cO = clst.APClust(m1,annots1,convert_to_distance=True)
+    # cl = clst.CMapClust()
+    # sl = clst.single_linkage_hist_cluster(m1)
+    # order acording to highest false positive rate @ rnkpt 90
+    fpSort = fpFrame.sort(90)
     # plot result
     fig = plt.figure(1, figsize=(10, 10))
-    plt.imshow(fpFrame.values,
+    plt.imshow(fpSort.values,
         interpolation='nearest',
         vmin=0, 
         vmax=1,
         aspect='auto',
         cmap=cm.gray_r)
-    xtcks = [str(x) for x in fpFrame.columns]
-    plt.xticks(np.arange(len(xtcks)), xtcks)
+    tickRange = range(0,40,5)
+    xtcks = [str(x) for x in fpFrame.columns[tickRange]]
+    plt.xticks(tickRange, xtcks)
     # plt.yticks(np.arange(len(ytcks)),ytcks)
     plt.colorbar()
     plt.xlabel('mrp4 threshold')
+    plt.ylabel('unique perturbations')
+    plt.title('summly false positive rate - based on DMSO')
     out = wkdir + '/false_positive_matrix_rnkpt_threshold.png'
     plt.savefig(out, bbox_inches='tight')
     plt.close()
@@ -584,12 +610,13 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
 # specFrm, dosFrm = dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True)
 ## test for overlap summly results in repeated signatures of compounds
 # overlapMedian, dmsoOverlapMedian = connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=True)
-topConnections, mtchDMSOtop, overlapMed, oMedDMSO = connection_overlap_median(inSum,
-                                                            sn.dmsoFrm,
-                                                            matrixType,
-                                                            nTop_connections=100,
-                                                            graph=False,
-                                                            return_top_sets=True)
+# topConnections, mtchDMSOtop, overlapMed, oMedDMSO = connection_overlap_median(inSum,
+#                                                             sn.dmsoFrm,
+#                                                             matrixType,
+#                                                             nTop_connections=100,
+#                                                             graph=False,
+#                                                             return_top_sets=True)
+# rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,graph=True)
 # #save results to file
 # outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
 # passSer.to_csv(outF,index=True,header=True,sep='\t')
