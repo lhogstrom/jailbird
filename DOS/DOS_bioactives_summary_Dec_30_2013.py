@@ -10,16 +10,14 @@ import matplotlib.pyplot as plt
 import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
 import pandas as pd
-import cmap
 import os
-from matplotlib.ticker import NullFormatter
 import cmap.analytics.summly_null as SN
 from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
 import cmap.util.progress as update
 from matplotlib import cm
 
-wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan122014'
+wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan162014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -364,10 +362,10 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
             h1 = plt.hist(oMedDMSO,30,color='b',range=[min1,max1],label=['DMSO'],alpha=.4,normed=True)
             h3 = plt.hist(overlapMed,30,color='r',range=[min1,max1],label=['DOS'],alpha=.3,normed=True) #
             plt.legend()
-            plt.xlabel(pType + ' - median summly connection overlap (out of 50)')
+            plt.xlabel(pType + ' - median ' + matrixType + 'summly connection overlap (out of 50)')
             plt.ylabel('freq')
             plt.title('connection consistency across signatures')
-            outF = os.path.join(wkdir, pType +  '_median_summly_connection_consistency.png')
+            outF = os.path.join(wkdir, pType +  '_median_summly_connection_consistency_' + matrixType + '.png')
             plt.savefig(outF, bbox_inches=0)
             plt.close()
         if return_top_sets == True:
@@ -377,7 +375,8 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
 
 def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
     '''
-    -For each unique perturbation type, at what point would you expect to see 25%\ false connections
+    -calculate the rate of false positives for bioactive signatures vs. DMSO
+    -make heatmap
 
     '''
     # goldSum = pd.concat([inSum,outSum],axis=0)
@@ -400,7 +399,8 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
         dConnRate = dSum/float(dmsoSum.shape[1])        
         # summly space: dmso connection rate
         obsToDmso = connRate/dConnRate
-        falsePosR = dConnRate / (dConnRate + connRate) # dmso / (dmso + obs)
+        # falsePosR = dConnRate / (dConnRate + connRate) # dmso / (dmso + obs)
+        falsePosR = dConnRate / connRate # dmso / obs
         falsePosR.name = rnkpt_thresh
         fpFrame = pd.concat([fpFrame,pd.DataFrame(falsePosR)],axis=1)
         highRatioCount = (obsToDmso >= ratioThresh).sum()
@@ -411,80 +411,120 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
         # obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
         # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan    
     #heatmap
-    #perform hierarchical clustering on 
-    # import scipy.cluster
-    # Y = scipy.cluster.hierarchy.linkage(fpFrame, method='centroid')
-    # Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
-    # cOrder = Z['leaves']
-    # iPCL = fpFrame.index[cOrder]
-    # clustered = fpFrm.reindex(index=iPCL,columns=iPCL)
-    # test 2
-    # m1 = np.random.rand(10,10)
-    # m1 = pd.DataFrame(m1)
-    # Y = scipy.cluster.hierarchy.linkage(m1, method='centroid')    
-    # Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
-    # cOrder = Z['leaves']
-    # iPCL = m1.index[cOrder]
-    # clustered = m1.reindex(index=iPCL,columns=iPCL)    
-    # #use cmap clustering tool
-    # import cmap.analytics.cluster as clst
-    # m1 = np.random.rand(6,3)
-    # a1 = np.random.rand(6,2)
-    # l1 = ['a','b','c','d','e','f']
-    # m1 = pd.DataFrame(m1)
-    # m1.index = l1
-    # # m1.columns = l1
-    # annots1 = pd.DataFrame(l1,index=l1)
-    # cO = clst.APClust(m1,annots1,convert_to_distance=True)
-    # cl = clst.CMapClust()
-    # sl = clst.single_linkage_hist_cluster(m1)
     # order acording to highest false positive rate @ rnkpt 90
     fpSort = fpFrame.sort(90)
     # plot result
-    fig = plt.figure(1, figsize=(10, 10))
-    plt.imshow(fpSort.values,
-        interpolation='nearest',
-        vmin=0, 
-        vmax=1,
-        aspect='auto',
-        cmap=cm.gray_r)
-    tickRange = range(0,40,5)
-    xtcks = [str(x) for x in fpFrame.columns[tickRange]]
-    plt.xticks(tickRange, xtcks)
-    # plt.yticks(np.arange(len(ytcks)),ytcks)
-    plt.colorbar()
-    plt.xlabel('mrp4 threshold')
-    plt.ylabel('unique perturbations')
-    plt.title('summly false positive rate - based on DMSO')
-    out = wkdir + '/false_positive_matrix_rnkpt_threshold.png'
-    plt.savefig(out, bbox_inches='tight')
-    plt.close()
-    # graph false positive rate
-    fpSer = pd.Series(fpDict)
-    plt.plot(fpSer.index,fpSer.values)
-    plt.ylabel('number of perturbations')
-    plt.xlabel('mrp4 threshold')
-    plt.title('false positive rates above .25 - (out of 7147)')
-    outF = os.path.join(wkdir,'false_positive_rates_by_mrp4_threshold.png')
-    plt.savefig(outF, bbox_inches=0)
-    plt.close()
-    # graph - obs:dmso ratio
-    ratioSer = pd.Series(ratioDict)
-    plt.plot(ratioSer.index,ratioSer.values)
-    plt.ylabel('number of connections')
-    plt.xlabel('mrp4 threshold')
-    plt.title('observed:dmso connection ratios above 3 - (out of 7147)')
-    outF = os.path.join(wkdir,'connection_ratio_by_mrp4_threshold.png')
-    plt.savefig(outF, bbox_inches=0)
-    plt.close()
-    # #plot
-    # h1 = plt.hist(obsToDmso.values,30,range=[0,20],color='b',alpha=.6)
-    # plt.xlabel('connection count ratio, summly space signatures : DMSO signatures')
-    # plt.ylabel('freq')
-    # plt.title('connection ratio mrp4 - ' + str(rnkpt_thresh))
-    # outF = os.path.join(wkdir,'connection_ratio_mrp4_' + str(rnkpt_thresh) +'_.png')
-    # plt.savefig(outF, bbox_inches=0)
-    # plt.close()
+    if graph == True:
+        fig = plt.figure(1, figsize=(10, 10))
+        plt.imshow(fpSort.values,
+            interpolation='nearest',
+            aspect='auto',
+            cmap=cm.gray_r)
+            # vmin=0, 
+            # vmax=1,
+        tickRange = range(0,40,5)
+        xtcks = [str(x) for x in fpFrame.columns[tickRange]]
+        plt.xticks(tickRange, xtcks)
+        # plt.yticks(np.arange(len(ytcks)),ytcks)
+        plt.colorbar()
+        plt.xlabel(matrixType + ' threshold')
+        plt.ylabel('unique perturbations')
+        plt.title('summly false positive rate - based on DMSO')
+        out = wkdir + '/false_positive_matrix_' + matrixType + '_threshold.png'
+        plt.savefig(out, bbox_inches='tight')
+        plt.close()
+        # heatmap by pert_type
+        fpGrped = fpFrame.groupby(level='pert_type')
+        for grp in fpGrped.groups:
+            grpFrm = fpGrped.get_group(grp)
+            grpSort = grpFrm.sort(90)
+            fig = plt.figure(1, figsize=(10, 10))
+            plt.imshow(grpSort.values,
+                interpolation='nearest',
+                aspect='auto',
+                cmap=cm.gray_r)
+                # vmin=0, 
+                # vmax=1,
+            tickRange = range(0,40,5)
+            xtcks = [str(x) for x in grpSort.columns[tickRange]]
+            plt.xticks(tickRange, xtcks)
+            # plt.yticks(np.arange(len(ytcks)),ytcks)
+            plt.colorbar()
+            plt.xlabel(matrixType + ' threshold')
+            plt.ylabel('unique perturbations')
+            plt.title(grp +' summly false positive rate - based on DMSO')
+            out = wkdir + '/' + grp + '_false_positive_matrix_' + matrixType + '_threshold.png'
+            plt.savefig(out, bbox_inches='tight')
+            plt.close()
+        # graph false positive rate
+        fpSer = pd.Series(fpDict)
+        plt.plot(fpSer.index,fpSer.values)
+        plt.ylabel('number of perturbations')
+        plt.xlabel(matrixType + 'threshold')
+        plt.title('false positive rates bellow .25 - (out of 7147)')
+        outF = os.path.join(wkdir,'false_positive_rates_by_' + matrixType + '_threshold.png')
+        plt.savefig(outF, bbox_inches=0)
+        plt.close()
+        # graph - obs:dmso ratio
+        ratioSer = pd.Series(ratioDict)
+        plt.plot(ratioSer.index,ratioSer.values)
+        plt.ylabel('number of connections')
+        plt.xlabel(matrixType + ' threshold')
+        plt.title('observed:dmso connection ratios above 3 - (out of 7147)')
+        outF = os.path.join(wkdir,'connection_ratio_by_' + matrixType + '_threshold.png')
+        plt.savefig(outF, bbox_inches=0)
+        plt.close()
+    return fpFrame
+
+def find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25):
+    '''
+    -For each unique perturbation type, what is the lowest summly theshold 
+    where you see 25%\ false postive rate
+
+    '''
+    bellowFrm = falsePosRates <= false_positive_rate_thresh
+    firstSer = pd.Series(data=np.zeros(bellowFrm.shape[0]),index=bellowFrm.index)
+    firstSer.name = matrixType + '_thresh'
+    noTrans = []
+    for i1 in bellowFrm.index:
+        x = bellowFrm.ix[i1,:]
+        x = x[~np.isnan(x)]
+        if ~x.any():
+            #note if threshold is never passed
+            FirstTrueIndex = np.nan
+        else:
+            TrueList = x[x]
+            FirstTrueIndex = TrueList.index[0]
+            #if pass threshold - do all higher rnkpts too?
+            if ~((x[FirstTrueIndex:]).all()):
+                noTrans.append(i1)
+        firstSer[i1] = FirstTrueIndex
+    outF = os.path.join(wkdir,'threshold_for_fpr_bellow_'+ str(false_positive_rate_thresh) + '_' + matrixType + '.txt')
+    firstSer.to_csv(outF,sep='\t',header=True)
+    lowFPR = firstSer[~np.isnan(firstSer)]
+    if graph == True:
+            graphSer = firstSer.copy()
+            graphSer[np.isnan(graphSer)] = 0
+            h1 = plt.hist(graphSer,30,color='b',alpha=.6,normed=False)
+            plt.legend()
+            plt.xlabel(matrixType + ' threshold')
+            plt.ylabel('freq')
+            plt.title('threshold to see false positive rates bellow ' + str(false_positive_rate_thresh))
+            outF = os.path.join(wkdir,'threshold_for_fpr_bellow_'+ str(false_positive_rate_thresh) + '_' + matrixType + '.png')
+            plt.savefig(outF, bbox_inches=0)
+            plt.close()
+            #graph by pert_type
+            gsGrped = graphSer.groupby(level='pert_type')
+            for grp in gsGrped.groups:
+                grpFrm = gsGrped.get_group(grp)
+                h1 = plt.hist(grpFrm,30,color='b',alpha=.6,normed=False)
+                plt.legend()
+                plt.xlabel(matrixType + ' threshold')
+                plt.ylabel('freq')
+                plt.title(grp + ' - threshold to see false positive rates bellow ' + str(false_positive_rate_thresh))
+                outF = os.path.join(wkdir, grp + '_threshold_for_fpr_bellow_'+ str(false_positive_rate_thresh) + '_' + matrixType + '.png')
+                plt.savefig(outF, bbox_inches=0)
+                plt.close()
 
 def test_overlap(xSer):
     'test the set overlap among items in a Series \
@@ -583,16 +623,17 @@ def dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True):
 
 #get dmso results
 sn = SN.SummNull(out=wkdir)
-sn.load_dmso_summ_results(index_row_by_pert_type=True)
+# sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='mrp4')
+sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='lass')
 dosBrds = get_dos_BRDs()
 dosQuery, countSer = get_dos_signatures(dosBrds)
 dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
 ### use lass matrix
-# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
-# matrixType = 'rnkpt_indp_lass'
+mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+matrixType = 'rnkpt_indp_lass'
 ### use mrp4 mtrx
-mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
-matrixType = 'mrp4'
+# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
+# matrixType = 'mrp4'
 iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
 inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=True)
 #get median rnkpt of n_top connections
@@ -611,12 +652,13 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
 ## test for overlap summly results in repeated signatures of compounds
 # overlapMedian, dmsoOverlapMedian = connection_overlap_median(inSum,sn.dmsoFrm,matrixType,nTop_connections=50,graph=True)
 # topConnections, mtchDMSOtop, overlapMed, oMedDMSO = connection_overlap_median(inSum,
-#                                                             sn.dmsoFrm,
-#                                                             matrixType,
-#                                                             nTop_connections=100,
-#                                                             graph=False,
-#                                                             return_top_sets=True)
-# rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,graph=True)
+                                                            # sn.dmsoFrm,
+                                                            # matrixType,
+                                                            # nTop_connections=100,
+                                                            # graph=False,
+                                                            # return_top_sets=True)
+falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,graph=False)
+find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25)
 # #save results to file
 # outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
 # passSer.to_csv(outF,index=True,header=True,sep='\t')
