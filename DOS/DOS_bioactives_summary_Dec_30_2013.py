@@ -17,7 +17,7 @@ import cmap.io.gmt as gmt
 import cmap.util.progress as update
 from matplotlib import cm
 
-wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan162014'
+wkdir = '/xchip/cogs/projects/DOS/bioactivity_summary_Jan16b2014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -543,6 +543,7 @@ def find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_ra
                 outF = os.path.join(wkdir, grp + '_threshold_for_fpr_bellow_'+ str(false_positive_rate_thresh) + '_' + matrixType + '.png')
                 plt.savefig(outF, bbox_inches=0)
                 plt.close()
+    return firstSer
 
 def test_overlap(xSer):
     'test the set overlap among items in a Series \
@@ -675,9 +676,12 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
                                                             # nTop_connections=100,
                                                             # graph=False,
                                                             # return_top_sets=True)
-falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,graph=False)
-find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25)
-pert_row_distribution('BRD-A00267231','trt_cp',inSum,sn.dmsoFrm,matrixType,graph=True)
+falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,range(0,100),graph=False)
+lowestThresh = find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25)
+#BRD-A01320529' - good seperation
+#'BRD-A02481876' - poor seperation 
+# - no seperation
+pert_row_distribution('BRD-A00420644','trt_cp',inSum,sn.dmsoFrm,matrixType,graph=True)
 
 # #save results to file
 # outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
