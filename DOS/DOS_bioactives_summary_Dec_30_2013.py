@@ -373,7 +373,7 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
         else:
             return overlapMed, oMedDMSO
 
-def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
+def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=True):
     '''
     -calculate the rate of false positives for bioactive signatures vs. DMSO
     -make heatmap
@@ -386,7 +386,6 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
     fpDict = {}
     fpFrame = pd.DataFrame()
     progress_bar = update.DeterminateProgressBar('connection ratio-calculation')
-    rnkptRange = range(60,100)
     for ii,rnkpt_thresh in enumerate(rnkptRange):
         progress_bar.update('observed to dmso', ii, len(rnkptRange))
         # rnkpt_thresh = 90
@@ -475,6 +474,25 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,graph=True):
         plt.savefig(outF, bbox_inches=0)
         plt.close()
     return fpFrame
+
+def pert_row_distribution(pert_id,pert_type,inSum,dmsoSum,matrixType,graph=True):
+    '''
+    -create histogram showing distribution of rankpoint values to a perturbation
+    in bioactive vs dmso signatures
+    '''
+    obsRow = inSum.ix[pert_type,pert_id]
+    dmsoRow = dmsoSum.ix[pert_type,pert_id]
+    if graph == True:
+        h1 = plt.hist(obsRow,30,color='b',range=[-100,100],label=['summly_inputs'],alpha=.4,normed=True)
+        h2 = plt.hist(dmsoRow,30,color='r',range=[-100,100],label='DMSO_inputs',alpha=.3,normed=True)
+        plt.legend()
+        plt.title(pert_id,fontweight='bold')
+        plt.ylabel('freq',fontweight='bold')
+        plt.xlabel(matrixType,fontweight='bold')
+        # plt.title('summlySpace DOS compounds (' + str(overlapCount) + ') - cell lines is_gold')
+        outF = os.path.join(wkdir, pert_id + '_summly_row_distribution_'+ matrixType + '.png')
+        plt.savefig(outF, bbox_inches='tight',dpi=200)
+        plt.close()
 
 def find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25):
     '''
@@ -659,6 +677,8 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
                                                             # return_top_sets=True)
 falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,graph=False)
 find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25)
+pert_row_distribution('BRD-A00267231','trt_cp',inSum,sn.dmsoFrm,matrixType,graph=True)
+
 # #save results to file
 # outF = os.path.join(wkdir, 'DOS_signatures_counts_above_90_mrp4.txt')
 # passSer.to_csv(outF,index=True,header=True,sep='\t')
