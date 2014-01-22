@@ -15,6 +15,8 @@ from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
 import cmap.util.progress as update
 from matplotlib import cm
+import multiprocessing
+import time
 
 wkdir = '/xchip/cogs/projects/connectivity/false_positive_rates/17Jan2014'
 if not os.path.exists(wkdir):
@@ -457,6 +459,20 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
         # isInf = np.isinf(obsToDmso)
         # obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
         # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan    
+    # run SVM in parallel
+    n_procs=15
+    tupList = [(inSum,dmsoSum,x) for x in range(0,100)]
+    prog = update.DeterminateProgressBar('self-connection graph builder')
+    pool = multiprocessing.Pool(n_procs)
+    rs = pool.map_async(_cdf_worker,tupList)
+    pool.close() # No more work
+    while (True):
+        if (rs.ready()): break
+        remaining = rs._number_left
+        prog.show_message('SVM evaluation - {0} tasks to complete'.format(remaining))
+        time.sleep(0.1)
+    results = rs.get()
+    fpFrame = pd.concat(results, axis=1, keys=[s.name for s in results])
     #heatmap
     # order acording to highest false positive rate @ rnkpt 90
     fpSort = fpFrame.sort(90)
@@ -525,6 +541,44 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
         plt.savefig(outF, bbox_inches=0)
         plt.close()
     return fpFrame
+
+def _cdf_worker(argTup):
+    '''
+    worker to build cdf
+
+    Parameters
+    ----------
+    argTup : tuple
+        contains this set of arguments:
+            inSum : pandas dataFrame
+                dataFrame of signature info z score expression data - observed
+            dmsoSum : pandas dataFrame
+                dataFrame of signature info z score expression data - dmso
+            rnkpt_thresh : int
+                summly score threshold
+
+    Returns
+    ----------
+    falsePosR : pandas Series
+        index = pert_id
+        values = false positive rate
+    ''' 
+    inSum = argTup[0]
+    dmsoSum = argTup[1]
+    rnkpt_thresh = argTup[2]
+    grtrThresh = np.greater_equal(inSum,rnkpt_thresh)
+    grtrSum = grtrThresh.sum(axis=1)
+    connRate = grtrSum/float(inSum.shape[1])
+    # dmso
+    grtrDMSO = dmsoSum >= rnkpt_thresh
+    dSum = grtrDMSO.sum(axis=1)
+    dConnRate = dSum/float(dmsoSum.shape[1])        
+    # summly space: dmso connection rate
+    falsePosR = dConnRate / connRate # dmso / obs
+    # if false postive rate is above 1, set to 1
+    falsePosR[falsePosR >= 1] = 1
+    falsePosR.name = rnkpt_thresh
+    return falsePosR
 
 def pert_row_distribution(pert_id,pert_type,inSum,dmsoSum,matrixType,graph=True):
     '''
