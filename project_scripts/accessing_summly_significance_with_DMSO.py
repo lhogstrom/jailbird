@@ -128,16 +128,25 @@ def get_summly_ind_compounds(dosGold,mtrxSummly):
     summBrds = set(isCp.index)
     goldDosBrds = set(dosGold['sig_id'].values)
     summGold = summBrds.difference(goldDosBrds)
-    
+    indSummSer = pd.Series(indSummSigs)
     indSer = pd.Series(index=indSummSer.values,data=indSummSer.index)
-    iGold = indSer.reindex(list(summGold))
-
+    iNonDos = indSer[indSer.index.isin(summGold)]
     # iNonDos = pd.Series(list(summGold))
     return iNonDos
 
 def get_CP006_compounds(dosGold,mtrxSummly):
     "1) return sig_ids of compounds that are on CP006 plates \
     and in summly matrix"
+    # gt = gct.GCT()
+    # gt.read_gctx_col_meta(mtrxSummly)
+    # gt.read_gctx_row_meta(mtrxSummly)
+    # indSummSigs = gt.get_column_meta('sig_id')
+    # indSummPType = gt.get_column_meta('pert_type')
+    # indSummInames = gt.get_column_meta('pert_iname')
+    # CM = mu.CMapMongo()
+    # cp006 = CM.find({'brew_prefix':{'$regex':'CP006'}}, #, 
+    #         {'sig_id':True,'pert_id':True},
+    #         toDataFrame=True)
 
 #load summly independent mode results
 def load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=False):
@@ -403,10 +412,15 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
         else:
             return overlapMed, oMedDMSO
 
-def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=True):
+def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=True,fpr_max=False):
     '''
     -calculate the rate of false positives for bioactive signatures vs. DMSO
     -make heatmap
+
+    Parameters:
+    -----------
+    fpr_max: bool
+        if false positive rate is above 1, set to 1
 
     '''
     # goldSum = pd.concat([inSum,outSum],axis=0)
@@ -419,7 +433,8 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
     for ii,rnkpt_thresh in enumerate(rnkptRange):
         progress_bar.update('observed to dmso', ii, len(rnkptRange))
         # rnkpt_thresh = 90
-        grtrThresh = inSum >= rnkpt_thresh
+        # grtrThresh = inSum >= rnkpt_thresh
+        grtrThresh = np.greater_equal(inSum,rnkpt_thresh)
         grtrSum = grtrThresh.sum(axis=1)
         connRate = grtrSum/float(inSum.shape[1])
         # dmso
@@ -430,6 +445,9 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
         obsToDmso = connRate/dConnRate
         # falsePosR = dConnRate / (dConnRate + connRate) # dmso / (dmso + obs)
         falsePosR = dConnRate / connRate # dmso / obs
+        # if false postive rate is above 1, set to 1
+        if fpr_max:
+            falsePosR[falsePosR >= 1] = 1
         falsePosR.name = rnkpt_thresh
         fpFrame = pd.concat([fpFrame,pd.DataFrame(falsePosR)],axis=1)
         highRatioCount = (obsToDmso >= ratioThresh).sum()
@@ -451,8 +469,9 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
             cmap=cm.gray_r)
             # vmin=0, 
             # vmax=1,
-        tickRange = range(0,40,5)
-        xtcks = [str(x) for x in fpFrame.columns[tickRange]]
+        tickRange = range(0,max(rnkptRange),5)
+        xtcks = [str(x) for x in tickRange]
+        # xtcks = [str(x) for x in fpFrame.columns[tickRange]]
         plt.xticks(tickRange, xtcks)
         # plt.yticks(np.arange(len(ytcks)),ytcks)
         plt.colorbar()
@@ -474,8 +493,10 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
                 cmap=cm.gray_r)
                 # vmin=0, 
                 # vmax=1,
-            tickRange = range(0,40,5)
-            xtcks = [str(x) for x in grpSort.columns[tickRange]]
+            # tickRange = range(0,40,5)
+            # xtcks = [str(x) for x in grpSort.columns[tickRange]]
+            tickRange = range(0,max(rnkptRange),5)
+            xtcks = [str(x) for x in tickRange]
             plt.xticks(tickRange, xtcks)
             # plt.yticks(np.arange(len(ytcks)),ytcks)
             plt.colorbar()
@@ -667,25 +688,25 @@ def dos_introspect(resPreCalc,graph_metric='median_rankpt',graph=True):
 
 ##########################################
 ### run functions to retrieve DOS info ###
-##########################################
 
+##########################################
 
 #get dmso results
 sn = SN.SummNull(out=wkdir)
-# sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='mrp4')
-sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='lass')
+sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='mrp4')
+# sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='lass')
 dosBrds = get_dos_BRDs()
 dosQuery, countSer = get_dos_signatures(dosBrds)
 dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
 ### use lass matrix
-mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
-matrixType = 'rnkpt_indp_lass'
+# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+# matrixType = 'rnkpt_indp_lass'
 ### use mrp4 mtrx
-# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
-# matrixType = 'mrp4'
-# iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
-# inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=True)
-iCpNonDOS = get_summly_ind_compounds(dosGold,mtrxSummly)
+mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
+matrixType = 'mrp4'
+iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
+inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=True)
+# iCpNonDOS = get_summly_ind_compounds(dosGold,mtrxSummly)
 # inSum,outSum = load_summly_independent(iCpNonDOS,mtrxSummly,index_row_by_pert_type=True)
 #get median rnkpt of n_top connections
 # medianSer = median_n_connections(inSum,n_top=25)
@@ -708,7 +729,7 @@ iCpNonDOS = get_summly_ind_compounds(dosGold,mtrxSummly)
                                                             # nTop_connections=100,
                                                             # graph=False,
                                                             # return_top_sets=True)
-# falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,range(0,100),graph=False)
+# falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,range(0,100),graph=True)
 # lowestThresh = find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25)
 # #BRD-A01320529' - good seperation
 # #'BRD-A02481876' - poor seperation 
@@ -732,16 +753,6 @@ iCpNonDOS = get_summly_ind_compounds(dosGold,mtrxSummly)
 
 
 #check the insum sig_ids --> are these all DOS compounds?
-
-# get annotations for insum sig_ids
-pIds = inSum.columns.get_level_values('pert_id')
-pSet = set(pIds)
-mc = mu.MongoContainer()
-pertInfo = mc.pert_info.find({'pert_id':{'$in':list(pIds)}},
-            {'pert_id':True,'pert_icollection':True},toDataFrame=True)
-set(pertInfo['pert_icollection'])
-#inSum is only DOS compounds
-
 
 # iGold version2:
 # 1) summly_space pert_ids, is_gold, core cell lines (cps, oe, sh)

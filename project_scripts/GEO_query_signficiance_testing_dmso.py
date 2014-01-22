@@ -10,6 +10,7 @@ import numpy as np, pandas as pd
 from cmap.util import debug
 import cmap
 from os import path
+import os
 import pandas as pd
 import codecs
 import cmap.io.gct as gct
@@ -22,7 +23,9 @@ import cmap.util.mongo_utils as mu
 from statsmodels.stats.multitest import fdrcorrection as fdr
 import cmap.analytics.summly_null as SN
 
-wkdir = '/xchip/cogs/projects/GEO_summly'
+wkdir = '/xchip/cogs/projects/GEO_summly_22Jan'
+if not path.exists(wkdir):
+    os.mkdir(wkdir)
 
 ### load GEO hypotheses being tested ####
 def get_expected_connection_frame():
@@ -88,6 +91,10 @@ aRes = aFrm.reindex(summRes)
 summSpace = list(sFrm.index)
 mc = mu.MongoContainer()
 pIDfrm = mc.pert_info.find({'pert_id':{'$in':summSpace}},toDataFrame=True)
+#make iname dictionary
+inameSer = pd.Series(data=pIDfrm['pert_iname'])
+inameSer.index = pIDfrm['pert_id']
+inameDict = inameSer.to_dict()
 
 
 # get ratings that have summly results
@@ -210,6 +217,7 @@ for igeoID in summIDs:
         #GEO, pert_id (expected), pert_type, rank, percent (p-value)
         resDict[geoID + ' - ' + pID] = {'geo_id':geoID,
                                 'expected_connection':pID,
+                                'expected_connection_iname':inameDict[pID],
                                 'pert_type':pType,
                                 'rnkpt4':eRnkpt,
                                 'rank':eRank,
