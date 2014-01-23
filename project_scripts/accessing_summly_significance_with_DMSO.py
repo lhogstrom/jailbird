@@ -417,7 +417,6 @@ def connection_overlap_median(inSum,dmsoSum,matrixType,nTop_connections=50,graph
 def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=True,fpr_max=False):
     '''
     -calculate the rate of false positives for bioactive signatures vs. DMSO
-    -make heatmap
 
     Parameters:
     -----------
@@ -431,6 +430,7 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
     ratioDict = {}
     fpDict = {}
     fpFrame = pd.DataFrame()
+    #### false positive calculation with loop ####
     progress_bar = update.DeterminateProgressBar('connection ratio-calculation')
     for ii,rnkpt_thresh in enumerate(rnkptRange):
         progress_bar.update('observed to dmso', ii, len(rnkptRange))
@@ -439,7 +439,7 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
         grtrThresh = np.greater_equal(inSum,rnkpt_thresh)
         grtrSum = grtrThresh.sum(axis=1)
         connRate = grtrSum/float(inSum.shape[1])
-        # dmso
+        # dmso 
         grtrDMSO = dmsoSum >= rnkpt_thresh
         dSum = grtrDMSO.sum(axis=1)
         dConnRate = dSum/float(dmsoSum.shape[1])        
@@ -458,9 +458,22 @@ def rates_of_DMSO_connections(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=T
         # deal with inf
         # isInf = np.isinf(obsToDmso)
         # obsToDmso[isInf] = grtrSum[isInf] # replace inf with obs sum
-        # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan    
-    # run SVM in parallel
-    n_procs=15
+        # obsToDmso = obsToDmso[~np.isnan(obsToDmso)]# remove nan  
+    return fpFrame
+
+def fpr_calc_parallel(inSum,outSum,dmsoSum,matrixType,rnkptRange,graph=True,fpr_max=False):
+    '''
+    -calculate the rate of false positives for bioactive signatures vs. DMSO
+    -make heatmap
+
+    Parameters:
+    -----------
+    fpr_max: bool
+        if false positive rate is above 1, set to 1
+
+    '''
+    #### false positive calculation in parallel ####
+    n_procs=30
     tupList = [(inSum,dmsoSum,x) for x in range(0,100)]
     prog = update.DeterminateProgressBar('self-connection graph builder')
     pool = multiprocessing.Pool(n_procs)
@@ -579,6 +592,49 @@ def _cdf_worker(argTup):
     falsePosR[falsePosR >= 1] = 1
     falsePosR.name = rnkpt_thresh
     return falsePosR
+
+def ecdf_calc(inSum,outSum,dmsoSum,matrixType,graph=True):
+    '''
+    -create empirical cdf for observed and dmso 
+
+    Parameters:
+    -----------
+
+    '''
+    #look at edcf by row
+    for ix in inSum.index:
+        pID = ix[1]
+        obsVec = inSum.ix[ix]
+        dmsoVec = dmsoSum.ix[ix]
+        oecdf = ECDF(obsVec)
+        decdf = ECDF(dmsoVec)
+        # evaluate ecdf
+        # min1 = np.min([np.min(obsVec),np.min(dmsoVec)])
+        # max1 = np.max([np.max(obsVec),np.max(dmsoVec)])
+        # vals = np.linspace(min1,max1,100)
+        vals = np.linspace(-100,100,100)
+        oEval = oecdf(vals)
+        dEval = decdf(vals)
+        # make individual plots
+        fig = plt.figure(1, figsize=(10, 10))
+        plt.subplot(2,1,1)
+        a1 = plt.plot(vals,oEval,color='b',label='observed n=' + str(len(obsVec)))
+        a3 = plt.plot(vals,dEval,color='r',label='DMSO n=' + str(len(dmsoVec))) #
+        plt.legend(loc=2)
+        plt.ylabel('F(x)',fontweight='bold')
+        # plt.xlabel(matrixType,fontweight='bold')
+        plt.title('ecdf summly row ' + pID)
+        plt.subplot(2,1,2)
+        h1 = plt.hist(obsVec,30,color='b',range=[-100,100],label=['observed'],alpha=.4,normed=True)
+        h2 = plt.hist(dmsoVec,30,color='r',range=[-100,100],label='DMSO',alpha=.3,normed=True)
+        # plt.legend()
+        # plt.title(pert_id,fontweight='bold')
+        plt.ylabel('freq',fontweight='bold')
+        plt.xlabel(matrixType,fontweight='bold')
+        outF = os.path.join(wkdir, pID + '_ecdf.png')
+        plt.savefig(outF, bbox_inches='tight',dpi=200)
+        plt.close()
+        fdrVec = dEval / oEval
 
 def pert_row_distribution(pert_id,pert_type,inSum,dmsoSum,matrixType,graph=True):
     '''
@@ -783,7 +839,8 @@ inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=T
                                                             # nTop_connections=100,
                                                             # graph=False,
                                                             # return_top_sets=True)
-# falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,range(0,100),graph=True)
+falsePosRates = rates_of_DMSO_connections(inSum,outSum,sn.dmsoFrm,matrixType,range(0,100),graph=True)
+falsePosRates = fpr_calc_parallel(inSum,outSum,sn.dmsoFrm,matrixType,range(0,100),graph=True)
 # lowestThresh = find_summly_thresholds(falsePosRates,matrixType,graph=True,false_positive_rate_thresh=.25)
 # #BRD-A01320529' - good seperation
 # #'BRD-A02481876' - poor seperation 
