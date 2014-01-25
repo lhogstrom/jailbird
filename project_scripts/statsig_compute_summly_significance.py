@@ -18,7 +18,8 @@ null_path = '/xchip/cogs/projects/connectivity/null/dmso/lass_n1000x7147.gctx'
 # null_path = '/xchip/cogs/projects/connectivity/null/random/lass_n1000x7147.gctx'
 
 pval_method = 'byrow'
-qval_method = 'byrow'
+# qval_method = 'byrow'
+qval_method = 'byecdf'
 
 # out = '/xchip/cogs/projects/connectivity/null/results_dmso'
 # out = '/xchip/cogs/projects/connectivity/null/results_random'
@@ -32,11 +33,17 @@ self.compute_pvalues()
 self.compute_qvalues()
 self.generate_outputs()
 
+### q-value by ecdf
+reload(ConnectivitySignificance)
+self.score_type = 'rnkpt_matched_lass'
+self.compute_qvalues_by_ecdf()
+# self.compute_qvalues()
+
 
 
 ### examine Dave's pval calculation:
 
-idx = 'BRD-K08219523'
+idx = 'BRD-K70792160'
 target = self.data['score'].frame.loc[idx]
 null = self.data['null'].frame.loc[idx]
 ecdf = ECDF(null)
@@ -55,8 +62,8 @@ df = df.sort(idx)
 wkdir = out
 fig = plt.figure(1, figsize=(10, 10))
 plt.subplot(2,1,1)
-a1 = plt.plot(df[idx],df['ecdf_target'],color='b',label='observed n=' + str(len(arg1)))
-a1 = plt.plot(df[idx],df['inv_target'],color='g',label='observed inverse n=' + str(len(arg1)))
+a1 = plt.plot(df[idx],df['ecdf_target'],color='b',label='null n=' + str(len(arg1)))
+a1 = plt.plot(df[idx],df['inv_target'],color='g',label='null inverse n=' + str(len(arg1)))
 # a3 = plt.plot(vals,dEval,color='r',label='DMSO n=' + str(len(dmsoVec))) #
 plt.legend(loc=2)
 plt.ylabel('F(x)',fontweight='bold')
