@@ -18,7 +18,7 @@ from matplotlib import cm
 import multiprocessing
 import time
 
-wkdir = '/xchip/cogs/projects/connectivity/false_positive_rates/17Jan2014'
+wkdir = '/xchip/cogs/projects/connectivity/false_positive_rates/24Jan2014_lass'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -112,6 +112,45 @@ def get_summly_ind_compounds(dosGold,mtrxSummly):
     # iNonDos = pd.Series(list(summGold))
     return iNonDos
 
+#load summly independent mode results
+def load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=False):
+    "load dos compounds that have independent mode results - return dataframe"
+    IST = gct.GCT(mtrxSummly)
+    IST.read(col_inds=list(iGold.values))
+    inSum = IST.frame
+    gctSigs = IST.get_column_meta('sig_id')
+    gctPertIDs = IST.get_column_meta('pert_id')
+    # inSum.columns = gctSigs #index is just sig_id
+    # hierarchical index - sig_id and pert_id
+    iZip = zip(*[gctPertIDs,gctSigs])
+    mCol = pd.MultiIndex.from_tuples(iZip, names=['pert_id','sig_id'])
+    inSum.columns = mCol
+    if index_row_by_pert_type:
+        rowPertType = IST.get_row_meta('pert_type')
+        rowPertIDs = IST.get_row_meta('id')
+        iZip = zip(*[rowPertType,rowPertIDs])
+        mRow = pd.MultiIndex.from_tuples(iZip, names=['pert_type','pert_id'])
+        inSum.index = mRow
+    #read all non-dos summlies
+    gt = gct.GCT()
+    gt.read_gctx_col_meta(mtrxSummly)
+    gt.read_gctx_row_meta(mtrxSummly)
+    indSummSigs = gt.get_column_meta('sig_id')
+    iNonDos = np.arange(len(indSummSigs))
+    iNonDos = np.delete(iNonDos,iGold.values)
+    # read in non-dos results
+    ISO = gct.GCT(mtrxSummly)
+    ISO.read(col_inds=list(iNonDos))
+    outSum = ISO.frame
+    gctSigs = ISO.get_column_meta('sig_id')
+    gctPertIDs = ISO.get_column_meta('pert_id')
+    # outSum.columns = gctSigs
+    iZip = zip(*[gctPertIDs,gctSigs])
+    mCol = pd.MultiIndex.from_tuples(iZip, names=['pert_id','sig_id'])
+    outSum.columns = mCol
+    return inSum, outSum #return dataframe of rankpt values
+
+
 def ecdf_calc(inSum,dmsoSum,matrixType,graph=True,fpr_max=True):
     '''
     -create empirical cdf for observed and dmso 
@@ -192,7 +231,7 @@ def fdr_heatmaps(fdrFrm):
         aspect='auto',
         cmap=cm.gray_r)
     tickRange = range(0,fdrFrm.shape[1],20)
-    xtcks = [str(x) for x in fpFrame.columns[tickRange]]
+    xtcks = [str(x) for x in fdrFrm.columns[tickRange]]
     plt.xticks(tickRange, xtcks)
     # plt.yticks(np.arange(len(ytcks)),ytcks)
     plt.colorbar()
@@ -215,7 +254,7 @@ def fdr_heatmaps(fdrFrm):
             # vmin=0, 
             # vmax=1,
         tickRange = range(0,fdrFrm.shape[1],20)
-        xtcks = [str(x) for x in fpFrame.columns[tickRange]]
+        xtcks = [str(x) for x in fdrFrm.columns[tickRange]]
         plt.xticks(tickRange, xtcks)
         # plt.yticks(np.arange(len(ytcks)),ytcks)
         plt.colorbar()
@@ -233,11 +272,11 @@ sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='mrp4')
 dosBrds = get_dos_BRDs()
 dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
 ### use lass matrix
-# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
-# matrixType = 'rnkpt_indp_lass'
+mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+matrixType = 'rnkpt_indp_lass'
 ### use mrp4 mtrx
-mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
-matrixType = 'mrp4'
+# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
+# matrixType = 'mrp4'
 iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
 # iNonDos = get_summly_ind_compounds(dosGold,mtrxSummly)
 inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=True)
