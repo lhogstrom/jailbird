@@ -18,7 +18,7 @@ from matplotlib import cm
 import multiprocessing
 import time
 
-wkdir = '/xchip/cogs/projects/connectivity/false_positive_rates/24Jan2014_lass'
+wkdir = '/xchip/cogs/projects/connectivity/false_positive_rates/24Jan2014_lass_curated'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -267,13 +267,19 @@ def fdr_heatmaps(fdrFrm):
 
 #get dmso results
 sn = SN.SummNull(out=wkdir)
-sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='mrp4')
+# sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='mrp4')
 # sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='lass')
+sn.load_dmso_summ_results(index_row_by_pert_type=True,summly_type='lass_curated')
 dosBrds = get_dos_BRDs()
 dosGold, countSerGold = get_dos_gold_signatures(dosBrds)
 ### use lass matrix
-mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_lass_n39560x7147.gctx'
+mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_n7147x7147.gctx'
 matrixType = 'rnkpt_indp_lass'
+# score_path = '/xchip/cogs/projects/connectivity/summly/matrices/asym/matched_lass_n7147x7147.gctx'
+
+null_path = 
+
 ### use mrp4 mtrx
 # mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
 # matrixType = 'mrp4'

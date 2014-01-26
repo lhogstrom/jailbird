@@ -26,18 +26,23 @@ qval_method = 'byecdf'
 # out = '/xchip/cogs/projects/connectivity/null/results_dmso_assym'
 out = '/xchip/cogs/projects/connectivity/null/lh_lass_dmso'
 
+reload(cmap.analytics.statsig)
+from cmap.analytics.statsig import ConnectivitySignificance
 self = ConnectivitySignificance(score_path, null_path, out, 
                                 pval_method, qval_method, verbose = True)
-
-self.compute_pvalues()
+### q-value by ecdf
+self.score_type = 'rnkpt_matched_lass'
+self.compute_qvalues_by_ecdf(graph=False,fdr_max=True,ecdf_by_range=True)
+self.fdr_heatmaps()
 self.compute_qvalues()
+
+### q-value by p-value
+# self.compute_pvalues()
+# self.compute_qvalues()
+
 self.generate_outputs()
 
-### q-value by ecdf
-reload(ConnectivitySignificance)
-self.score_type = 'rnkpt_matched_lass'
-self.compute_qvalues_by_ecdf()
-# self.compute_qvalues()
+
 
 
 
