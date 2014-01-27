@@ -278,8 +278,6 @@ mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_n71
 matrixType = 'rnkpt_indp_lass'
 # score_path = '/xchip/cogs/projects/connectivity/summly/matrices/asym/matched_lass_n7147x7147.gctx'
 
-null_path = 
-
 ### use mrp4 mtrx
 # mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
 # matrixType = 'mrp4'
