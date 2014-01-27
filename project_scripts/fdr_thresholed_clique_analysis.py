@@ -29,14 +29,11 @@ if not (lassMtrx.columns == qMtrx.columns).all():
     print 'matrix indices do not match'
 
 #chech that index and columns of matrices are the same
+qThresh = .2
+isgt = qMtrx > qThresh
+lassMasked = lassMtrx.copy()
+lassMasked[isgt] = 0
 
-qMask = qMtrx.copy()
-qThresh = .1
-islt = qMtrx <= qThresh
-qMask[islt] = 1
-qMask[~islt] = 0
-
-lassMasked = qMask*lassMtrx
 ogt = gct.GCT()
 ogt.build_from_DataFrame(lassMasked)
 outF = '/xchip/cogs/projects/connectivity/null/clique_analysis/q_thresholded_lass_matrix/matched_lass_n7147x7147.gctx'
@@ -47,5 +44,35 @@ gt3 = gct.GCT()
 gt3.read(outF)
 outFrm = gt3.frame
 
+#plot distribution of significant lass scores:
+g = lassMasked[~(lassMasked == 0)]
+scoreList = g.unstack()
+scoreList = scoreList[~np.isnan(scoreList)]
+
+plt.hist(scoreList,30)
+plt.xlabel('lass scores',fontweight='bold')
+plt.ylabel('count',fontweight='bold')
+outF = '/xchip/cogs/projects/connectivity/null/clique_analysis/q_thresholded_lass_matrix/significant_lass_scores_hist.png'
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
 # run matlab code like this:
 # sig_cliqueselect_tool('clique','/xchip/cogs/projects/pharm_class/cp_cliques_current.gmt', 'inpath', '/xchip/cogs/projects/connectivity/summly/matrices/','out','/xchip/cogs/projects/connectivity/summly/matrices/')
+
+
+#scratch code:
+# qMask = qMtrx.copy()
+# qThresh = .2
+# islt = qMtrx <= qThresh
+# qMask[islt] = 1
+# qMask[~islt] = 0
+
+# lassMasked = qMask*lassMtrx
+# lm2 = lassMtrx.copy()
+# lm2[qMask == 0] = 0
+
+# g = lm2[~(lm2 == 0)]
+# scoreList = g.unstack()
+# scoreList = scoreList[~np.isnan(scoreList)]
+# plt.hist(scoreList,30)
+# plt.show()
