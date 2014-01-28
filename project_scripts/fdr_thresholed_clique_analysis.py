@@ -5,10 +5,15 @@
 -prep to run Rajiv's sig_cliqueselect_tool in matlab
 '''
 
+import os
 import numpy as np, pandas as pd, scipy as sp
 from matplotlib import pyplot as plt
 from cmap.analytics.statsig import ConnectivitySignificance
 from cmap.io import gct
+
+wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/random_q_thresholded_sym_lass_matrix'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
 
 # matched lass connection matrix
 lFile = '/xchip/cogs/projects/connectivity/null/clique_analysis/baseline_lass_matrix/matched_lass_n7147x7147.gctx'
@@ -17,8 +22,8 @@ gt.read(lFile)
 lassMtrx = gt.frame
 
 # q-value matrix from fdr correction
-qFile = '/xchip/cogs/projects/connectivity/null/results_dmso_sym/qvalues_n7147x7147.gctx'
-# qFile = '/xchip/cogs/projects/connectivity/null/results_random_sym/qvalues_n7147x7147.gctx'
+# qFile = '/xchip/cogs/projects/connectivity/null/results_dmso_sym/qvalues_n7147x7147.gctx'
+qFile = '/xchip/cogs/projects/connectivity/null/results_random_sym/qvalues_n7147x7147.gctx'
 gt2 = gct.GCT()
 gt2.read(qFile)
 qMtrx = gt2.frame
@@ -36,7 +41,7 @@ lassMasked[isgt] = 0
 
 ogt = gct.GCT()
 ogt.build_from_DataFrame(lassMasked)
-outF = '/xchip/cogs/projects/connectivity/null/clique_analysis/q_thresholded_lass_matrix/matched_lass_n7147x7147.gctx'
+outF = wkdir + '/matched_lass_n7147x7147.gctx'
 ogt.write(outF)
 
 #load in thresholded matrix
@@ -52,9 +57,24 @@ scoreList = scoreList[~np.isnan(scoreList)]
 plt.hist(scoreList,30)
 plt.xlabel('lass scores',fontweight='bold')
 plt.ylabel('count',fontweight='bold')
-outF = '/xchip/cogs/projects/connectivity/null/clique_analysis/q_thresholded_lass_matrix/significant_lass_scores_hist.png'
+plt.title('lass random significance - q<.2')
+outF = wkdir + '/random_significant_lass_scores_hist.png'
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
+
+# what does baseline look like?
+lassList = lassMtrx.unstack()
+lassList = lassList[~np.isnan(lassList)]
+plt.hist(lassList,30)
+plt.xlabel('lass scores',fontweight='bold')
+plt.ylabel('count',fontweight='bold')
+plt.title('all lass scores')
+outF = wkdir + '/all_lass_scores_hist.png'
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+
+# what do the random matrices look like?
 
 # run matlab code like this:
 # sig_cliqueselect_tool('clique','/xchip/cogs/projects/pharm_class/cp_cliques_current.gmt', 'inpath', '/xchip/cogs/projects/connectivity/summly/matrices/','out','/xchip/cogs/projects/connectivity/summly/matrices/')
