@@ -11,8 +11,11 @@ from cmap.analytics.statsig import ConnectivitySignificance
 from cmap.io import gct
 from cmap.io import gmt
 import copy
+from matplotlib import cm
 
-
+wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/clique_vs_dmso_null'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
 
 # load cliques
 classGMT = '/xchip/cogs/projects/pharm_class/cp_cliques_current.gmt'
@@ -39,6 +42,50 @@ gt.read()
 dmsoFrm = gt.frame
 dmsoFrm.columns = gt.get_column_meta('id')
 dmsoCM = dmsoFrm[dmsoFrm.index.isin(cSet)]
+rowMedian = dmsoCM.median(axis=1)
+
+### compare observed to null
+#construct 
+graph=False
+for icliq in cliqueLabels.index:
+    cName = cliqueLabels.ix[icliq,'id']
+    pIds = cliqueLabels.ix[icliq,'sig']
+    smFrm = sFrm.reindex(index=pIds,columns=pIds)
+    rMed = rowMedian[pIds]
+    fig = plt.figure(1, figsize=(10, 10))
+    # make matrix of equal size using null
+    smDmso = dmsoFrm.reindex(pIds)
+    iRand = np.random.choice(range(0,smDmso.shape[1]),len(pIds))
+    # take upper left of observed
+    if graph:
+        # graph heatmap of each
+        plt.imshow(smFrm.values,
+            interpolation='nearest',
+            aspect='auto',
+            vmin=-100, 
+            vmax=100,
+            cmap=cm.RdBu_r)
+        tickRange = range(0,smFrm.shape[1])
+        xtcks = [x for x in smFrm.columns]
+        plt.xticks(tickRange, xtcks)
+        plt.yticks(tickRange,xtcks)
+        plt.colorbar()
+        # plt.xlabel(matrixType + ' threshold')
+        # plt.ylabel('unique perturbations')
+        plt.title(cName)
+        out = wkdir + '/' + cName + '_observed.png'
+        plt.savefig(out, bbox_inches='tight')
+        plt.close()
 
 
+
+
+#plot row median of DMSO
+plt.hist(rowMedian,30)
+plt.xlabel('lass scores',fontweight='bold')
+plt.ylabel('count',fontweight='bold')
+plt.title('clique members - dmso row median')
+outF = wkdir + '/dmso_row_median.png'
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
 
