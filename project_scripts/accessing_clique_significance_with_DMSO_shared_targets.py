@@ -16,15 +16,33 @@ from cmap.io import gct
 from cmap.io import gmt
 import cmap.util.progress as update
 
-wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/clique_vs_dmso_null'
+# wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/shared_targets_vs_dmso_null'
+wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/meta_compound_classes_vs_dmso_null'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
-# load cliques
-classGMT = '/xchip/cogs/projects/pharm_class/cp_cliques_current.gmt'
-gmtDict = gmt.read(classGMT)
-cliqueLabels = pd.DataFrame(gmtDict)
-# create set of all clique members
+# Load Steven's cliques
+grpMin = 2
+# rFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/cpd_targets_n268/summly/self_rankpt_n342x342.gctx'
+# cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/cpd_targets_n268/summly/signature_info.txt'
+rFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/cpd_groups_n147/summly/self_rankpt_n1096x1096.gctx'
+cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/cpd_groups_n147/summly/signature_info.txt'
+
+classFrm = pd.read_csv(cFile,sep='\t')
+classGrp = classFrm.groupby('group_id')
+grpDict = {}
+for grp in classGrp.groups:
+    igrp = classGrp.groups[grp]
+    grpFrm = classFrm.reindex(igrp)
+    pIds = list(grpFrm['pert_id'])
+    if len(pIds) < grpMin:
+        continue
+    grpDict[grp] = pIds
+grpSer = pd.Series(grpDict)
+grpSer.name = 'sig'
+cliqueLabels = pd.DataFrame(grpSer)
+cliqueLabels['id'] = cliqueLabels.index
+
 cList = [item for sublist in cliqueLabels['sig'] for item in sublist]
 cSet = set(cList)
 
@@ -32,7 +50,7 @@ cSet = set(cList)
 # thresholded
 # rFile = '/xchip/cogs/projects/connectivity/null/clique_analysis/dmso_q_thresholded_asym_lass_matrix/jan28/my_analysis.sig_cliqueselect_tool.2014012814320559/summly/self_rankpt_n379x379.gctx'
 # non-thresholded asym
-rFile = '/xchip/cogs/projects/connectivity/null/clique_analysis/baseline_lass_asym_matrix/jan28/my_analysis.sig_cliqueselect_tool.2014012814364180/summly/self_rankpt_n379x379.gctx'
+# rFile = '/xchip/cogs/projects/connectivity/null/clique_analysis/baseline_lass_asym_matrix/jan28/my_analysis.sig_cliqueselect_tool.2014012814364180/summly/self_rankpt_n379x379.gctx'
 gt1 = gct.GCT()
 gt1.read(rFile)
 sFrm = gt1.frame
@@ -59,7 +77,7 @@ def no_diagonal_unstack(frm):
 
 ### compare observed to null
 #construct 
-graph=False
+graph=True
 pvalDict = {}
 progress_bar = update.DeterminateProgressBar('group p-val computation')
 for iicliq,icliq in enumerate(cliqueLabels.index):
@@ -111,7 +129,7 @@ for iicliq,icliq in enumerate(cliqueLabels.index):
         plt.close()
         # median null hist
         h2 = plt.hist(nullSer,30,color='b',range=[-100,100],label='DMSO',alpha=.8)
-        h1 = plt.hist(np.array([medObs]),30,color='r',range=[-100,100],label=['observed'],alpha=.8)
+        h1 = plt.hist(np.array([medObs]),30,color='r',range=[-100,100],label=['observed'],alpha=.3,weights=[1000])
         plt.legend()
         plt.xlabel('lass scores',fontweight='bold')
         plt.title('clique median score - ' + cName)
