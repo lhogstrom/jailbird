@@ -11,7 +11,7 @@ import copy
 from matplotlib import cm
 from statsmodels.distributions import ECDF
 
-from cmap.analytics.statsig import ConnectivitySignificance
+import cmap.analytics.statsig as statsig
 from cmap.io import gct
 from cmap.io import gmt
 import cmap.util.progress as update
@@ -75,9 +75,16 @@ def no_diagonal_unstack(frm):
     overlapSer = overlapSer[~overlapSer.isnull()] #remove nulls 
     return overlapSer
 
+def test_statistic_med_quartile(ser):
+    'find median of upper quartile'
+    desc = ser.describe()
+    uQ = ser[ser > desc['75%']]
+    uMed = uQ.median()
+    return uMed
+
 ### compare observed to null
 #construct 
-graph=True
+graph=False
 pvalDict = {}
 progress_bar = update.DeterminateProgressBar('group p-val computation')
 for iicliq,icliq in enumerate(cliqueLabels.index):
@@ -102,11 +109,13 @@ for iicliq,icliq in enumerate(cliqueLabels.index):
         permDict[iperm] = medDmso
     nullSer = pd.Series(permDict)
     #two tailed p-value
-    ecdf = ECDF(nullSer)
-    arg1 = ecdf(medObs)
-    arg2 = 1 - ecdf(medObs)
-    pval = 2 * np.minimum(arg1, arg2)
+    # ecdf = ECDF(nullSer)
+    # arg1 = ecdf(medObs)
+    # arg2 = 1 - ecdf(medObs)
+    # pval = 2 * np.minimum(arg1, arg2)
     #set p-val min
+    #pvalue based on median of upper/lower quartile
+    pval = statsig.empirical_pval(medObs,nullSer)
     if pval == 0:
         pval = 1/float(nperm)
     pvalDict[cName] = pval
@@ -141,6 +150,13 @@ pvalSer.name = 'group_median_pval'
 outF = wkdir + '/clique_group_median_pval.txt'
 pvalSer.to_csv(outF, sep='\t',header=True)
 
+# run FDR correction
+qvalObj = statsig.QValueR(pvalSer)
+qvalObj.compute_qvalues()
+qvalFrm = pd.DataFrame({'p-values':qvalObj.pvalues,'q-values':qvalObj.qvalues})
+outF = wkdir + '/clique_group_median_qval.txt'
+qvalFrm.to_csv(outF, sep='\t',header=True)
+
 #plot row median of DMSO
 plt.hist(rowMedian,30)
 plt.xlabel('lass scores',fontweight='bold')
@@ -149,4 +165,13 @@ plt.title('clique members - dmso row median')
 outF = wkdir + '/dmso_row_median.png'
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
+
+# to-do:
+# other table info - group size, iqr, median obs value, 
+# fix p-value calculation (same side)
+# test stat - best quartile max(absolute value of both)
+# print out all graphs, table --> sent to Rajiv to be posted
+# graph of p-values
+# make into pestle module
+
 
