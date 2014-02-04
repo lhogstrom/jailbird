@@ -29,17 +29,16 @@ cr.store_parameters_rpt()
 cr.make_summary_table()
 
 # to-do:
-# graph of p-values
 # make a seperate figures directory
 # fix quartile connection
 # what about sym vs. non-sym
 
 #run matlab html page generator
-tbl = parse_tbl('/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ/clique_group_qval_summary.txt','outfmt','record')
-fig = parse_tbl('/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ/figure_table.txt','outfmt','record')
-mk_html_table('/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ/index.html',tbl,'figures',fig)
+# tbl = parse_tbl('/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ/clique_group_qval_summary.txt','outfmt','record')
+# fig = parse_tbl('/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ/figure_table.txt','outfmt','record')
+# mk_html_table('/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ/index.html',tbl,'figures',fig)
 
-ln -s /xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ /xchip/cogs/web/icmap/hogstrom/clique_significance/cpd_groups_n147_vs_dmso_uQ
+# ln -s /xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ /xchip/cogs/web/icmap/hogstrom/clique_significance/cpd_groups_n147_vs_dmso_uQ
 
 
 
