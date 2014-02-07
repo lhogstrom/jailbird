@@ -109,8 +109,8 @@ plt.close()
 
 ### target status heatmap
 #make heatmap of clustered data
-nStart = 55
-nFinish = 90
+nStart = 40
+nFinish = 65
 tmpClust = summClust.ix[nStart:nFinish,nStart:nFinish]
 fig = plt.figure(1, figsize=(10, 10))
 gs = gridspec.GridSpec(1, 2, width_ratios=[40, 1]) 
@@ -130,7 +130,7 @@ plt.yticks(np.arange(len(xtcks)),xtcks)
 # plt.ylabel('unique perturbations')
 plt.title('Kinase clustering')
 # target status
-target = 'SYK'
+target = 'AURKB'
 smFrm = pd.DataFrame(boolFrm[target][nStart:nFinish])
 ax1 = plt.subplot(gs[1])
 ax1.imshow(smFrm,
@@ -183,4 +183,7 @@ plt.close()
 
 # loop through each cell line - apply summly dendrogram to order to all
 # make heatmap
+
+
+
 
