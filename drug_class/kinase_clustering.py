@@ -15,7 +15,6 @@ from cmap.util.mongo_utils import CredentialsObject
 from matplotlib import cm
 import matplotlib.gridspec as gridspec
 
-
 wkdir = '/xchip/cogs/projects/pharm_class/lhwork/kinase_clustering'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
@@ -33,8 +32,6 @@ treeFrm = pd.read_csv(sTree,sep='(')
 treeSer = treeFrm.ix[:,0]
 treeSplit = treeSer.str.split(':')
 treeSplit = treeSplit[~treeSplit.isnull()]
-for x in treeSplit:
-    print x[0]
 listSpace = [x[0] for x in treeSplit]
 gSer= pd.Series(listSpace)
 inamesCluster = gSer[gSer.isin(pInames)]
@@ -46,7 +43,6 @@ summIn.columns = pInames
 summClust = summIn.reindex(index=inamesCluster,columns=inamesCluster)
 
 # load in expected molecular targets of each drug
-#import 
 aFile = '/xchip/cogs/projects/pharm_class/lhwork/kinase_clustering/drug_annotations.txt'
 annFrm = pd.read_csv(aFile,sep='\t')
 annFrm = annFrm.reindex(columns=['sum_id','pert_iname','targets'])
@@ -161,7 +157,7 @@ for tar in tarCounts.index[:70]:
 tmpBool = boolFrm.ix[:,:30]
 fig = plt.figure(1, figsize=(10, 50))
 plt.imshow(tmpBool.values,
-    interpolation='nearest',
+    interpolation='nearest', 
     aspect='auto',
     cmap=cm.Greys)
     # vmin=0, 
