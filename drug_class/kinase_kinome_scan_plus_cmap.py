@@ -1,7 +1,10 @@
 #! /usr/bin/env python
 
 '''
-load in kinome scan data - compare to CMAP
+load in kinome scan data 
+-check CMAP 'target' annotations
+- compare to CMAP
+
 
 LH 02/2014
 '''
