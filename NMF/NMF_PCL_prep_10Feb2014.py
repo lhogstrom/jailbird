@@ -179,10 +179,8 @@ for r in cliqFrm.iterrows():
     plt.savefig(outF, bbox_inches='tight')
     plt.close()
 
-
-
 ### load NMF projection results
-
 gFile = '/xchip/cogs/projects/NMF/MCF7_comp_annot_to_CCLE_space2/c_annotc1/c1_vs_ACHILLES_Comp_annot.v1.pdf.gct'
-
+gt = gct.GCT()
+gt.read(gFile)
 

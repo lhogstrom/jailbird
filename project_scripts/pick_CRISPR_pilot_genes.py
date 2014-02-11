@@ -115,6 +115,24 @@ nDrugsTargetd = drgGrped.size()
 # cpSer = pd.Series(cpLst)
 # targetCounts = cpSer.value_counts()
 
+# load Steven's 384 target labels
+cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/cpd_targets_n368/summly/signature_info.txt'
+classFrm = pd.read_csv(cFile,sep='\t')
+# make series of group names and pert_ids
+classGrp = classFrm.groupby('group_id')
+grpDict = {}
+group_min = 3
+for grp in classGrp.groups:
+    igrp = classGrp.groups[grp]
+    grpFrm = classFrm.reindex(igrp)
+    pIds = list(grpFrm['pert_id'])
+    if len(pIds) < group_min:
+        continue
+    grpDict[grp] = pIds
+grpSer = pd.Series(grpDict)
+grpSer.name = 'sig'
+grpLen = grpSer.apply(len)
+
 ###########################
 ### combine selection criteria 
 ###########################
@@ -199,9 +217,15 @@ geneUnion = lSet.union(iSet,jSet)
 #proposed list
 # 1) all of Itay's list
 # 2) all LM's from Jake's list
+# 5) genes with many hairpins (44 with 10 or more, 296 with 6 or more)
+# --> at least 3/4 of these genes should have 3 or more hairpins
+# 50+ genes targeted by compounds (most listed targets/ LM)
 # 3) top 30 from pan-cancer list
 # 4) (+ genes with drugs from the pan-cancer list)
-# 5) genes with many hairpins (44 with 10 or more, 296 with 6 or more)
+# is in summly space - how many signatures?
+
+
+
 
 
 
