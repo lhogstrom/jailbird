@@ -104,6 +104,17 @@ matchDrugFrm = drugFrm[drugFrm['class'].isin(list(targetSet))]
 drgGrped = matchDrugFrm.groupby('class')
 nDrugsTargetd = drgGrped.size()
 
+# load newer version of drug labels:
+# aFile = '/xchip/cogs/projects/pharm_class/lhwork/kinase_clustering/drug_annotations.txt'
+# annFrm = pd.read_csv(aFile,sep='\t')
+# annFrm = annFrm.reindex(columns=['sum_id','pert_iname','targets'])
+# annFrm.index = annFrm['sum_id']
+# annFrm.targets = annFrm.targets.str.split(', ')
+# hasTarget = annFrm[~annFrm.targets.isnull()]
+# cpLst = [item for sublist in hasTarget.targets for item in sublist]
+# cpSer = pd.Series(cpLst)
+# targetCounts = cpSer.value_counts()
+
 ###########################
 ### combine selection criteria 
 ###########################
@@ -163,3 +174,37 @@ crisprFrm.to_csv(outF,sep='\t',index=True,header=True)
 # symbolSer = pd.Series(geneInfo['pr_gene_symbol'],index=geneInfo['pr_id'])
 # symbolSer = pd.Series(geneInfo['pr_gene_symbol'])
 # symbolSer.index=geneInfo['pr_id']
+
+### load in sheet created above
+lFile = '/xchip/cogs/projects/CRISPR/pilot/L1000_CRISPR_selection_table.txt'
+lFrm = pd.read_csv(lFile,sep='\t')
+
+### load in itay's chromatin regulators
+iFile = '/xchip/cogs/projects/CRISPR/pilot/itay_chromatin_regulation.txt'
+iFrm = pd.read_csv(cFile,sep='\t')
+
+### Load in Jake's chromatin genes 
+jFile = '/xchip/cogs/projects/CRISPR/pilot/Chromatin_Genes_with_L1000_Landmark_Status.txt'
+jFrm = pd.read_csv(jFile,sep='\t')
+
+# make set of gene symbols
+lSet = set(lFrm['pr_gene_symbol'])
+iSet = set(iFrm['gene_symbol'])
+jSet = set(jFrm['Gene'])
+
+geneUnion = lSet.union(iSet,jSet)
+
+
+
+#proposed list
+# 1) all of Itay's list
+# 2) all LM's from Jake's list
+# 3) top 30 from pan-cancer list
+# 4) (+ genes with drugs from the pan-cancer list)
+# 5) genes with many hairpins (44 with 10 or more, 296 with 6 or more)
+
+
+
+
+
+

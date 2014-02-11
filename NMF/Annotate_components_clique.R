@@ -10,7 +10,7 @@
    # path1 <- "/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO"
    # prefix1 <- "MCF7_top_intra_connecting_compound_classes_n129x978"
    # outpath <- "/xchip/cogs/projects/NMF/MCF7_comp_annot_to_CCLE_space2"
-   prefix1 <- "PC3_top_intra_connecting_compound_classes_n129x978"
+   prefix1 <- "PC3_top_intra_connecting_compound_classes_n134x978"
    outpath <- "/xchip/cogs/projects/NMF/PC3_comp_annot_to_CCLE_space"
 
    DISSECTOR_project_dataset.v1(     # Project a dataset in the space defined by a W matrix
@@ -58,4 +58,6 @@
        character.scaling    = 0.65,
        phen.table           = NULL,
        phenotypes           = NULL)
+
+
 
