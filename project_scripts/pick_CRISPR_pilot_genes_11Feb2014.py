@@ -59,7 +59,7 @@ cgsFrm = mc.sig_info.find({'pert_type':'trt_sh.cgs'},
 geneGrped= cgsFrm.groupby('pert_iname')
 medNsample = geneGrped['distil_nsample'].median()
 medNsample.sort(ascending=False)
-largeNsample = medNsample[medNsample>8]
+largeNsample = medNsample[medNsample>7]
 
 #######################################
 ### load apriori genes of interest ####
@@ -85,6 +85,10 @@ ptopFrm = pd.read_csv(p1File,sep='\t')
 ### load all pan cancer genes
 p2File = '/xchip/cogs/projects/CRISPR/pilot/lawrence_modified_s3.txt'
 pFrm = pd.read_csv(p2File,sep='\t')
+
+###########################
+### targets with Drugs ####
+###########################
 
 # load Steven's 384 target labels
 cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/cpd_targets_n368/summly/signature_info.txt'
@@ -133,27 +137,9 @@ outF = os.path.join(wkdir, 'target_expression_LM.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
-KDwell = medianTargetExpr[medianTargetExpr < -5]
-KDbad = medianTargetExpr[medianTargetExpr > 0]
+KDwell = medianTargetExpr[medianTargetExpr < -5].index
+KDbad = medianTargetExpr[medianTargetExpr > 0].index
 
-###########################
-### targets with Drugs ####
-###########################
-
-#drug targets - important ones, well connecting ones --> plus all LM
-filePCLgrps = '/xchip/cogs/projects/pharm_class/pcl_shared_target.txt'
-pclFrm = pd.io.parsers.read_csv(filePCLgrps,sep='\t')
-drugFrm = pclFrm[pclFrm['src'] == 'DRUG_BANK']
-targetList = drugFrm['class'].values
-targetSet = set(targetList)
-#how many of these have a cgs in CMAP
-targetFrm = mc.sig_info.find({'pert_type':'trt_sh.cgs','pert_iname':{'$in':list(targetSet)}},
-            {'sig_id':True,'pert_iname':True},toDataFrame=True)
-cgsTargetdSet = set(targetFrm['pert_iname'])
-#drugs targeting each gene
-matchDrugFrm = drugFrm[drugFrm['class'].isin(list(targetSet))]
-drgGrped = matchDrugFrm.groupby('class')
-nDrugsTargetd = drgGrped.size()
 
 # load newer version of drug labels:
 # aFile = '/xchip/cogs/projects/pharm_class/lhwork/kinase_clustering/drug_annotations.txt'
@@ -196,6 +182,8 @@ ptopSet = set(ptopFrm['Genes'])
 pSet = set(pFrm['gene'])
 scSet = set(scFrm['group_id'][:40])# top connecting gene groups
 shSet = set(largeNsample.index) # genes with the most hairpins
+kdBadSet = set(KDbad)
+kdWellSet = set(KDwell)
 # geneUnion = lSet.union(iSet,jSet,ptopSet,scSet)
 # geneUnion = iSet.union(jLMSet,ptopSet,shSet,scSet)
 
@@ -213,17 +201,23 @@ shSet = set(largeNsample.index) # genes with the most hairpins
 # 4) (+ genes with drugs from the pan-cancer list)
 # is in summly space - how many signatures?
 
-includeSet = iSet.union(jLMSet,ptopSet,shSet,scSet)
+includeSet = iSet.union(jLMSet,ptopSet,shSet,scSet,kdBadSet,kdWellSet)
+
+#######################################
+### construct table with gene info ###
+#######################################
 
 #crisprFrm 
 crisprFrm = mc.gene_info.find({'pr_gene_symbol':{'$in':list(includeSet)}},
-            {'is_expressed':True,'pr_gene_symbol':True,'is_lm':True},
+            {'is_expressed':True,'pr_gene_symbol':True,'is_lm':True,'pr_gene_id':True},
             toDataFrame=True)
 geneGrped = crisprFrm.groupby('pr_gene_symbol')
 crisprFrm = geneGrped.first()
-# crisprFrm['target_KD'] = '-'
-# crisprFrm.ix[list(KDbad.index),'target_KD'] = 'poor'
-# crisprFrm.ix[list(KDwell.index),'target_KD'] = 'very_good'
+crisprFrm = crisprFrm.reindex(list(includeSet))
+crisprFrm.is_lm[crisprFrm.is_lm.isnull()] = False #set is_lm false to empty entries
+crisprFrm['target_KD'] = '-'
+crisprFrm.ix[KDbad,'target_KD'] = 'poor'
+crisprFrm.ix[KDwell,'target_KD'] = 'very_good'
 # add nsample info to table
 nSampleMatch = medNsample.reindex(crisprFrm.index)
 nSampleMatch.name = 'median_distil_nsample'
@@ -246,7 +240,6 @@ crisprFrm['chromatin_related_Tirosh'] = crisprFrm.index.isin(iFrm['gene_symbol']
 crisprFrm['chromatin_related_Jaffe'] = crisprFrm.index.isin(jFrm['Gene']) 
 #drug target n
 mnDrugsTargetd = grpLen.reindex(crisprFrm.index)
-# mnDrugsTargetd = nDrugsTargetd.reindex(crisprFrm.index)
 mnDrugsTargetd.name = 'n_drugs_targeting_gene'
 mtFrm = pd.DataFrame(mnDrugsTargetd)
 crisprFrm = pd.concat([crisprFrm,mtFrm],axis=1)
@@ -265,7 +258,15 @@ crisprFrm.to_csv(outF,sep='\t',index=True,header=True)
 
 
 
+ptopSer = pd.Series(list(ptopSet))
+ptopSer.isin(pFrm['gene'])
 
+crisprFrm[crisprFrm['is_lm'].isnull()].index.isin(pFrm['gene'])
+
+
+# CGS_in_summly_space: Y / N
+# Is drug target: which drug
+# GEX in each of the n=5 lines ( MCF7, PC3, A549, A375, HT29 — check with her)
 
 
 
