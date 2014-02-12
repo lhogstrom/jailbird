@@ -23,34 +23,6 @@ if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
 ###########################
-### baseline expr. ########
-###########################
-
-#baseline expression in the core cell lines
-#dynamic expression range
-mc = mu.MongoContainer()
-ci = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
-            {'is_expressed':True,'pr_gene_symbol':True},
-            toDataFrame=True)
-#retrieve info for all genes which have been KD
-beFrm = pd.DataFrame()
-for ix1 in ci.index:
-    gene = ci.ix[ix1,'pr_gene_symbol']
-    bEx = ci.ix[ix1,'is_expressed']
-    bSer = pd.Series(bEx)
-    bSer.name = gene
-    bFrm = pd.DataFrame(bSer)
-    beFrm = pd.concat([beFrm,bFrm],axis=1)
-# coreList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
-coreList = ['A375','A549', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # take out HA1E since there is no info for that
-# reindex to just core cell lines
-coreFrm = beFrm.reindex(coreList)
-coreFrm = coreFrm.T
-coreFrac = coreFrm.sum(axis=1)/float(len(coreList))
-dynamicExpr = coreFrac[coreFrac == .5]
-dynamicExpr = coreFrac[(coreFrac > .25) & (coreFrac < .7)]
-
-###########################
 ### shRNA counts ##########
 ###########################
 
@@ -129,28 +101,8 @@ geneGrped = cgsInfo.groupby('pert_iname')
 medianTargetExpr = geneGrped['target_zs'].median()
 medianTargetExpr.sort()
 
-plt.hist(medianTargetExpr)
-plt.ylabel('freq',fontweight='bold')
-plt.xlabel('target_zs (median across all cell lines)',fontweight='bold')
-plt.title('LM genes targetd by shRNA - differential expression of target')
-outF = os.path.join(wkdir, 'target_expression_LM.png')
-plt.savefig(outF, bbox_inches='tight',dpi=200)
-plt.close()
-
 KDwell = medianTargetExpr[medianTargetExpr < -5].index
 KDbad = medianTargetExpr[medianTargetExpr > 0].index
-
-
-# load newer version of drug labels:
-# aFile = '/xchip/cogs/projects/pharm_class/lhwork/kinase_clustering/drug_annotations.txt'
-# annFrm = pd.read_csv(aFile,sep='\t')
-# annFrm = annFrm.reindex(columns=['sum_id','pert_iname','targets'])
-# annFrm.index = annFrm['sum_id']
-# annFrm.targets = annFrm.targets.str.split(', ')
-# hasTarget = annFrm[~annFrm.targets.isnull()]
-# cpLst = [item for sublist in hasTarget.targets for item in sublist]
-# cpSer = pd.Series(cpLst)
-# targetCounts = cpSer.value_counts()
 
 ###########################
 ### combine selection criteria 
@@ -169,10 +121,6 @@ KDbad = medianTargetExpr[medianTargetExpr > 0].index
 # # dynamic expression of target
 # includeSet = includeSet.union(set(dynamicExpr.index))
 
-#######################################
-### consolodate gene sets of interest #
-#######################################
-
 # make set of gene symbols
 lSet = set(lFrm['pr_gene_symbol'])
 iSet = set(iFrm['gene_symbol'])
@@ -186,31 +134,57 @@ kdBadSet = set(KDbad)
 kdWellSet = set(KDwell)
 # geneUnion = lSet.union(iSet,jSet,ptopSet,scSet)
 # geneUnion = iSet.union(jLMSet,ptopSet,shSet,scSet)
-
-#proposed list
-# 1) all of Itay's list
-# 2) all LM's from Jake's list
-# 5) genes with many hairpins (44 with 10 or more, 296 with 6 or more)
-# top pan cancer genes
-# top genes targeted by drugs 
-
-# (all lm targeted by drugs)
-# --> at least 3/4 of these genes should have 3 or more hairpins
-# 50+ genes targeted by compounds (most listed targets/ LM)
-# 3) top 30 from pan-cancer list
-# 4) (+ genes with drugs from the pan-cancer list)
-# is in summly space - how many signatures?
-
+#combine gene sets
 includeSet = iSet.union(jLMSet,ptopSet,shSet,scSet,kdBadSet,kdWellSet)
+
+###########################
+### baseline expr. ########
+###########################
+
+#baseline expression in the core cell lines
+#dynamic expression range
+mc = mu.MongoContainer()
+# LM only
+# ci = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
+#             {'is_expressed':True,'pr_gene_symbol':True},
+#             toDataFrame=True)
+ci = mc.gene_info.find({'pr_gene_symbol':{'$in':list(includeSet)}},
+            {'is_expressed':True,'pr_gene_symbol':True},
+            toDataFrame=True)
+ciGrped = ci.groupby('pr_gene_symbol')
+ci = ciGrped.first()
+#retrieve info for all genes which have been KD
+beFrm = pd.DataFrame()
+for ix1 in ci.index:
+    # gene = ci.ix[ix1,'pr_gene_symbol']
+    gene = ix1
+    bEx = ci.ix[ix1,'is_expressed']
+    bSer = pd.Series(bEx)
+    bSer.name = gene
+    bFrm = pd.DataFrame(bSer)
+    beFrm = pd.concat([beFrm,bFrm],axis=1)
+# coreList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
+coreList = ['A375','A549', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # take out HA1E since there is no info for that
+# reindex to just core cell lines
+coreFrm = beFrm.reindex(coreList)
+coreFrm = coreFrm.T
+coreFrac = coreFrm.sum(axis=1)/float(len(coreList))
+dynamicExpr = coreFrac[coreFrac == .5]
+dynamicExpr = coreFrac[(coreFrac > .25) & (coreFrac < .7)]
 
 #######################################
 ### construct table with gene info ###
 #######################################
 
+### define function to show baseline expression in core cell lines
+def reindex_dict(g):
+    cellList = 'MCF7', 'PC3', 'A549', 'A375', 'HT29'
+    return dict((k, g[k]) for k in (cellList))
 #crisprFrm 
 crisprFrm = mc.gene_info.find({'pr_gene_symbol':{'$in':list(includeSet)}},
             {'is_expressed':True,'pr_gene_symbol':True,'is_lm':True,'pr_gene_id':True},
             toDataFrame=True)
+crisprFrm.is_expressed = crisprFrm.is_expressed.apply(reindex_dict)
 geneGrped = crisprFrm.groupby('pr_gene_symbol')
 crisprFrm = geneGrped.first()
 crisprFrm = crisprFrm.reindex(list(includeSet))
@@ -223,18 +197,13 @@ nSampleMatch = medNsample.reindex(crisprFrm.index)
 nSampleMatch.name = 'median_distil_nsample'
 nsFrm = pd.DataFrame(nSampleMatch)
 crisprFrm = pd.concat([crisprFrm,nsFrm],axis=1)
-# baseline expression to table
-mcoreFrace = coreFrac.reindex(crisprFrm.index)
-mcoreFrace.name = 'fraction_baseline_expr_in_core_lines'
-mcFrm = pd.DataFrame(mcoreFrace)
-crisprFrm = pd.concat([crisprFrm,mcFrm],axis=1)
 # median target KD
 mDiffMatch = medianTargetExpr.reindex(crisprFrm.index)
 mDiffMatch.name = 'median_z_of_lm_target'
 mdFrm = pd.DataFrame(mDiffMatch)
 crisprFrm = pd.concat([crisprFrm,mdFrm],axis=1)
 # is in Lawrence pan cancer list
-crisprFrm['pan_cancer_ge'] = crisprFrm.index.isin(pFrm['gene'])
+crisprFrm['pan_cancer_gene'] = crisprFrm.index.isin(pFrm['gene'])
 # is in Itay's or Jake's list
 crisprFrm['chromatin_related_Tirosh'] = crisprFrm.index.isin(iFrm['gene_symbol']) 
 crisprFrm['chromatin_related_Jaffe'] = crisprFrm.index.isin(jFrm['Gene']) 
@@ -243,33 +212,52 @@ mnDrugsTargetd = grpLen.reindex(crisprFrm.index)
 mnDrugsTargetd.name = 'n_drugs_targeting_gene'
 mtFrm = pd.DataFrame(mnDrugsTargetd)
 crisprFrm = pd.concat([crisprFrm,mtFrm],axis=1)
+# baseline expression to table
+mcoreFrace = coreFrac.reindex(crisprFrm.index)
+mcoreFrace.name = 'fraction_baseline_expr_in_core_lines'
+mcFrm = pd.DataFrame(mcoreFrace)
+crisprFrm = pd.concat([crisprFrm,mcFrm],axis=1)
+# eliminate genes with little or no baseline expression
+lowExpr = (crisprFrm.fraction_baseline_expr_in_core_lines < .2)
+lowExprFrm = crisprFrm[lowExpr] #record info on low expressors
+crisprFrm = crisprFrm[~lowExpr]
 
 #write to table to file
 outF = os.path.join(wkdir, 'L1000_CRISPR_selection_table.txt')
 crisprFrm.to_csv(outF,sep='\t',index=True,header=True)
-#get all lm genes 
-# mc = mu.MongoContainer()
-# geneInfo = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
-#             {'pr_gene_symbol':True,'pr_id':True,'is_l1000':True},toDataFrame=True)
-# #check that it doesn't have a known pert_iname
-# symbolSer = pd.Series(geneInfo['pr_gene_symbol'],index=geneInfo['pr_id'])
-# symbolSer = pd.Series(geneInfo['pr_gene_symbol'])
-# symbolSer.index=geneInfo['pr_id']
 
+#####################
+### table summary ###
+#####################
+summaryDict = {}
+summaryDict['n_LM_genes'] = crisprFrm.is_lm.sum()
+summaryDict['poor_LM_KD'] = (crisprFrm.target_KD == 'poor').sum()
+summaryDict['good_LM_KD'] = (crisprFrm.target_KD == 'very_good').sum()
+summaryDict['mean_distil_nsample'] = crisprFrm.median_distil_nsample.mean()
+summaryDict['n_pan_cancer_genes'] = crisprFrm.pan_cancer_gene.sum()
+summaryDict['n_Tirosh_chromatin'] = crisprFrm.chromatin_related_Tirosh.sum()
+summaryDict['n_Jaffe_chromatin'] = crisprFrm.chromatin_related_Jaffe.sum()
+summarySer = pd.Series(summaryDict)
+outF = os.path.join(wkdir, 'L1000_CRISPR_selection_summary.txt')
+summarySer.to_csv(outF,sep='\t',index=True,header=True)
 
+#############################################
+### plot baseline expression of LM genes ###
+#############################################
+pilotLM = crisprFrm.median_z_of_lm_target[~crisprFrm.median_z_of_lm_target.isnull()]
+plt.hist(pilotLM)
+plt.ylabel('freq',fontweight='bold')
+plt.xlabel('target_zs (median across all cell lines)',fontweight='bold')
+plt.title('LM genes targetd by shRNA - differential expression of target')
+outF = os.path.join(wkdir, 'crispr_pilot_target_expression_LM.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
 
-ptopSer = pd.Series(list(ptopSet))
-ptopSer.isin(pFrm['gene'])
-
-crisprFrm[crisprFrm['is_lm'].isnull()].index.isin(pFrm['gene'])
-
-
+# selection criteria currecntly left out:
 # CGS_in_summly_space: Y / N
 # Is drug target: which drug
 # GEX in each of the n=5 lines ( MCF7, PC3, A549, A375, HT29 — check with her)
-
-
-
-
-
+# (all lm targeted by drugs)
+# 50+ genes targeted by compounds (most listed targets/ LM)
+# is in summly space - how many signatures?
 
