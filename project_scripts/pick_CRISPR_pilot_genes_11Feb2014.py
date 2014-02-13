@@ -18,20 +18,20 @@ import cmap.util.mongo_utils as mu
 # 5) 50 with really good shRNAs - good KD and good hairpin consensus
 # 6) 50 with bad shRNAs -no KD and bad hairpin consensus
 
-wkdir = '/xchip/cogs/projects/CRISPR/pilot_11Feb2014'
+wkdir = '/xchip/cogs/projects/CRISPR/pilot_13Feb2014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
 ###########################
 ### shRNA counts ##########
 ###########################
-
+mc = mu.MongoContainer()
 cgsFrm = mc.sig_info.find({'pert_type':'trt_sh.cgs'},
             {'dn100_full':False,'up100_full':False,'dn100_bing':False,'up100_bing':False,'dn50_lm':False,'up50_lm':False},toDataFrame=True)
 geneGrped= cgsFrm.groupby('pert_iname')
 medNsample = geneGrped['distil_nsample'].median()
 medNsample.sort(ascending=False)
-largeNsample = medNsample[medNsample>7]
+largeNsample = medNsample[medNsample>8]
 
 #######################################
 ### load apriori genes of interest ####
@@ -48,7 +48,7 @@ iFrm = pd.read_csv(iFile,sep='\t')
 ### Load in Jake's chromatin genes 
 jFile = '/xchip/cogs/projects/CRISPR/pilot/Chromatin_Genes_with_L1000_Landmark_Status.txt'
 jFrm = pd.read_csv(jFile,sep='\t')
-jLM = jFrm[jFrm.Gene.isin(ci['pr_gene_symbol'])]
+# jLM = jFrm[jFrm.Gene.isin(ci['pr_gene_symbol'])]
 
 ### load top pan cancer genes
 p1File = '/xchip/cogs/projects/CRISPR/pilot/lawrence_top_pan_cancer_genes.txt'
@@ -125,7 +125,7 @@ KDbad = medianTargetExpr[medianTargetExpr > 0].index
 lSet = set(lFrm['pr_gene_symbol'])
 iSet = set(iFrm['gene_symbol'])
 jSet = set(jFrm['Gene'])
-jLMSet = set(jLM['Gene'])
+# jLMSet = set(jLM['Gene'])
 ptopSet = set(ptopFrm['Genes'])
 pSet = set(pFrm['gene'])
 scSet = set(scFrm['group_id'][:40])# top connecting gene groups
@@ -135,7 +135,7 @@ kdWellSet = set(KDwell)
 # geneUnion = lSet.union(iSet,jSet,ptopSet,scSet)
 # geneUnion = iSet.union(jLMSet,ptopSet,shSet,scSet)
 #combine gene sets
-includeSet = iSet.union(jLMSet,ptopSet,shSet,scSet,kdBadSet,kdWellSet)
+includeSet = iSet.union(jSet,ptopSet,shSet,scSet,kdBadSet,kdWellSet)
 
 ###########################
 ### baseline expr. ########
@@ -143,7 +143,6 @@ includeSet = iSet.union(jLMSet,ptopSet,shSet,scSet,kdBadSet,kdWellSet)
 
 #baseline expression in the core cell lines
 #dynamic expression range
-mc = mu.MongoContainer()
 # LM only
 # ci = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
 #             {'is_expressed':True,'pr_gene_symbol':True},
@@ -237,6 +236,8 @@ summaryDict['mean_distil_nsample'] = crisprFrm.median_distil_nsample.mean()
 summaryDict['n_pan_cancer_genes'] = crisprFrm.pan_cancer_gene.sum()
 summaryDict['n_Tirosh_chromatin'] = crisprFrm.chromatin_related_Tirosh.sum()
 summaryDict['n_Jaffe_chromatin'] = crisprFrm.chromatin_related_Jaffe.sum()
+noCGS = crisprFrm[crisprFrm.median_distil_nsample.isnull()]
+summaryDict['n_genes_without_cgs'] = noCGS.shape[0]
 summarySer = pd.Series(summaryDict)
 outF = os.path.join(wkdir, 'L1000_CRISPR_selection_summary.txt')
 summarySer.to_csv(outF,sep='\t',index=True,header=True)
@@ -253,11 +254,14 @@ outF = os.path.join(wkdir, 'crispr_pilot_target_expression_LM.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
-# selection criteria currecntly left out:
+### selection criteria currecntly left out: ###
+# MCF7, PC3, A549, A375, HT29
 # CGS_in_summly_space: Y / N
 # Is drug target: which drug
-# GEX in each of the n=5 lines ( MCF7, PC3, A549, A375, HT29 — check with her)
 # (all lm targeted by drugs)
 # 50+ genes targeted by compounds (most listed targets/ LM)
 # is in summly space - how many signatures?
 
+# which of Jaffe's genes are poorly expressed in the cell lines of interest:
+# lowExprFrm[lowExprFrm.chromatin_related_Jaffe]
+# noMongoEntry = crisprFrm[crisprFrm.is_expressed.isnull()]

@@ -654,6 +654,9 @@ matrixType = 'rnkpt_indp_lass'
 ### use mrp4 mtrx
 # mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/indep_mrp4_n39560x7147.gctx'
 # matrixType = 'mrp4'
+### use lass matched matrix
+# mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_n7147x7147.gctx'
+# matrixType = 'rnkpt_matched_lass'
 iGold = get_summly_dos_indeces(dosGold,mtrxSummly)
 inSum,outSum = load_summly_independent(iGold,mtrxSummly,index_row_by_pert_type=True)
 #get median rnkpt of n_top connections
@@ -692,8 +695,9 @@ topConnections, mtchDMSOtop, overlapMed, oMedDMSO = connection_overlap_median(in
 # outF = os.path.join(wkdir, 'DMSO_signatures_counts_above_90_mrp4.txt')
 # dmsoSer.to_csv(outF,index=True,header=True,sep='\t')
 
-
-
-
 ## what is the relationship between median overlap and median CC or SS
+
+# run Rajiv's matlab PCL tool:
+# sig_cliquescore_tool('score', 'summly_score.gctx', 'summly_id', 'query.grp',  'clique', 'pcl.gmt')
+# where summly_id is a list of column ids in the score matrix to evaluate.
 
