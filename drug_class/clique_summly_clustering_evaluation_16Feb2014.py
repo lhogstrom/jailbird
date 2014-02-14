@@ -17,7 +17,13 @@ from matplotlib import cm
 import matplotlib.gridspec as gridspec
 import cmap.io.gmt as gmt
 
-cFile = '/xchip/cogs/projects/connectivity/clustering/'
+wkdir = '/xchip/cogs/projects/pharm_class/lhwork/summly_clustering_16Feb2014'
+if not os.path.exists(wkdir):
+    os.mkdir(wkdir)
+
+###########################
+### load summly matrix ####
+###########################
 
 ### use lass matched matrix
 sFile = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_n7147x7147.gctx'
@@ -33,7 +39,10 @@ for i,x in enumerate(pInames):
     pInameType.append(pInames[i]+ '.' +pType[i])
 anntFrm = pd.DataFrame({'pert_id':pIDs,'pert_type':pType,'pert_iname':pInames},index=pInameType)
 
-### load hierarchical tree ### 
+###############################
+### load hierarchical tree #### 
+###############################
+
 sTree = '/xchip/cogs/projects/connectivity/clustering/matched_lass_dendro.tre'
 # Munge to load in cluster asignments
 treeFrm = pd.read_csv(sTree,sep='(')
@@ -46,25 +55,35 @@ inamesCluster = gSer[gSer.isin(pInameType)]
 clustFrm = anntFrm.reindex(inamesCluster.values)
 clustFrm['order'] = range(clustFrm.shape[0])
 
+###############################
+### load groupings         #### 
+###############################
 
 cFile = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
 cliqueGMT = gmt.read(cFile)
 cliqFrm = pd.DataFrame(cliqueGMT)
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace("/","-")
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace(" ","_")
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace("&","_")
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace("?","_")
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace("(","_")
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace(")","_")
-        cliqFrm['desc_mod'] = cliqFrm['desc'].str.replace("'","_")
-
+cliqFrm['desc_mod'] = cliqFrm['desc']
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace("/","-")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace(" ","_")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace("&","_")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace("?","_")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace("(","_")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace(")","_")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace("'","_")
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace('\xce','_')
+cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace('\xba','_')
+cliqFrm['desc'] = cliqFrm['desc'].str.replace('\xce','_')
+cliqFrm['desc'] = cliqFrm['desc'].str.replace('\xba','_')
 ### rolling sum window
 window=10
+prog = progress.DeterminateProgressBar('cliq graph')
 for icliq,cliq in enumerate(cliqFrm.desc):
+    prog.update(cliq,icliq,len(cliqFrm.desc))
+    cliqMod = cliqFrm.ix[icliq,'desc_mod']
     brds = cliqFrm.ix[icliq,'sig']
     boolSer = clustFrm.pert_id.isin(brds)
     rollSum = pd.stats.moments.rolling_sum(boolSer,window)
-    out = wkdir + '/' + cliq + '_rolling_sum.png'
+    out = wkdir + '/' + cliqMod + '_rolling_sum.png'
     plt.plot(rollSum)
     plt.ylim((0,window))
     plt.xlabel('cluster axis')
@@ -72,4 +91,5 @@ for icliq,cliq in enumerate(cliqFrm.desc):
     plt.title(cliq + ' - target density from clustering - window = ' +str(window)) 
     plt.savefig(out, bbox_inches='tight')
     plt.close()
+
 

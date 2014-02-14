@@ -98,18 +98,28 @@ dosBrds = get_dos_BRDs()
 mtrxSummly = '/xchip/cogs/projects/connectivity/summly/matrices/matched_lass_n7147x7147.gctx'
 matrixType = 'rnkpt_matched_lass'
 dosSer = get_summly_dos_indeces(dosBrds,mtrxSummly)
-outGRP = wkdir + '/summly_ids.grp'
+outGRP = wkdir + '/dos_summly_ids.grp'
 dosSer.to_csv(outGRP,index=False)
 
-# run Rajiv's matlab PCL tool:
-# sig_cliquescore_tool('score', 'summly_score.gctx', 'summly_id', 'query.grp',  'clique', 'pcl.gmt', 'out', '/outdir')
-# where summly_id is a list of column ids in the score matrix to evaluate.
+##########################################
+### get brds for the whole matrix ###
+##########################################
+
+gt = gct.GCT()
+gt.read(mtrxSummly)
+summFrm = gt.frame
+sigSer = pd.Series(index=summFrm.index, data=summFrm.columns)
+outGRP = wkdir + '/summly_matched_ids.grp'
+sigSer.to_csv(outGRP,index=False)
 
 ##########################################
 ### construct sig_cliquescore_tool command ###
 ##########################################
 
 groupGMT = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
+cliqueGMT = gmt.read(groupGMT)
+cliqFrm = pd.DataFrame(cliqueGMT)
+
 cmd = ', '.join(['sig_cliquescore_tool(\'score\', \'' + mtrxSummly+ '\'',
          '\'summly_id\', \'' + outGRP + '\'',
          '\'clique\', \'' + groupGMT + '\'',
@@ -119,12 +129,29 @@ cmd = ', '.join(['sig_cliquescore_tool(\'score\', \'' + mtrxSummly+ '\'',
 ### load sig_cliquescore_tool results ###
 #########################################
 
+# cliques against DOS compounds
 cFile = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014/feb13/my_analysis.sig_cliquescore_tool.2014021313530491/clique_median_n145x234.gctx'
 gt = gct.GCT()
 gt.read(cFile)
-cliqFrm = gt.frame
+cliqDos = gt.frame
 
-cUnstack = cliqFrm.unstack()
+# cliques against all compounds
+cFileFull = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014/feb14/my_analysis.sig_cliquescore_tool.2014021411101091/clique_median_n145x7147.gctx'
+gt2 = gct.GCT()
+gt2.read(cFileFull)
+cliqFull = gt2.frame
+cliqFull = cliqFull.reindex(sigSer.values)
+cliqFull.index = sigSer.index
+# transpose matrix and write
+# cT = cliqFull.T 
+# gt3 = gct.GCT()
+# gt3.build_from_DataFrame(cT)
+
+#####################################
+### plot DOS heatmap - make hist  ###
+#####################################
+
+cUnstack = cliqDos.unstack()
 plt.hist(cUnstack,30)
 plt.ylabel('freq',fontweight='bold')
 plt.xlabel('median ' + matrixType,fontweight='bold')
@@ -135,12 +162,9 @@ plt.close()
 
 ### heatmap 
 ccol.set_color_map()
-plt.imshow(cliqFrm.values,
+plt.imshow(cliqDos.values,
     interpolation='nearest',
     aspect='auto')
-    # cmap=ccol.set_)
-    # vmin=0, 
-    # vmax=1,
 # tickRange = range(0,tmpClust.shape[0])
 # xtcks = [x for x in tmpClust.index]
 # plt.xticks(tickRange, xtcks,rotation=90)
@@ -149,3 +173,16 @@ plt.colorbar()
 outF = os.path.join(wkdir, 'dos_clique_heatmap.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
+
+############################################
+### Examine cliq connection with members ###
+############################################
+
+n_members = 300
+cpSer = pd.Series([item for sublist in cliqFrm['sig'] for item in sublist])
+cpSer = cpSer[cpSer.isin(cliqFull.index)]
+iRand = np.random.choice(len(cpLst),n_members,replace=False)
+cpRand = np.random.choice(cpSer,n_members,replace=False)
+rCliq = cliqFull.reindex(index=cpRand)
+
+
