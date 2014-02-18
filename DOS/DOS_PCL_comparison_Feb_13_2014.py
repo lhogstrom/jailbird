@@ -17,8 +17,9 @@ import cmap.io.gmt as gmt
 import cmap.util.progress as update
 from matplotlib import cm
 import cmap.plot.colors as ccol
+import scipy.cluster
 
-wkdir = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014'
+wkdir = '/xchip/cogs/projects/DOS/PCL_comparison_Feb142014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -100,6 +101,8 @@ matrixType = 'rnkpt_matched_lass'
 dosSer = get_summly_dos_indeces(dosBrds,mtrxSummly)
 outGRP = wkdir + '/dos_summly_ids.grp'
 dosSer.to_csv(outGRP,index=False)
+# nullMtrx = '/xchip/cogs/projects/connectivity/null/dmso/lass_n1000x7147.gctx'
+nullMtrx = '/xchip/cogs/projects/connectivity/null/random/lass_n1000x7147.gctx'
 
 ##########################################
 ### get brds for the whole matrix ###
@@ -108,6 +111,10 @@ dosSer.to_csv(outGRP,index=False)
 gt = gct.GCT()
 gt.read(mtrxSummly)
 summFrm = gt.frame
+pInames = gt.get_column_meta('pert_iname')
+pIDs = gt.get_column_meta('pert_id')
+pType = gt.get_column_meta('pert_type')
+anntFrm = pd.DataFrame({'pert_id':pIDs,'pert_type':pType,'pert_iname':pInames},index=pIDs)
 sigSer = pd.Series(index=summFrm.index, data=summFrm.columns)
 outGRP = wkdir + '/summly_matched_ids.grp'
 sigSer.to_csv(outGRP,index=False)
@@ -116,12 +123,21 @@ sigSer.to_csv(outGRP,index=False)
 ### construct sig_cliquescore_tool command ###
 ##########################################
 
-groupGMT = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
+# groupGMT = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
+groupGMT = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140213/cliques.gmt'
 cliqueGMT = gmt.read(groupGMT)
 cliqFrm = pd.DataFrame(cliqueGMT)
+cliqFrm['group_size'] = cliqFrm.sig.apply(len)
+cliqFrm.index = cliqFrm['desc']
 
+#observed 
 cmd = ', '.join(['sig_cliquescore_tool(\'score\', \'' + mtrxSummly+ '\'',
-         '\'summly_id\', \'' + outGRP + '\'',
+        '\'summly_id\', \'' + outGRP + '\'',
+         '\'clique\', \'' + groupGMT + '\'',
+         '\'out\', \'' + wkdir + '\')'])
+
+#null 
+cmd = ', '.join(['sig_cliquescore_tool(\'score\', \'' + nullMtrx + '\'',
          '\'clique\', \'' + groupGMT + '\'',
          '\'out\', \'' + wkdir + '\')'])
 
@@ -130,13 +146,17 @@ cmd = ', '.join(['sig_cliquescore_tool(\'score\', \'' + mtrxSummly+ '\'',
 #########################################
 
 # cliques against DOS compounds
-cFile = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014/feb13/my_analysis.sig_cliquescore_tool.2014021313530491/clique_median_n145x234.gctx'
+# cFile = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014/feb13/my_analysis.sig_cliquescore_tool.2014021313530491/clique_median_n145x234.gctx'
+cFile = '/xchip/cogs/projects/DOS/PCL_comparison_Feb142014/feb14/my_analysis.sig_cliquescore_tool.2014021415040791/clique_median_n80x234.gctx'
 gt = gct.GCT()
 gt.read(cFile)
 cliqDos = gt.frame
+cliqDos = cliqDos.reindex(dosSer.values)
+cliqDos.index = dosSer.index
 
 # cliques against all compounds
-cFileFull = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014/feb14/my_analysis.sig_cliquescore_tool.2014021411101091/clique_median_n145x7147.gctx'
+# cFileFull = '/xchip/cogs/projects/DOS/PCL_comparison_Feb162014/feb14/my_analysis.sig_cliquescore_tool.2014021411101091/clique_median_n145x7147.gctx'
+cFileFull = '/xchip/cogs/projects/DOS/PCL_comparison_Feb142014/feb14/my_analysis.sig_cliquescore_tool.2014021414592391/clique_median_n80x7147.gctx'
 gt2 = gct.GCT()
 gt2.read(cFileFull)
 cliqFull = gt2.frame
@@ -146,6 +166,18 @@ cliqFull.index = sigSer.index
 # cT = cliqFull.T 
 # gt3 = gct.GCT()
 # gt3.build_from_DataFrame(cT)
+
+# cliques against DMSO
+cFile = '/xchip/cogs/projects/DOS/PCL_comparison_Feb142014/feb14/my_analysis.sig_cliquescore_tool.2014021415010091/clique_median_n80x1000.gctx'
+gt4 = gct.GCT()
+gt4.read(cFile)
+cliqDMSO = gt4.frame
+
+# cliques against random signatures
+cFile = '/xchip/cogs/projects/DOS/PCL_comparison_Feb142014/feb14/my_analysis.sig_cliquescore_tool.2014021415003091/clique_median_n80x1000.gctx'
+gt5 = gct.GCT()
+gt5.read(cFile)
+cliqRnd = gt5.frame
 
 #####################################
 ### plot DOS heatmap - make hist  ###
@@ -178,11 +210,109 @@ plt.close()
 ### Examine cliq connection with members ###
 ############################################
 
+# positive control (selection of compounds wich are cliq memebers)
 n_members = 300
 cpSer = pd.Series([item for sublist in cliqFrm['sig'] for item in sublist])
 cpSer = cpSer[cpSer.isin(cliqFull.index)]
-iRand = np.random.choice(len(cpLst),n_members,replace=False)
+# iRand = np.random.choice(len(cpLst),n_members,replace=False)
 cpRand = np.random.choice(cpSer,n_members,replace=False)
 rCliq = cliqFull.reindex(index=cpRand)
+
+# negative control (random selection of compounds)
+n_members = 300
+summlyCps = anntFrm[anntFrm.pert_type == 'trt_cp'].index.values
+cpRand = np.random.choice(summlyCps,n_members,replace=False)
+rCliq = cliqFull.reindex(index=cpRand)
+
+# plot distribution
+cUnstack = rCliq.unstack()
+plt.hist(cUnstack,30)
+plt.ylabel('freq',fontweight='bold')
+plt.xlabel('median ' + matrixType,fontweight='bold')
+plt.title('distribution of DOS-clique connections')
+# outF = os.path.join(wkdir, 'positive_control_clique_connection_distribution.png')
+outF = os.path.join(wkdir, 'negative_control_clique_connection_distribution.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+### run against dmso and random
+
+
+
+
+
+### try permuting clique labels --> make different permutations of clique groups
+
+### which DOS compounds have a medain connection greater than 80 lass
+maxDos = cliqDos.max(axis=1)
+minDos = cliqDos.min(axis=1)
+connection_thresh = 85
+# positive or negative connection 
+# passThresh = (maxDos >= connection_thresh) + (minDos <= -connection_thresh) # above threshold or bellow -threshold
+# positive connection only
+passThresh = (maxDos >= connection_thresh)
+connectedDos = cliqDos.ix[passThresh,:]
+
+### which clique member compounds have a medain connection greater than 85 lass - to a clique
+isMember = cliqFull.index.isin(cpSer)
+maxCp = cliqFull.max(axis=1)
+minCp = cliqFull.min(axis=1)
+connection_thresh = 85
+# positive or negative connection 
+# passThresh = (maxDos >= connection_thresh) + (minDos <= -connection_thresh) # above threshold or bellow -threshold
+# positive connection only
+passThresh = (maxCp >= connection_thresh)
+passThresh = passThresh[isMember]
+isConnected = passThresh[passThresh]
+connMembers = cliqFull.ix[isConnected.index,:]
+# cpSer = cpSer[cpSer.isin(cliqFull.index)]
+
+
+#########################################
+### cluster sig_cliquescore_tool results ###
+#########################################
+
+#rows
+# mtrx = cliqDos
+# mtrx = connectedDos
+mtrx = connMembers
+Y = scipy.cluster.hierarchy.linkage(mtrx, method='centroid')
+Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
+cOrder = Z['leaves']
+iPCL = mtrx.index[cOrder]
+clustered = mtrx.reindex(index=iPCL)
+#columns 
+Y = scipy.cluster.hierarchy.linkage(mtrx.T, method='centroid')
+Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
+cOrder = Z['leaves']
+iPCL_columns = mtrx.columns[cOrder]
+clustered = mtrx.reindex(index=iPCL,columns=iPCL_columns)
+
+# make heatmap
+plt.close()
+ccol.set_color_map()
+fig = plt.figure(1, figsize=(100, 25))
+plt.imshow(clustered.T.values,
+    interpolation='nearest',
+    aspect='auto')
+xtickRange = range(0,clustered.shape[0])
+xtcks = [x for x in clustered.index]
+ytickRange = range(0,clustered.shape[1])
+ytcks = [x for x in clustered.columns]
+# cFrm2 = cliqFrm.reindex(clustered.columns)
+# ytcks = [x[1]['desc'] + ' - ' + str(x[1]['group_size']) for x in cFrm2.iterrows()]
+plt.xticks(xtickRange, xtcks,rotation=90)
+plt.yticks(ytickRange, ytcks)
+plt.xlabel('compounds')
+# plt.yticks(np.arange(len(xtcks)),xtcks)
+# plt.title('median connection of DOS to compound class')
+plt.title('median connection of clique members to cliques')
+plt.colorbar()
+# outF = os.path.join(wkdir, 'dos_clique_heatmap_clust.png')
+outF = os.path.join(wkdir, 'clique_member_heatmap_thresholded.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+
 
 

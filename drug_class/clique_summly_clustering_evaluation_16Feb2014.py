@@ -91,5 +91,3 @@ for icliq,cliq in enumerate(cliqFrm.desc):
     plt.title(cliq + ' - target density from clustering - window = ' +str(window)) 
     plt.savefig(out, bbox_inches='tight')
     plt.close()
-
-

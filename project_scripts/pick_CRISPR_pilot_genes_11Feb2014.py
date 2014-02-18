@@ -147,6 +147,7 @@ includeSet = iSet.union(jSet,ptopSet,shSet,scSet,kdBadSet,kdWellSet)
 # ci = mc.gene_info.find({'is_lm':True,'pr_pool_id':'epsilon'},
 #             {'is_expressed':True,'pr_gene_symbol':True},
 #             toDataFrame=True)
+mc = mu.MongoContainer()
 ci = mc.gene_info.find({'pr_gene_symbol':{'$in':list(includeSet)}},
             {'is_expressed':True,'pr_gene_symbol':True},
             toDataFrame=True)
@@ -170,6 +171,12 @@ coreFrm = coreFrm.T
 coreFrac = coreFrm.sum(axis=1)/float(len(coreList))
 dynamicExpr = coreFrac[coreFrac == .5]
 dynamicExpr = coreFrac[(coreFrac > .25) & (coreFrac < .7)]
+
+# check expression of one gene
+# ci = mc.gene_info.find({'pr_gene_symbol':'MUC1'},
+#             {'is_expressed':True,'pr_gene_symbol':True}, toDataFrame=True)
+# g = ci.ix[0,:]['is_expressed']
+# dict((k, g[k]) for k in (cellList))
 
 #######################################
 ### construct table with gene info ###
