@@ -313,6 +313,12 @@ outF = os.path.join(wkdir, 'clique_member_heatmap_thresholded.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
+### get pert_inames for cpSer
+mc = mu.MongoContainer()
+pertInfo = mc.pert_info.find({'pert_id':{'$in':list(cpSer)}},
+            {'pert_id':True,'pert_iname':True},toDataFrame=True)
 
+pertInfo = mc.pert_info.find({'pert_iname':'taxane'},
+            {'pert_id':True,'pert_iname':True},toDataFrame=True)
 
 
