@@ -282,9 +282,9 @@ cOrder = Z['leaves']
 iPCL = mtrx.index[cOrder]
 clustered = mtrx.reindex(index=iPCL)
 #columns 
-Y = scipy.cluster.hierarchy.linkage(mtrx.T, method='centroid')
-Z = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
-cOrder = Z['leaves']
+Y_ = scipy.cluster.hierarchy.linkage(mtrx.T, method='centroid')
+Z_ = scipy.cluster.hierarchy.dendrogram(Y,orientation='right')
+cOrder_ = Z['leaves']
 iPCL_columns = mtrx.columns[cOrder]
 clustered = mtrx.reindex(index=iPCL,columns=iPCL_columns)
 
@@ -318,7 +318,24 @@ mc = mu.MongoContainer()
 pertInfo = mc.pert_info.find({'pert_id':{'$in':list(cpSer)}},
             {'pert_id':True,'pert_iname':True},toDataFrame=True)
 
-pertInfo = mc.pert_info.find({'pert_iname':'taxane'},
-            {'pert_id':True,'pert_iname':True},toDataFrame=True)
 
 
+### group x group cluster
+groupCorr = np.corrcoef(clustered,rowvar=0)
+# make heatmap
+plt.close()
+fig = plt.figure(1, figsize=(30, 25))
+plt.imshow(groupCorr,
+    interpolation='nearest',
+    aspect='auto',
+    cmap=cm.RdBu_r)
+ytickRange = range(0,clustered.shape[1])
+ytcks = [x for x in clustered.columns]
+plt.xticks(ytickRange, ytcks,rotation=90)
+plt.yticks(ytickRange, ytcks)
+plt.xlabel('compound groups')
+plt.title('group-group connection correlation')
+plt.colorbar()
+outF = os.path.join(wkdir, 'group_by_group_heatmap.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
