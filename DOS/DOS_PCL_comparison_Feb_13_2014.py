@@ -319,8 +319,11 @@ pertInfo = mc.pert_info.find({'pert_id':{'$in':list(cpSer)}},
             {'pert_id':True,'pert_iname':True},toDataFrame=True)
 
 
+#########################################
+### group x group cluster ###
+#########################################
 
-### group x group cluster
+
 groupCorr = np.corrcoef(clustered,rowvar=0)
 # make heatmap
 plt.close()
@@ -339,3 +342,36 @@ plt.colorbar()
 outF = os.path.join(wkdir, 'group_by_group_heatmap.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
+
+#########################################
+### Interesting DOS compounds ###
+#########################################
+
+DosGroup = ['BRD-K81514393',
+ 'BRD-K45582470',
+ 'BRD-K23985857',
+ 'BRD-K74623475',
+ 'BRD-K69406317',
+ 'BRD-K65404805',
+ 'BRD-K74271701']
+dosCliq = cliqFull.reindex(DosGroup)
+# make heatmap
+plt.close()
+ccol.set_color_map()
+fig = plt.figure(1, figsize=(10, 25))
+plt.imshow(dosCliq.T.values,
+    interpolation='nearest',
+    aspect='auto')
+xtickRange = range(0,dosCliq.shape[0])
+xtcks = [x for x in dosCliq.index]
+ytickRange = range(0,dosCliq.shape[1])
+ytcks = [x for x in dosCliq.columns]
+plt.xticks(xtickRange, xtcks,rotation=90)
+plt.yticks(ytickRange, ytcks)
+plt.xlabel('compounds')
+plt.title('median connection of DOS cp to cliques')
+plt.colorbar()
+outF = os.path.join(wkdir, 'picked_DOS_cp_clique_heatmap.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
