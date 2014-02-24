@@ -19,7 +19,7 @@ import cmap.io.gmt as gmt
 import cmap.util.progress as progress
 import cmap.util.mongo_utils as mu
 
-wkdir = '/xchip/cogs/projects/pharm_class/lhwork/summly_clustering_16Feb2014'
+wkdir = '/xchip/cogs/projects/pharm_class/lhwork/summly_clustering_24Feb2014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -45,17 +45,31 @@ anntFrm = pd.DataFrame({'pert_id':pIDs,'pert_type':pType,'pert_iname':pInames},i
 ### load hierarchical tree #### 
 ###############################
 
-sTree = '/xchip/cogs/projects/connectivity/clustering/matched_lass_dendro.tre'
-# Munge to load in cluster asignments
-treeFrm = pd.read_csv(sTree,sep='(')
-treeSer = treeFrm.ix[:,0]
-treeSplit = treeSer.str.split(':')
-treeSplit = treeSplit[~treeSplit.isnull()]
-listSpace = [x[0] for x in treeSplit]
-gSer= pd.Series(listSpace)
-inamesCluster = gSer[gSer.isin(pInameType)]
-clustFrm = anntFrm.reindex(inamesCluster.values)
+# sTree = '/xchip/cogs/projects/connectivity/clustering/matched_lass_dendro.tre'
+# # Munge to load in cluster asignments
+# treeFrm = pd.read_csv(sTree,sep='(')
+# treeSer = treeFrm.ix[:,0]
+# treeSplit = treeSer.str.split(':')
+# treeSplit = treeSplit[~treeSplit.isnull()]
+# listSpace = [x[0] for x in treeSplit]
+# gSer= pd.Series(listSpace)
+# inamesCluster = gSer[gSer.isin(pInameType)]
+# clustFrm = anntFrm.reindex(inamesCluster.values)
+# clustFrm['order'] = range(clustFrm.shape[0])
+
+### load XML file 
+sTreeXML = '/xchip/cogs/projects/connectivity/clustering/matched_lass_dendro.xml'
+tstPanLst = open(sTreeXML).read().splitlines()
+labelList = []
+for str1 in tstPanLst:
+    if 'label="' in str1:
+        s1 = str1.split('label="')[1]
+        s2 = s1.split('">')[0]
+        labelList.append(s2)
+labelList.pop(0)
+clustFrm = anntFrm.reindex(labelList)
 clustFrm['order'] = range(clustFrm.shape[0])
+
 
 ##########################################
 ### load DOS compounds in summly space ###
@@ -95,7 +109,8 @@ dosSer = get_summly_dos_indeces(dosBrds,mtrxSummly)
 ### load groupings         #### 
 ###############################
 
-cFile = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
+# cFile = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
+cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140213/cliques.gmt'
 cliqueGMT = gmt.read(cFile)
 cliqFrm = pd.DataFrame(cliqueGMT)
 cliqFrm['desc_mod'] = cliqFrm['desc']
@@ -111,6 +126,9 @@ cliqFrm['desc_mod'] = cliqFrm['desc_mod'].str.replace('\xba','_')
 cliqFrm['desc'] = cliqFrm['desc'].str.replace('\xce','_')
 cliqFrm['desc'] = cliqFrm['desc'].str.replace('\xba','_')
 ### rolling sum window
+graphDir = wkdir + '/window_min'
+if not os.path.exists(graphDir):
+    os.mkdir(graphDir)
 window=10
 group_min = 4 # minimum clique members within a window
 clustered_groups = {}
@@ -139,13 +157,13 @@ for icliq,cliq in enumerate(cliqFrm.desc):
         rollRange = np.arange(rMin,rMax)
         if len(rollRange) <= 100: # skip if cluster is too long
             localFrm = rollFrm.ix[(rMin-10):(rMax+10),:]
-            out = wkdir + '/window_min/' + cliqMod + '_local_dendrogram_table.txt'
+            out = graphDir + '/' + cliqMod + '_local_dendrogram_table.txt'
             localFrm.to_csv(out,sep='\t')
             # any local dos compounds
             if localFrm.is_dos.any():
                 dosDict[cliq] = list(localFrm[localFrm.is_dos].pert_id)
         # create graph
-        out = wkdir + '/window_min/' + cliqMod + '_rolling_sum.png'
+        out = graphDir + '/' + cliqMod + '_rolling_sum.png'
         plt.plot(rollSum)
         plt.ylim((0,window))
         plt.xlabel('cluster axis')
@@ -155,4 +173,12 @@ for icliq,cliq in enumerate(cliqFrm.desc):
         plt.close()
 
 # list of DOS compounds that are close by clique region of the dendrogram
-dosConnected = [item for sublist in dosDict.values() for item in sublist]
+dosDendro = pd.Series(dosDict)
+outF = wkdir + '/window_min/DOS_cps_proximal_to_local_cliques.txt'
+dosDendro.to_csv(outF,sep='\t')
+
+
+# dosConnected = [item for sublist in dosDict.values() for item in sublist]
+
+
+

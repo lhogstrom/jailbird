@@ -236,12 +236,11 @@ plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
 ### run against dmso and random
-
-
-
-
-
 ### try permuting clique labels --> make different permutations of clique groups
+
+#########################################
+### threshold cliq results ###
+#########################################
 
 ### which DOS compounds have a medain connection greater than 80 lass
 maxDos = cliqDos.max(axis=1)
@@ -323,7 +322,6 @@ pertInfo = mc.pert_info.find({'pert_id':{'$in':list(cpSer)}},
 ### group x group cluster ###
 #########################################
 
-
 groupCorr = np.corrcoef(clustered,rowvar=0)
 # make heatmap
 plt.close()
@@ -346,15 +344,22 @@ plt.close()
 #########################################
 ### Interesting DOS compounds ###
 #########################################
+# make dictionary of expected dos-clique connections
+# from the summly dendrogram
 
-DosGroup = ['BRD-K81514393',
- 'BRD-K45582470',
- 'BRD-K23985857',
- 'BRD-K74623475',
- 'BRD-K69406317',
- 'BRD-K65404805',
- 'BRD-K74271701']
-dosCliq = cliqFull.reindex(DosGroup)
+# dosDict = {'GSK3': ['BRD-K74271701'],
+#  'HDAC': ['BRD-K65404805'],
+#  'HMGCR': ['BRD-K74623475', 'BRD-K69406317'],
+#  'HSP90': ['BRD-K45582470'],
+#  'MEK': ['BRD-K23985857'],
+#  'serotonin receptor': ['BRD-K81514393']}
+dosDict = {'HDAC_inhibitor': ['BRD-K65404805'],
+ 'HMGCR_inhibitor': ['BRD-K74623475', 'BRD-K69406317'],
+ 'HSP90_inhibitor': ['BRD-K45582470','BRD-K10906552'],
+ 'MEK_inhibitor': ['BRD-K23985857']}
+dosGroup = [item for sublist in dosDict.values() for item in sublist]
+
+dosCliq = cliqFull.reindex(dosGroup)
 # make heatmap
 plt.close()
 ccol.set_color_map()
@@ -374,4 +379,38 @@ plt.colorbar()
 outF = os.path.join(wkdir, 'picked_DOS_cp_clique_heatmap.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
+
+###
+summFrm.columns = summFrm.index
+for x in dosDict.iteritems():
+    cliq = x[0]
+    cps = x[1]
+    for cp in cps:
+        # add compound to larger list of brds
+        grpCps = cliqFrm.ix[cliq,:].sig
+        grpCps = grpCps[:]
+        grpCps.append(cp)
+        grpFrm = summFrm.reindex(index=grpCps,columns=grpCps)
+        grpAnnt = anntFrm.reindex(grpCps)
+        grpFrm.index = grpAnnt.pert_iname
+        grpFrm.index = grpAnnt.pert_iname
+        ### make heatmap
+        plt.close()
+        ccol.set_color_map()
+        fig = plt.figure(1, figsize=(10, 10))
+        plt.imshow(grpFrm.values,
+            interpolation='nearest',
+            aspect='auto')
+        xtickRange = range(0,grpFrm.shape[0])
+        xtcks = [x for x in grpFrm.index]
+        plt.xticks(xtickRange, xtcks,rotation=90)
+        plt.yticks(xtickRange, xtcks)
+        plt.xlabel('compounds')
+        plt.title(cliq + ' compounds plus DOS - ' + cp)
+        plt.colorbar()
+        outF = os.path.join(wkdir, cliq + '_' + cp + '_picked_DOS_cp.png')
+        plt.savefig(outF, bbox_inches='tight',dpi=200)
+        plt.close()
+
+
 
