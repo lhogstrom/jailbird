@@ -19,7 +19,7 @@ from matplotlib import cm
 import cmap.plot.colors as ccol
 import scipy.cluster
 
-wkdir = '/xchip/cogs/projects/DOS/PCL_comparison_Feb142014'
+wkdir = '/xchip/cogs/projects/DOS/PCL_comparison_Feb242014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -353,10 +353,24 @@ plt.close()
 #  'HSP90': ['BRD-K45582470'],
 #  'MEK': ['BRD-K23985857'],
 #  'serotonin receptor': ['BRD-K81514393']}
-dosDict = {'HDAC_inhibitor': ['BRD-K65404805'],
- 'HMGCR_inhibitor': ['BRD-K74623475', 'BRD-K69406317'],
- 'HSP90_inhibitor': ['BRD-K45582470','BRD-K10906552'],
- 'MEK_inhibitor': ['BRD-K23985857']}
+# dosDict = {'HDAC_inhibitor': ['BRD-K65404805'],
+#  'HMGCR_inhibitor': ['BRD-K74623475', 'BRD-K69406317'],
+#  'HSP90_inhibitor': ['BRD-K45582470','BRD-K10906552'],
+#  'MEK_inhibitor': ['BRD-K23985857']}
+
+dosDict = {'HMGCR_inhibitor': ['BRD-K69406317',
+  'BRD-K87125912',
+  'BRD-K91663486',
+  'BRD-K74461819',
+  'BRD-K41335306',
+  'BRD-K63423329',
+  'BRD-K49477330',
+  'BRD-K10211010',
+  'BRD-K20197338',
+  'BRD-K41700431'],
+ 'PI-3_kinase_inhibitor': ['BRD-K19181733'],
+ 'tubulin_inhibitor': ['BRD-K55149044', 'BRD-K62970326']}
+
 dosGroup = [item for sublist in dosDict.values() for item in sublist]
 
 dosCliq = cliqFull.reindex(dosGroup)

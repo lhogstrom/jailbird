@@ -45,18 +45,6 @@ anntFrm = pd.DataFrame({'pert_id':pIDs,'pert_type':pType,'pert_iname':pInames},i
 ### load hierarchical tree #### 
 ###############################
 
-# sTree = '/xchip/cogs/projects/connectivity/clustering/matched_lass_dendro.tre'
-# # Munge to load in cluster asignments
-# treeFrm = pd.read_csv(sTree,sep='(')
-# treeSer = treeFrm.ix[:,0]
-# treeSplit = treeSer.str.split(':')
-# treeSplit = treeSplit[~treeSplit.isnull()]
-# listSpace = [x[0] for x in treeSplit]
-# gSer= pd.Series(listSpace)
-# inamesCluster = gSer[gSer.isin(pInameType)]
-# clustFrm = anntFrm.reindex(inamesCluster.values)
-# clustFrm['order'] = range(clustFrm.shape[0])
-
 ### load XML file 
 sTreeXML = '/xchip/cogs/projects/connectivity/clustering/matched_lass_dendro.xml'
 tstPanLst = open(sTreeXML).read().splitlines()
@@ -69,7 +57,8 @@ for str1 in tstPanLst:
 labelList.pop(0)
 clustFrm = anntFrm.reindex(labelList)
 clustFrm['order'] = range(clustFrm.shape[0])
-
+outF = wkdir + '/summly_dendrogram_table.txt'
+clustFrm.to_csv(outF,sep='\t')
 
 ##########################################
 ### load DOS compounds in summly space ###
@@ -174,7 +163,7 @@ for icliq,cliq in enumerate(cliqFrm.desc):
 
 # list of DOS compounds that are close by clique region of the dendrogram
 dosDendro = pd.Series(dosDict)
-outF = wkdir + '/window_min/DOS_cps_proximal_to_local_cliques.txt'
+outF = wkdir + '/DOS_cps_proximal_to_local_cliques.txt'
 dosDendro.to_csv(outF,sep='\t')
 
 
