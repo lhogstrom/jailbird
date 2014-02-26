@@ -144,7 +144,7 @@ for icliq,cliq in enumerate(cliqFrm.desc):
     cliqMod = cliqFrm.ix[icliq,'desc']
     brds = cliqFrm.ix[icliq,'sig']
     boolSer = clustFrm.pert_id.isin(brds)
-    isNonMemb = clustFrm.pert_id.isin(nonMemb)
+    isNonMemb = clustFrm.index.isin(nonMemb)
     rollSum = pd.stats.moments.rolling_sum(boolSer,window)
     rollSum.name = 'rolling_group_count'
     nrollSum = rollSum[~rollSum.isnull()]
@@ -184,12 +184,109 @@ outF = wkdir + '/non_clique_member_cps_proximal_to_local_cliques.txt'
 dosDendro.to_csv(outF,sep='\t')
 
 #########################################
-### Interesting DOS compounds ###
+### dendrogram analysis ###
 #########################################
 
-nonMGroup = [item for sublist in nonMembDict.values() for item in sublist]
 
-nmCliq = cliqFull.reindex(nonMGroup)
+###
+matchDict = {}
+imageDict = {}
+summFrm.columns = summFrm.index
+prog = progress.DeterminateProgressBar('cliq graph')
+for ix,x in enumerate(nonMembDict.iteritems()):
+    cliq = x[0]
+    cps = x[1]
+    prog.update(cliq,ix,len(nonMembDict))
+    for cp in cps:
+        # add compound to larger list of brds
+        grpCps = cliqFrm.ix[cliq,:].sig
+        grpCps = grpCps[:]
+        grpCps.append(cp)
+        grpFrm = summFrm.reindex(index=grpCps,columns=grpCps)
+        # grpAnnt = anntFrm.reindex(grpCps)
+        grpAnnt = anntFrm[anntFrm.pert_id.isin(grpCps)]
+        grpAnnt.index = grpAnnt.pert_id
+        grpAnnt = grpAnnt.reindex(grpCps)
+        grpFrm.index = grpAnnt.pert_iname
+        cpIname = grpAnnt.pert_iname[-1]
+        # grpFrm.index = grpAnnt.pert_iname
+        # score between outside member to member
+        pairVec = grpFrm.ix[:,cp][:-1]
+        medSumm = pairVec.median()
+        if medSumm > 90:
+            matchDict[cp] = cliq
+            ### make heatmap
+            plt.close()
+            ccol.set_color_map()
+            fig = plt.figure(1, figsize=(5, 5))
+            plt.imshow(grpFrm.values,
+                interpolation='nearest',
+                aspect='auto',
+                vmin=-100,
+                vmax=100)
+            xtickRange = range(0,grpFrm.shape[0])
+            xtcks = [x for x in grpFrm.index]
+            plt.xticks(xtickRange, xtcks,rotation=90)
+            plt.yticks(xtickRange, xtcks)
+            plt.xlabel('compounds')
+            plt.title(cliq + ' compounds plus - ' + cp + ' (' + cpIname+ ')')
+            plt.colorbar()
+            FilePrefix = cliq + '_' + cp + '_potential_member_heatmap.png'
+            outF = os.path.join(graphDir, FilePrefix)
+            imageDict[cp] = FilePrefix
+            plt.savefig(outF, bbox_inches='tight',dpi=200)
+            plt.close()
+### make heatmap sub-pages
+imageSer = pd.Series(imageDict)
+imageSer.name = 'heatmap_image'
+htmlDict = {}
+for x in imageSer.iteritems():
+    brd = x[0]
+    img = x[1]
+    prefix = img[:-3] + 'html'
+    pageF = os.path.join(graphDir,prefix)
+    htmlDict[brd] = prefix
+    with open(pageF,'w') as f:
+            lineWrite = '<BR>' + '<tr><td><img src=' + img + '></td></tr> <BR>'
+            f.write(lineWrite + '\n')
+prefixSer = pd.Series(htmlDict)
+htmlSer = '<a href=./' + prefixSer + '>heatmap</a> <BR>'
+htmlSer.name = 'heatmap_image'
+# make table 
+matchSer = pd.Series(matchDict)
+matchSer.name = 'PCL_hit_group'
+matchFrm = pd.DataFrame(matchSer)
+anntMtch = anntFrm[anntFrm.pert_id.isin(matchFrm.index)]
+anntMtch.index = anntMtch.pert_id
+matchFrm = pd.concat([matchFrm,anntMtch],axis=1)
+matchFrm = pd.concat([matchFrm,pd.DataFrame(htmlSer)],axis=1)
+matchFrm = matchFrm.sort('PCL_hit_group')
+hitFile = wkdir + '/summly_dendrogram_non_member_hits.txt'
+matchFrm.to_csv(hitFile,sep='\t',index=False)
+# write html page
+pageF = os.path.join(graphDir,'index.html')
+with open(pageF,'w') as f:
+    ## write hit table
+    table_data = []
+    with open(hitFile,'rt') as Fread:
+        for line in Fread:
+            table_data.append(line.split('\t'))
+    htmlcodeFDR = HTML.table(table_data)
+    f.write(htmlcodeFDR + '\n')
+    # lineWrite = '<BR>' + '<tr><td><img src=./non_member_cp_clique_heatmap.png></td></tr> <BR>'
+    # f.write(lineWrite + '\n')
+    # for imageFile in fileList:
+    #     # csF = os.path.join(outdir,cell1 + '_drug_target_CS_dist.png')
+    #     lineWrite = '<BR>' + '<tr><td><img src=' + imageFile + '></td></tr>'
+    #     f.write(lineWrite + '\n')
+
+
+#########################################
+### sig_cliquescore_tool heatmap ###
+#########################################
+
+# nonMGroup = [item for sublist in nonMembDict.values() for item in sublist]
+nmCliq = cliqFull.reindex(matchFrm.index)
 # make heatmap
 plt.close()
 ccol.set_color_map()
@@ -206,62 +303,7 @@ plt.yticks(ytickRange, ytcks)
 plt.xlabel('compounds')
 plt.title('median connection of non-member cps to cliques')
 plt.colorbar()
-outF = os.path.join(wkdir, 'non_member_cp_clique_heatmap.png')
+ctFile = os.path.join(graphDir, 'non_member_cp_clique_heatmap.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
-
-###
-matchDict = {}
-summFrm.columns = summFrm.index
-for x in nonMembDict.iteritems():
-    cliq = x[0]
-    cps = x[1]
-    for cp in cps:
-        # add compound to larger list of brds
-        grpCps = cliqFrm.ix[cliq,:].sig
-        grpCps = grpCps[:]
-        grpCps.append(cp)
-        grpFrm = summFrm.reindex(index=grpCps,columns=grpCps)
-        # grpAnnt = anntFrm.reindex(grpCps)
-        grpAnnt = anntFrm[anntFrm.pert_id.isin(grpCps)]
-        grpAnnt.reindex(grpCps,columns='pert_id')
-        grpFrm.index = grpAnnt.pert_iname
-        cpIname = grpAnnt.pert_iname[-1]
-        # grpFrm.index = grpAnnt.pert_iname
-        # score between outside member to member
-        pairVec = grpFrm.ix[:,cp][:-1]
-        medSumm = pairVec.median()
-        if medSumm > 90:
-            matchDict[cp] = cliq
-            ### make heatmap
-            plt.close()
-            ccol.set_color_map()
-            fig = plt.figure(1, figsize=(10, 10))
-            plt.imshow(grpFrm.values,
-                interpolation='nearest',
-                aspect='auto',
-                vmin=-100,
-                vmax=100)
-            xtickRange = range(0,grpFrm.shape[0])
-            xtcks = [x for x in grpFrm.index]
-            plt.xticks(xtickRange, xtcks,rotation=90)
-            plt.yticks(xtickRange, xtcks)
-            plt.xlabel('compounds')
-            plt.title(cliq + ' compounds plus - ' + cp + ' (' + cpIname+ ')')
-            plt.colorbar()
-            outF = os.path.join(graphDir, cliq + '_' + cp + '_potential_member_heatmap.png')
-            plt.savefig(outF, bbox_inches='tight',dpi=200)
-            plt.close()
-matchSer = pd.Series(matchDict)
-matchSer.name = 'PCL_hit_group'
-matchFrm = pd.DataFrame(matchSer)
-anntMtch = anntFrm[anntFrm.pert_id.isin(matchFrm.index)]
-anntMtch.index = anntMtch.pert_id
-matchFrm = pd.concat([matchFrm,anntMtch],axis=1)
-outF = wkdir + '/summly_dendrogram_non_member_hits.txt'
-matchFrm.to_csv(outF,sep='\t',index=False)
-
-
-
-anntFrm[anntFrm.pert_id == 'BRD-K13646352']
 
