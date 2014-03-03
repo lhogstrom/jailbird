@@ -76,6 +76,7 @@ cliqMemb = list(set(cliqMemberLong))
 isMemb = anntFrm.pert_id.isin(cliqMemb)
 isCp = anntFrm.pert_type == 'trt_cp'
 nonMemb = anntFrm[isCp & ~isMemb].index.values
+nonMid = anntFrm[isCp & ~isMemb].pert_id.values
 
 #########################################
 ### load sig_cliquescore_tool results ###
@@ -307,3 +308,60 @@ ctFile = os.path.join(graphDir, 'non_member_cp_clique_heatmap.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
+#########################################
+### make specificity index for sig_cliquescore_tool  ###
+#########################################
+
+# cliquescore results for non-clique members
+cliqNM = cliqFull.reindex(nonMid)
+cThresh = 85
+cPass = cliqNM > cThresh
+cpSum = cPass.sum(axis=1) # number of clique connections above threshold
+plt.hist(cpSum)
+plt.ylabel('# cliq connections',fontweight='bold')
+plt.xlabel('compound',fontweight='bold')
+plt.title('clique connections above lass score ' + str(cThresh))
+outF = os.path.join(wkdir, 'compound_cliq_connection_sum.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+# specificity ratio: highest score: next highest 5 scores
+cliqPass = cliqNM[cpSum > 0]
+# cliqPass = cliqNM[cpSum == 1]
+def specif_ratio(x):
+    x = x.order(ascending=False)
+    max1 = x[0]
+    # max2 = x[1:5] 
+    max2 = x[1] 
+    topTwoRatio = max1/max2
+    pHigher = (max1-max2)/max2
+    #ratio:
+    # highest value
+    # median of next 5 highest?
+    return pHigher
+ratioSer = cliqPass.apply(specif_ratio,axis=1)
+
+plt.hist(ratioSer,30)
+plt.ylabel('ratio of highest cliq connections',fontweight='bold')
+plt.xlabel('compound',fontweight='bold')
+plt.title('specificity of clique connections above lass score ' + str(cThresh))
+outF = os.path.join(wkdir, 'compound_cliq_connection_specificity.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+highSpecifcity = cliqPass[ratioSer > .5]
+
+
+
+
+
+
+
+grpSum = cPass.sum(axis=0)
+plt.hist(grpSum)
+plt.xlabel('# compound connections',fontweight='bold')
+plt.ylabel('cliques',fontweight='bold')
+plt.title('clique connections above lass score ' + str(cThresh))
+outF = os.path.join(wkdir, 'cliq_connection_sum.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()

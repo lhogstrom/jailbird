@@ -21,7 +21,7 @@
       input_W_dataset         = paste(outpath,"/",prefix1,".W.k9.gct",sep=""),  # Input W matrix (GCT)
       W_normalization         = "none",         # Normalization for W                                            
       output_H_dataset        = paste(outpath,"/",prefix1,".H_proj.v1.gct",sep=""),   # Output dataset H (GCT)
-      output_W_dataset        = paste(outpath,"/",prefix1,".W.v1.gct",sep=""))   # Output dataset normalized W (GCT)
+      output_W_dataset        = paste(outpath,"/",prefix1,".W.v1.gct",sep=""))   # Output dataset normalized W (GCT) - 932 tissue types x components
 
    source("/xchip/cogs/projects/NMF/Comp_Annot/DISSECTOR_lib.v3.R")
 
