@@ -11,14 +11,11 @@ import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
 import pandas as pd
 import os
-import cmap.analytics.summly_null as SN
-from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
 import cmap.util.progress as update
 from matplotlib import cm
 import cmap.plot.colors as ccol
 import scipy.cluster
-import cmap.util.progress as progress
 
 wkdir = '/xchip/cogs/projects/pharm_class/lhwork/non_member_analysis_25Feb2014'
 if not os.path.exists(wkdir):
@@ -76,6 +73,7 @@ cliqMemb = list(set(cliqMemberLong))
 isMemb = anntFrm.pert_id.isin(cliqMemb)
 isCp = anntFrm.pert_type == 'trt_cp'
 nonMemb = anntFrm[isCp & ~isMemb].index.values
+nonMid = anntFrm[isCp & ~isMemb].pert_id.values
 
 #########################################
 ### load sig_cliquescore_tool results ###
@@ -138,7 +136,7 @@ window=10
 group_min = 4 # minimum clique members within a window
 clustered_groups = {}
 nonMembDict = {}
-prog = progress.DeterminateProgressBar('cliq graph')
+prog = update.DeterminateProgressBar('cliq graph')
 for icliq,cliq in enumerate(cliqFrm.desc):
     prog.update(cliq,icliq,len(cliqFrm.desc))
     cliqMod = cliqFrm.ix[icliq,'desc']
@@ -192,7 +190,7 @@ dosDendro.to_csv(outF,sep='\t')
 matchDict = {}
 imageDict = {}
 summFrm.columns = summFrm.index
-prog = progress.DeterminateProgressBar('cliq graph')
+prog = update.DeterminateProgressBar('cliq graph')
 for ix,x in enumerate(nonMembDict.iteritems()):
     cliq = x[0]
     cps = x[1]
@@ -307,3 +305,60 @@ ctFile = os.path.join(graphDir, 'non_member_cp_clique_heatmap.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
+#########################################
+### make specificity index for sig_cliquescore_tool  ###
+#########################################
+
+# cliquescore results for non-clique members
+cliqNM = cliqFull.reindex(nonMid)
+cThresh = 85
+cPass = cliqNM > cThresh
+cpSum = cPass.sum(axis=1) # number of clique connections above threshold
+plt.hist(cpSum)
+plt.ylabel('# cliq connections',fontweight='bold')
+plt.xlabel('compound',fontweight='bold')
+plt.title('clique connections above lass score ' + str(cThresh))
+outF = os.path.join(wkdir, 'compound_cliq_connection_sum.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+# specificity ratio: highest score: next highest 5 scores
+cliqPass = cliqNM[cpSum > 0]
+# cliqPass = cliqNM[cpSum == 1]
+def specif_ratio(x):
+    x = x.order(ascending=False)
+    max1 = x[0]
+    # max2 = x[1:5] 
+    max2 = x[1] 
+    topTwoRatio = max1/max2
+    pHigher = (max1-max2)/max2
+    #ratio:
+    # highest value
+    # median of next 5 highest?
+    return pHigher
+ratioSer = cliqPass.apply(specif_ratio,axis=1)
+
+plt.hist(ratioSer,30)
+plt.ylabel('ratio of highest cliq connections',fontweight='bold')
+plt.xlabel('compound',fontweight='bold')
+plt.title('specificity of clique connections above lass score ' + str(cThresh))
+outF = os.path.join(wkdir, 'compound_cliq_connection_specificity.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+highSpecifcity = cliqPass[ratioSer > .5]
+
+
+
+
+
+
+
+grpSum = cPass.sum(axis=0)
+plt.hist(grpSum)
+plt.xlabel('# compound connections',fontweight='bold')
+plt.ylabel('cliques',fontweight='bold')
+plt.title('clique connections above lass score ' + str(cThresh))
+outF = os.path.join(wkdir, 'cliq_connection_sum.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
