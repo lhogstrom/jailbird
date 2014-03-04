@@ -11,14 +11,11 @@ import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
 import pandas as pd
 import os
-import cmap.analytics.summly_null as SN
-from statsmodels.distributions import ECDF
 import cmap.io.gmt as gmt
 import cmap.util.progress as update
 from matplotlib import cm
 import cmap.plot.colors as ccol
 import scipy.cluster
-import cmap.util.progress as progress
 
 wkdir = '/xchip/cogs/projects/pharm_class/lhwork/non_member_analysis_25Feb2014'
 if not os.path.exists(wkdir):
@@ -139,7 +136,7 @@ window=10
 group_min = 4 # minimum clique members within a window
 clustered_groups = {}
 nonMembDict = {}
-prog = progress.DeterminateProgressBar('cliq graph')
+prog = update.DeterminateProgressBar('cliq graph')
 for icliq,cliq in enumerate(cliqFrm.desc):
     prog.update(cliq,icliq,len(cliqFrm.desc))
     cliqMod = cliqFrm.ix[icliq,'desc']
@@ -193,7 +190,7 @@ dosDendro.to_csv(outF,sep='\t')
 matchDict = {}
 imageDict = {}
 summFrm.columns = summFrm.index
-prog = progress.DeterminateProgressBar('cliq graph')
+prog = update.DeterminateProgressBar('cliq graph')
 for ix,x in enumerate(nonMembDict.iteritems()):
     cliq = x[0]
     cps = x[1]
