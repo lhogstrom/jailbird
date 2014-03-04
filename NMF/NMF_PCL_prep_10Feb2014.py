@@ -45,10 +45,10 @@ if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
 #load in clique annotations and matrix
-cFile = '/xchip/cogs/sig_tools/sig_cliquescore_tool/sample/cp_clique_n69/clique.gmt'
+# cFile = '/xchip/cogs/sig_tools/sig_cliquescore_tool/sample/cp_clique_n69/clique.gmt'
+cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140221/cliques.gmt'
 cliqueGMT = gmt.read(cFile)
 cliqFrm = pd.DataFrame(cliqueGMT)
-
 subGroups = ['tubulin']
 
 # set grouping structures 
