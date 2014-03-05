@@ -1,7 +1,5 @@
 '''
--identify which compounds do not already belong to PCL groups
--look at the summly dendrogram, which compounds apear close to the cp cluster
--how specfic is the non-member relationship to to clique members?
+- examine high throughput screening data for cliq hits
 
 Larson Hogstrom, 3/2014
 '''

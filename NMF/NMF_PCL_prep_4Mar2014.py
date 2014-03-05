@@ -40,7 +40,7 @@ def set_class_labels(test_groups,sigInfoFrm,pclDict):
         sigInfoFrm['pcl_name'][iMatch] = group
     return sigInfoFrm
 
-wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation/MCF7_c9_INF'
+wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation/LINCS_core_c9_bing'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -48,9 +48,8 @@ if not os.path.exists(wkdir):
 probeSpace = 'bing' # lm_epsilon or bing
 nDMSO = 50
 nKeep = 2 # number of signatures per drug
-# cellList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
-cellList = ['MCF7']
-
+cellList = ['A375','A549', 'HA1E', 'HCC515', 'HEPG2', 'HT29', 'MCF7', 'PC3', 'VCAP'] # cmap 'core' cell lines
+# cellList = ['MCF7']
 
 #load in clique annotations and matrix
 # cFile = '/xchip/cogs/sig_tools/sig_cliquescore_tool/sample/cp_clique_n69/clique.gmt'
