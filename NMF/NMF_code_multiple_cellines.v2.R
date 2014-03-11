@@ -8,9 +8,11 @@
   # Pre-processing: rank normalization for CC datasets
   
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
-   cell1 <- "HCC515"
-   path1 <- "/xchip/cogs/projects/NMF/lincs_core_cell_lines/HCC515"
-   prefix1 <- "HCC515_top_intra_connecting_compound_classes_n120x978"
+   # cell1 <- "HCC515"
+   # path1 <- "/xchip/cogs/projects/NMF/lincs_core_cell_lines/HCC515"
+   # prefix1 <- "HCC515_top_intra_connecting_compound_classes_n120x978"
+   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation/LINCS_core_c9_bing"
+   prefix1 <- "clique_compound_classes_n4713x10638"
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
@@ -20,7 +22,8 @@
    ##  CMAP Compound Classes ----------------------------------------------------------------------------------------------------------  
       # Input Files
       L1000.file   <- paste(path1,"/",prefix1,".NORM.gct",sep="")
-      annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.v2.txt",sep="")
+      # annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.v2.txt",sep="")
+      annot.file   <- paste(path1,"/clique_compound_classes.v2.txt",sep="")
       # Parameters
       k.comp       <- 9    # Optimal number of components: 9, 20
       name.column  <- 1     # Column # in annot.file containing the perturbation name
@@ -245,29 +248,29 @@
    }
    dev.off()
 
-   # Biplot MDS projection
+   # ### Biplot MDS projection
 
-   library(rgl)
-   library(bpca)
+   # library(rgl)
+   # library(bpca)
 
-   row.names <- row.names(H)
-   col.names <- colnames(H)
-   row.names(H) <- paste("    ", row.names, sep="")
-   colnames(H) <- paste("    ", col.names, sep="")
+   # row.names <- row.names(H)
+   # col.names <- colnames(H)
+   # row.names(H) <- paste("    ", row.names, sep="")
+   # colnames(H) <- paste("    ", col.names, sep="")
 
-   obj.col <- col.classes[match(gene.class, all.classes)]
-   colnames(H) <- paste(colnames(H), " (", gene.class, ")", sep="")
+   # obj.col <- col.classes[match(gene.class, all.classes)]
+   # colnames(H) <- paste(colnames(H), " (", gene.class, ")", sep="")
 
-   bpca.1 <- bpca(t(H), method='hj', lambda.end=3)
+   # bpca.1 <- bpca(t(H), method='hj', lambda.end=3)
 
-   open3d(windowRect = c(10, 10, 1200, 1200), zoom=0.35)
+   # open3d(windowRect = c(10, 10, 1200, 1200), zoom=0.35)
 
-   plot(bpca.1, ref.lines=F, rgl.use=TRUE, var.col='black', var.factor=0.35, var.cex=1.2, 
-         obj.names=T, obj.cex=0.70, obj.col=obj.col, simple.axes=FALSE, box=FALSE)
+   # plot(bpca.1, ref.lines=F, rgl.use=TRUE, var.col='black', var.factor=0.35, var.cex=1.2, 
+   #       obj.names=T, obj.cex=0.70, obj.col=obj.col, simple.axes=FALSE, box=FALSE)
 
-   s <- strsplit(movie.file, split="/")
-   movie.name <- s[[1]][length(s[[1]])]
-   dir <- s[[1]][seq(1, length(s[[1]])-1)]
+   # s <- strsplit(movie.file, split="/")
+   # movie.name <- s[[1]][length(s[[1]])]
+   # dir <- s[[1]][seq(1, length(s[[1]])-1)]
 
-   my.movie3d(spin3d(axis=c(1,1,1), rpm=2), duration=5, fps = 10, movie = movie.name, dir = paste(dir, collapse="/"),
-           convert = TRUE, clean = TRUE, verbose=TRUE, top = TRUE, type = "gif", startTime = 0) 
+   # my.movie3d(spin3d(axis=c(1,1,1), rpm=2), duration=5, fps = 10, movie = movie.name, dir = paste(dir, collapse="/"),
+   #         convert = TRUE, clean = TRUE, verbose=TRUE, top = TRUE, type = "gif", startTime = 0) 

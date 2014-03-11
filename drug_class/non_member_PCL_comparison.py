@@ -354,11 +354,11 @@ highSpecifcity = cliqPass[ratioSer > .5]
 
 
 
-grpSum = cPass.sum(axis=0)
-plt.hist(grpSum)
-plt.xlabel('# compound connections',fontweight='bold')
-plt.ylabel('cliques',fontweight='bold')
-plt.title('clique connections above lass score ' + str(cThresh))
-outF = os.path.join(wkdir, 'cliq_connection_sum.png')
-plt.savefig(outF, bbox_inches='tight',dpi=200)
-plt.close()
+# grpSum = cPass.sum(axis=0)
+# plt.hist(grpSum)
+# plt.xlabel('# compound connections',fontweight='bold')
+# plt.ylabel('cliques',fontweight='bold')
+# plt.title('clique connections above lass score ' + str(cThresh))
+# outF = os.path.join(wkdir, 'cliq_connection_sum.png')
+# plt.savefig(outF, bbox_inches='tight',dpi=200)
+# plt.close()
