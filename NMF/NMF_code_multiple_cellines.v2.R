@@ -11,8 +11,8 @@
    # cell1 <- "HCC515"
    # path1 <- "/xchip/cogs/projects/NMF/lincs_core_cell_lines/HCC515"
    # prefix1 <- "HCC515_top_intra_connecting_compound_classes_n120x978"
-   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation/MCF7_c20_LM"
-   prefix1 <- "clique_compound_classes_n652x10638"
+   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation/PC3_c20_INF"
+   prefix1 <- "clique_compound_classes_n585x10638"
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
