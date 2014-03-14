@@ -10,7 +10,7 @@ import cmap.analytics.clique_significance as cls
 
 # wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/meta_compound_classes_vs_dmso_null_uQ'
 # wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_groups_n147_vs_dmso_uQ'
-wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_targets_n368_vs_random_median'
+wkdir = '/xchip/cogs/projects/connectivity/null/clique_analysis/significance/cpd_targets_n368_vs_random_median2'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 

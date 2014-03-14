@@ -19,6 +19,7 @@ from matplotlib import cm
 import cmap.plot.colors as ccol
 import scipy.cluster
 
+
 wkdir = '/xchip/cogs/projects/DOS/PCL_comparison_Feb242014'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
