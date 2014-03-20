@@ -11,8 +11,8 @@
    # cell1 <- "HCC515"
    # path1 <- "/xchip/cogs/projects/NMF/lincs_core_cell_lines/HCC515"
    # prefix1 <- "HCC515_top_intra_connecting_compound_classes_n120x978"
-   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation/PC3_c20_INF"
-   prefix1 <- "clique_compound_classes_n585x10638"
+   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation/MCF7_c20_INF"
+   prefix1 <- "clique_compound_classes_n652x10638"
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
@@ -25,7 +25,7 @@
       # annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.v2.txt",sep="")
       annot.file   <- paste(path1,"/clique_compound_classes.v2.txt",sep="")
       # Parameters
-      k.comp       <- 9    # Optimal number of components: 9, 20
+      k.comp       <- 20    # Optimal number of components: 9, 20
       name.column  <- 1     # Column # in annot.file containing the perturbation name
       class.column <- 7     # Column # in annot.file containing the class or category name
       use.prefix   <- F     # Use only prefix before "_" to find association between perturbation names in Input File vs. annot.file
