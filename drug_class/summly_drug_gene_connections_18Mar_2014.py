@@ -31,28 +31,50 @@ summFrm.columns = gt.get_column_meta('pert_id')
 pert_type = gt.get_column_meta('pert_type')
 pert_iname = gt.get_column_meta('pert_iname')
 pert_id = gt.get_column_meta('pert_id')
-isSh = [x == 'trt_sh.cgs' for x in pert_type]
+isSh = [x == 'trt_sh.cgs' for x in pert_type] # trt_oe
 isCp = [x == 'trt_cp' for x in pert_type]
+pert_iname_dict = {}
+for ix, x in enumerate(pert_id):
+    pert_iname_dict[x] = pert_iname[ix]
 
 ### make CGS x cp matrix
 cgsFrm = summFrm.ix[isSh,isCp]
 cgsRank = cgsFrm.rank(ascending=False,axis=0)
 
 ### which of the drug-gene pairs are in summly space
-geneSummly = targetSheet.gene.isin(pert_iname)
-drugSummly = targetSheet.pert_id.isin(pert_id)
+geneSummly = targetSheet.gene.isin(cgsRank.index)
+drugSummly = targetSheet.pert_id.isin(cgsRank.columns)
 inSummly = geneSummly & drugSummly
 summlySheet = targetSheet[inSummly]
 outF = wkdir + '/drug_gene_pairs_in_summly_space.txt'
 summlySheet.to_csv(outF,index=False,sep='\t')
 
 ### loop through drug-gene pairs to find rank
+zer = np.zeros([len(summlySheet),5])
+dgIndex = summlySheet.pert_id + ':' + summlySheet.gene
+resFrame = pd.DataFrame(zer,index=dgIndex,columns=['drug_id','drug_iname','gene','connection_rank','mean_rank_pt_4'])
 for r in summlySheet.iterrows():
-    r[0]
+    gene = r[1][0]
+    pID = r[1][1]
+    di = pID + ':' + gene
+    pIname = pert_iname_dict[pID]
+    resFrame.ix[di,'drug_id'] = pID
+    resFrame.ix[di,'drug_iname'] = pIname
+    resFrame.ix[di,'gene'] = gene
+    resFrame.ix[di,'connection_rank'] = cgsRank.ix[gene,pID]
+    resFrame.ix[di,'mean_rank_pt_4'] = cgsFrm.ix[gene,pID]
+resFrame = resFrame.sort('connection_rank')
+outF = wkdir + '/expected_drug_gene_connection_ranks.txt'
+resFrame.to_csv(outF,index=False,sep='\t')
 
-
-
-
-
-# drug x CGS rank
-
+### plot ranks
+fig = plt.figure(1, figsize=(8,8))
+plt.plot(resFrame.connection_rank,'.')
+outF = wkdir + '/expected_drug_gene_connection_ranks.png'
+plt.ylabel('rank out of 3797 genes')
+plt.xlabel('summly drug-gene connections')
+plt.ylim((1,cgsRank.shape[0]))
+plt.xlim((1,resFrame.shape[0]))
+plt.title('expected drug connection to gene KD')
+plt.savefig(outF, bbox_inches='tight')
+plt.close()
