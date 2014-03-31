@@ -11,8 +11,8 @@
    # cell1 <- "HCC515"
    # path1 <- "/xchip/cogs/projects/NMF/lincs_core_cell_lines/HCC515"
    # prefix1 <- "HCC515_top_intra_connecting_compound_classes_n120x978"
-   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation/MCF7_c20_INF"
-   prefix1 <- "clique_compound_classes_n652x10638"
+   path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/PC3_c9_LM"
+   prefix1 <- "clique_compound_classes_n585x978"
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),
@@ -25,7 +25,7 @@
       # annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.v2.txt",sep="")
       annot.file   <- paste(path1,"/clique_compound_classes.v2.txt",sep="")
       # Parameters
-      k.comp       <- 20    # Optimal number of components: 9, 20
+      k.comp       <- 9    # Optimal number of components: 9, 20
       name.column  <- 1     # Column # in annot.file containing the perturbation name
       class.column <- 7     # Column # in annot.file containing the class or category name
       use.prefix   <- F     # Use only prefix before "_" to find association between perturbation names in Input File vs. annot.file
@@ -35,6 +35,8 @@
       pdf.file     <- paste(path1,"/",prefix1, ".k", k.comp, ".pdf", sep="")
       W.file       <- paste(path1,"/",prefix1, ".W.k", k.comp, ".gct", sep="")
       H.file       <- paste(path1,"/",prefix1, ".H.k", k.comp, ".gct", sep="")
+      MI.in.file       <- paste(path1,"/",substr(prefix1,1,23), ".MI.input_space.gct", sep="")
+      MI.k.file       <- paste(path1,"/",substr(prefix1,1,23), ".MI.k", k.comp, ".gct", sep="")
       movie.file   <- paste(path1,"/",prefix1, ".Biplot.Movie.k", k.comp, ".gct", sep="")
    ##  --------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -138,114 +140,116 @@
    dist.matrix <- as.dist(1 - MI.matrix)
    HC <- hclust(dist.matrix, method="complete")
    MI.matrix <- MI.matrix[HC$order, HC$order]
+   write.gct.2(gct.data.frame = MI.matrix, descs = row.names(MI.matrix), filename = MI.in.file)
    gc <- gene.class[HC$order]
    max.v <- max(max(MI.matrix), -min(MI.matrix))
    MI.matrix <- ceiling(ncolors * (MI.matrix - (- max.v))/(1.001*(max.v - (- max.v))))
-   V <- apply(MI.matrix, MARGIN=2, FUN=rev)
-   par(mar = c(2, 8, 14, 8))
-   image(1:dim(V)[2], 1:dim(V)[1], t(V), main = "IC Association Matrix using landmark genes", zlim = c(0, ncolors), col=mycol,
-         axes=FALSE, sub = "", xlab= "", ylab="")
-   mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.30, col=rev(col.classes[match(gc, all.classes)]), line=0, las=1, font=2, family="")
-   mtext(colnames(V), at=1:ncol(V), side = 3, cex=0.30, col=col.classes[match(gc, all.classes)], line=0, las=3, font=2, family="")
+   # V <- apply(MI.matrix, MARGIN=2, FUN=rev)
+   # par(mar = c(2, 8, 14, 8))
+   # image(1:dim(V)[2], 1:dim(V)[1], t(V), main = "IC Association Matrix using landmark genes", zlim = c(0, ncolors), col=mycol,
+   #       axes=FALSE, sub = "", xlab= "", ylab="")
+   # mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.30, col=rev(col.classes[match(gc, all.classes)]), line=0, las=1, font=2, family="")
+   # mtext(colnames(V), at=1:ncol(V), side = 3, cex=0.30, col=col.classes[match(gc, all.classes)], line=0, las=3, font=2, family="")
 
    MI.matrix <- matrix(0, nrow=ncol(H), ncol=ncol(H), dimnames = list(colnames(H), colnames(H)))
    for (i in 1:ncol(H)) for (j in 1:ncol(H)) MI.matrix[i, j] <- IC.v1(H[,i], H[,j])
    dist.matrix <- as.dist(1 - MI.matrix)
    HC <- hclust(dist.matrix, method="complete")
    MI.matrix <- MI.matrix[HC$order, HC$order]
+   write.gct.2(gct.data.frame = MI.matrix, descs = row.names(MI.matrix), filename = MI.k.file)
    gc <- gene.class[HC$order]
    max.v <- max(max(MI.matrix), -min(MI.matrix))
    MI.matrix <- ceiling(ncolors * (MI.matrix - (- max.v))/(1.001*(max.v - (- max.v))))
-   V <- apply(MI.matrix, MARGIN=2, FUN=rev)
-   par(mar = c(2, 8, 14, 8))
-   image(1:dim(V)[2], 1:dim(V)[1], t(V), main = "IC Association Matrix using components", zlim = c(0, ncolors), col=mycol,
-         axes=FALSE, sub = "", xlab= "", ylab="")
-   mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.30, col=rev(col.classes[match(gc, all.classes)]), line=0, las=1, font=2, family="")
-   mtext(colnames(V), at=1:ncol(V), side = 3, cex=0.30, col=col.classes[match(gc, all.classes)], line=0, las=3, font=2, family="")
+   # V <- apply(MI.matrix, MARGIN=2, FUN=rev)
+   # par(mar = c(2, 8, 14, 8))
+   # image(1:dim(V)[2], 1:dim(V)[1], t(V), main = "IC Association Matrix using components", zlim = c(0, ncolors), col=mycol,
+   #       axes=FALSE, sub = "", xlab= "", ylab="")
+   # mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.30, col=rev(col.classes[match(gc, all.classes)]), line=0, las=1, font=2, family="")
+   # mtext(colnames(V), at=1:ncol(V), side = 3, cex=0.30, col=col.classes[match(gc, all.classes)], line=0, las=3, font=2, family="")
 
    # Merge H matrices
 
    # Normalize H
 
-   Ht <- t(H)
-   sum.H <- apply(Ht, MARGIN=1, FUN=sum)
-   for (i in 1:nrow(Ht)) {
-      Ht[i,] <- Ht[i,]/sum.H[i]
-   }
+   # Ht <- t(H)
+   # sum.H <- apply(Ht, MARGIN=1, FUN=sum)
+   # for (i in 1:nrow(Ht)) {
+   #    Ht[i,] <- Ht[i,]/sum.H[i]
+   # }
 
-   for (i in 1:nrow(Ht)) {
-      nf <- layout(matrix(c(1, 2, 3, 4), 4, 1, byrow=T), 1, c(4, ceiling(n.top/2) + 2, ceiling(n.bottom/2) + 2, 3),  FALSE)
-      ind <- order(Ht[i,], decreasing=T)
-      Ht.temp <- Ht[, ind]
-      mutinf.m <- NULL
-      for (k in 1:nrow(Ht.temp)) mutinf.m <- c(mutinf.m, IC.v1(Ht.temp[i,], Ht.temp[k,]))
-      ind <- order(mutinf.m, decreasing=T)
-      mutinf.m <- signif(mutinf.m[ind], 3)
-      Ht.temp <- Ht.temp[ind,]
-      gene.class.temp <- gene.class[ind]
+   # for (i in 1:nrow(Ht)) {
+   #    nf <- layout(matrix(c(1, 2, 3, 4), 4, 1, byrow=T), 1, c(4, ceiling(n.top/2) + 2, ceiling(n.bottom/2) + 2, 3),  FALSE)
+   #    ind <- order(Ht[i,], decreasing=T)
+   #    Ht.temp <- Ht[, ind]
+   #    mutinf.m <- NULL
+   #    for (k in 1:nrow(Ht.temp)) mutinf.m <- c(mutinf.m, IC.v1(Ht.temp[i,], Ht.temp[k,]))
+   #    ind <- order(mutinf.m, decreasing=T)
+   #    mutinf.m <- signif(mutinf.m[ind], 3)
+   #    Ht.temp <- Ht.temp[ind,]
+   #    gene.class.temp <- gene.class[ind]
      
-      # Target profile
+   #    # Target profile
     
-      V <- Ht.temp[1,]
-      gc <- gene.class.temp[1]
-      V <- V*ncolors
-      par(mar = c(1, 20, 4, 6))    
-      image(1:length(V), 1:1, as.matrix(V), zlim = c(0, ncolors), col=mycol, axes=FALSE, main=row.names(Ht)[i], sub = "", cex.main = 2, xlab= "", ylab="")     
-      mtext(paste(row.names(Ht)[i], " (", gc, ") ", sep=""), at=1, side = 2, cex=0.50, col=col.classes[match(gc, all.classes)], line=0, las=1, font=2, family="")
-      axis(4, at=1+0.2, labels="        IC  ", adj= 0.5, tick=FALSE, las = 1, cex.axis=0.85, line=-1, font=2, family="")
-      axis(4, at=1, labels="   (Information ", adj= 0.5, tick=FALSE, las = 1, cex.axis=0.75, line=-1, font=2, family="")
-      axis(4, at=1-0.2, labels="    Coefficient) ", adj= 0.5, tick=FALSE, las = 1, cex.axis=0.75, line=-1, font=2, family="")     
-      axis(3, at=1:length(V), labels=colnames(Ht.temp), adj= 0.5, tick=FALSE, las = 1, cex.axis=ifelse(k.comp >= 25, 0.6, 0.85),
-           font.axis=1, line=-1, font=2, family="")
+   #    V <- Ht.temp[1,]
+   #    gc <- gene.class.temp[1]
+   #    V <- V*ncolors
+   #    par(mar = c(1, 20, 4, 6))    
+   #    image(1:length(V), 1:1, as.matrix(V), zlim = c(0, ncolors), col=mycol, axes=FALSE, main=row.names(Ht)[i], sub = "", cex.main = 2, xlab= "", ylab="")     
+   #    mtext(paste(row.names(Ht)[i], " (", gc, ") ", sep=""), at=1, side = 2, cex=0.50, col=col.classes[match(gc, all.classes)], line=0, las=1, font=2, family="")
+   #    axis(4, at=1+0.2, labels="        IC  ", adj= 0.5, tick=FALSE, las = 1, cex.axis=0.85, line=-1, font=2, family="")
+   #    axis(4, at=1, labels="   (Information ", adj= 0.5, tick=FALSE, las = 1, cex.axis=0.75, line=-1, font=2, family="")
+   #    axis(4, at=1-0.2, labels="    Coefficient) ", adj= 0.5, tick=FALSE, las = 1, cex.axis=0.75, line=-1, font=2, family="")     
+   #    axis(3, at=1:length(V), labels=colnames(Ht.temp), adj= 0.5, tick=FALSE, las = 1, cex.axis=ifelse(k.comp >= 25, 0.6, 0.85),
+   #         font.axis=1, line=-1, font=2, family="")
      
-      # HIGHEST IC ASSOCIATIONS
+   #    # HIGHEST IC ASSOCIATIONS
 
-      V <- Ht.temp[2:(n.top+1),]
-      gc <- gene.class.temp[2:(n.top+1)]
-      row.names(V) <- paste(row.names(V), " (", gc, ") ", sep="")
-      muti <- mutinf.m[2:(n.top+1)]
-      V <- V*ncolors
-      V <- apply(V, MARGIN=2, FUN=rev)
-      gc <- rev(gc)
-      muti <- rev(muti)
-      par(mar = c(1, 20, 3, 6))
-      image(1:dim(V)[2], 1:dim(V)[1], t(V), zlim = c(0, ncolors), col=mycol, axes=FALSE, main="HIGHEST IC ASSOCIATIONS", sub = "", xlab= "", ylab="")     
-      mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.50, col=col.classes[match(gc, all.classes)], line=0, las=1, font=2, family="")
-      axis(4, at=1:nrow(V), labels=muti, adj= 0.5, tick=FALSE, las = 1, cex.axis=0.85, font.axis=1, line=0, font=2, family="")
-      axis(3, at=1:ncol(V), labels=colnames(V), adj= 0.5, tick=FALSE, las = 1, cex.axis=ifelse(k.comp >= 25, 0.6, 0.85),
-           font.axis=1, line=-1, font=2, family="")
+   #    V <- Ht.temp[2:(n.top+1),]
+   #    gc <- gene.class.temp[2:(n.top+1)]
+   #    row.names(V) <- paste(row.names(V), " (", gc, ") ", sep="")
+   #    muti <- mutinf.m[2:(n.top+1)]
+   #    V <- V*ncolors
+   #    V <- apply(V, MARGIN=2, FUN=rev)
+   #    gc <- rev(gc)
+   #    muti <- rev(muti)
+   #    par(mar = c(1, 20, 3, 6))
+   #    image(1:dim(V)[2], 1:dim(V)[1], t(V), zlim = c(0, ncolors), col=mycol, axes=FALSE, main="HIGHEST IC ASSOCIATIONS", sub = "", xlab= "", ylab="")     
+   #    mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.50, col=col.classes[match(gc, all.classes)], line=0, las=1, font=2, family="")
+   #    axis(4, at=1:nrow(V), labels=muti, adj= 0.5, tick=FALSE, las = 1, cex.axis=0.85, font.axis=1, line=0, font=2, family="")
+   #    axis(3, at=1:ncol(V), labels=colnames(V), adj= 0.5, tick=FALSE, las = 1, cex.axis=ifelse(k.comp >= 25, 0.6, 0.85),
+   #         font.axis=1, line=-1, font=2, family="")
 
-      # LOWEST IC ASSOCIATIONS
+   #    # LOWEST IC ASSOCIATIONS
      
-      V <- Ht.temp[seq(nrow(Ht.temp) - n.bottom + 1, nrow(Ht.temp)),]
-      gc <- gene.class.temp[seq(nrow(Ht.temp) - n.bottom + 1, nrow(Ht.temp))]
-      row.names(V) <- paste(row.names(V), " (", gc, ") ", sep="")
-      muti <- mutinf.m[seq(nrow(Ht.temp) - n.bottom + 1, nrow(Ht.temp))]
-      V <- V*ncolors
-      V <- apply(V, MARGIN=2, FUN=rev)
-      gc <- rev(gc)
-      muti <- rev(muti)     
-      par(mar = c(2, 20, 3, 6))     
-      image(1:dim(V)[2], 1:dim(V)[1], t(V), zlim = c(0, ncolors), col=mycol, axes=FALSE, main="LOWEST IC ASSOCIATIONS", sub = "", xlab= "", ylab="")     
-      mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.50, col=col.classes[match(gc, all.classes)], line=0, las=1, font=2, family="")    
-      axis(4, at=1:nrow(V), labels=muti, adj= 0.5, tick=FALSE, las = 1, cex.axis=0.85, font.axis=1, line=0, font=2, family="")
-      axis(3, at=1:ncol(V), labels=colnames(V), adj= 0.5, tick=FALSE, las = 1, cex.axis=ifelse(k.comp >= 25, 0.6, 0.85),
-           font.axis=1, line=-1, font=2, family="")
+   #    V <- Ht.temp[seq(nrow(Ht.temp) - n.bottom + 1, nrow(Ht.temp)),]
+   #    gc <- gene.class.temp[seq(nrow(Ht.temp) - n.bottom + 1, nrow(Ht.temp))]
+   #    row.names(V) <- paste(row.names(V), " (", gc, ") ", sep="")
+   #    muti <- mutinf.m[seq(nrow(Ht.temp) - n.bottom + 1, nrow(Ht.temp))]
+   #    V <- V*ncolors
+   #    V <- apply(V, MARGIN=2, FUN=rev)
+   #    gc <- rev(gc)
+   #    muti <- rev(muti)     
+   #    par(mar = c(2, 20, 3, 6))     
+   #    image(1:dim(V)[2], 1:dim(V)[1], t(V), zlim = c(0, ncolors), col=mycol, axes=FALSE, main="LOWEST IC ASSOCIATIONS", sub = "", xlab= "", ylab="")     
+   #    mtext(row.names(V), at=1:nrow(V), side = 2, cex=0.50, col=col.classes[match(gc, all.classes)], line=0, las=1, font=2, family="")    
+   #    axis(4, at=1:nrow(V), labels=muti, adj= 0.5, tick=FALSE, las = 1, cex.axis=0.85, font.axis=1, line=0, font=2, family="")
+   #    axis(3, at=1:ncol(V), labels=colnames(V), adj= 0.5, tick=FALSE, las = 1, cex.axis=ifelse(k.comp >= 25, 0.6, 0.85),
+   #         font.axis=1, line=-1, font=2, family="")
 
-      par.mar <- par("mar")
-      par(mar = c(4, 45, 1, 5))
-      leg.set <- seq(0, 1, 0.01)
-      image(1:length(leg.set), 1:1, as.matrix(leg.set), zlim=c(0, 1), col=mycol, axes=FALSE, main=paste("Legend"), sub = "", xlab= "", ylab="",font=2, family="")
-      ticks <- seq(0, 1, 0.1)
-      tick.cols <- rep("black", 5)
-      tick.lwd <- 2
-      locs <- NULL
-      for (k in 1:length(ticks)) locs <- c(locs, which.min(abs(ticks[k] - leg.set)))
-      axis(1, at=locs, labels=ticks, adj= 0.5, tick=T, cex=0.7, cex.axis=1, line=0, font=2, family="")
-      mtext("Component Amplitude", cex=0.85, side = 1, line = 2.5, outer=F)     
-      par(mar = par.mar)
+   #    par.mar <- par("mar")
+   #    par(mar = c(4, 45, 1, 5))
+   #    leg.set <- seq(0, 1, 0.01)
+   #    image(1:length(leg.set), 1:1, as.matrix(leg.set), zlim=c(0, 1), col=mycol, axes=FALSE, main=paste("Legend"), sub = "", xlab= "", ylab="",font=2, family="")
+   #    ticks <- seq(0, 1, 0.1)
+   #    tick.cols <- rep("black", 5)
+   #    tick.lwd <- 2
+   #    locs <- NULL
+   #    for (k in 1:length(ticks)) locs <- c(locs, which.min(abs(ticks[k] - leg.set)))
+   #    axis(1, at=locs, labels=ticks, adj= 0.5, tick=T, cex=0.7, cex.axis=1, line=0, font=2, family="")
+   #    mtext("Component Amplitude", cex=0.85, side = 1, line = 2.5, outer=F)     
+   #    par(mar = par.mar)
 
-   }
+   # }
    dev.off()
 
    # ### Biplot MDS projection

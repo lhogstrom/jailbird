@@ -165,3 +165,8 @@ for prefix in dimDict:
 # gt = gct.GCT()
 # gt.read(gFile)
 
+### load in MI matrix
+mFile = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/MCF7_c9_LM/clique_compound_classes.MI.input_space.gct'
+mi = pd.read_csv(mFile,sep='\t',skiprows=[0,1],index_col=0) #,header=True
+mi = mi.drop('Description',1)
+
