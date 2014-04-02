@@ -23,14 +23,35 @@ sourceDir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2'
 # directory of NMF result prefix and matrix dimentions
 # dimDict = {'LINCS_core_c9_LM':'n4716x978',
 # 'LINCS_core_c9_bing':'n4713x10638',
-dimDict = { 'PC3_c20_LM':'n585x978',
-'PC3_c20_INF':'n585x10638',
-'MCF7_c20_INF':'n652x10638',
-'MCF7_c20_LM':'n652x978',
-'MCF7_c9_INF':'n652x10638',
-'MCF7_c9_LM':'n652x978',
-'PC3_c9_INF':'n585x10638',
-'PC3_c9_LM':'n585x978'}    
+# dimDict = { 'PC3_c20_LM':'n585x978',
+# 'PC3_c20_INF':'n585x10638',
+# 'MCF7_c20_INF':'n652x10638',
+# 'MCF7_c20_LM':'n652x978',
+# 'MCF7_c9_INF':'n652x10638',
+# 'MCF7_c9_LM':'n652x978',
+# 'PC3_c9_INF':'n585x10638',
+# 'PC3_c9_LM':'n585x978'}    
+
+dimDict = {'A375_c9_lm_epsilon':'n473x978',
+'A549_c9_lm_epsilon':'n612x978', # 
+'HA1E_c9_lm_epsilon':'n578x978',
+'HCC515_c9_lm_epsilon':'n543x978',
+'HEPG2_c9_lm_epsilon':'n357x978',
+'HT29_c9_lm_epsilon':'n433x978',
+'MCF7_c9_lm_epsilon':'n652x978',
+'PC3_c9_lm_epsilon':'n585x978',
+'VCAP_c9_lm_epsilon':'n574x978'}
+
+# dimDict = {'A375_c20_lm_epsilon':'n473x978',
+# 'A549_c20_lm_epsilon':'n612x978', # 
+# 'HA1E_c20_lm_epsilon':'n578x978',
+# 'HCC515_c20_lm_epsilon':'n543x978',
+# 'HEPG2_c20_lm_epsilon':'n357x978',
+# 'HT29_c20_lm_epsilon':'n433x978',
+# 'MCF7_c20_lm_epsilon':'n652x978',
+# 'PC3_c20_lm_epsilon':'n585x978',
+# 'VCAP_c20_lm_epsilon':'n574x978'}
+
 
 sigDict = {} # significance counts
 for prefix in dimDict:
@@ -53,7 +74,7 @@ for prefix in dimDict:
     anntFrm.columns = headers
     anntFrm.index.name = 'sig1'
     # drop extra rows
-    anntFrm = anntFrm[anntFrm.index.isin(mi.index)] # leave out annotations not in matrix
+    anntFrm = anntFrm[anntFrm.index.isin(Hmtrx.index)] # leave out annotations not in matrix
     ### read in mutual information matrices
     mFile = sourceDir + '/' + prefix + '/clique_compound_classes.MI.input_space.gct'
     mi = pd.read_csv(mFile,sep='\t',skiprows=[0,1],index_col=0) #,header=True
@@ -204,40 +225,18 @@ for prefix in dimDict:
     ##############################
     ### pairwise sigature comparisons ##
     ##############################
-    inList = {} # store intra-group mutual information
-    outList = {} # store inter-group mutual information
-    for r in cliqFrm.iterrows():
-        grp = r[1]['id']
-        brds = r[1]['sig']
-        anntMtch = anntFrm[anntFrm.pert_id.isin(brds)]
-        anntNonMtch = anntFrm[~anntFrm.pert_id.isin(brds)]
-        # within group comparisons
-        grpIn = cmi.reindex(index=anntMtch.index, columns=anntMtch.index)
-        ilRand = np.triu_indices(len(grpIn),k=0)
-        upIn = grpIn.values.copy()
-        upIn[ilRand] = np.nan
-        vGI = upIn[~np.isnan(upIn)]
-        inList[grp] = vGI
-        # outside group comparisons 
-        grpOut = cmi.reindex(index=anntNonMtch.index, columns=anntMtch.index)
-        vGO = grpOut.unstack()
-        outList[grp] = vGO.values
-    # inMedian = [np.median(x) for x in inList]
-    inSer = pd.Series(inList)
-    inMedian = inSer.apply(np.median)
-    inMedian.sort()
-    inMedian = inMedian[~np.isnan(inMedian)]
-    # inSorted = inSer[inMedian.index].values
-    inSorted = inSer[inMedian.index]
-    outSer = pd.Series(outList)
-    outSorted = outSer[inMedian.index]
+    # pairwise connections from input space
+    inMI, outMI = MI_pairwise_comp(mi,cliqFrm,anntFrm)
+    # pairwise connections from NMF component space
+    inCMI, outCMI = MI_pairwise_comp(cmi,cliqFrm,anntFrm)
     ##############################
     ### simple boxplot ##
     ##############################
-    ### simple boxplot of intra-group connections
+    ### NMF components - simple boxplot of intra-group connections
     fig = plt.figure(figsize=(8, 10), dpi=50)
-    plt.boxplot(inSorted,vert=0)
-    tickList = [x for x in inSorted.index]
+    plt.boxplot(inCMI,vert=0)
+    plt.xlim((-1,1))
+    tickList = [x for x in inCMI.index]
     plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
     plt.tick_params(labelsize=8)
     plt.xlabel('mutual information',fontweight='bold')
@@ -245,6 +244,18 @@ for prefix in dimDict:
     outF = os.path.join(graphDir,'pairwise_comparison_boxplot_NMF_components.png')
     plt.savefig(outF, bbox_inches='tight',dpi=200)
     plt.close()
+    ### input space - simple boxplot of intra-group connections
+    fig = plt.figure(figsize=(8, 10), dpi=50)
+    plt.boxplot(inMI,vert=0)
+    plt.xlim((-1,1))
+    tickList = [x for x in inMI.index]
+    plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
+    plt.tick_params(labelsize=8)
+    plt.xlabel('mutual information',fontweight='bold')
+    plt.title('intra-group connection - input space',fontweight='bold')
+    outF = os.path.join(graphDir,'pairwise_comparison_boxplot_input_space.png')
+    plt.savefig(outF, bbox_inches='tight',dpi=200)
+    plt.close()    
     ##############################
     ### boxplot with null ##
     ##############################
@@ -315,5 +326,64 @@ for prefix in dimDict:
     outF = os.path.join(graphDir,'mutual_information_difference_metric.png')
     plt.savefig(outF, bbox_inches='tight',dpi=200)
     plt.close()
+    # save to text file
+    outF = os.path.join(graphDir,'mutual_information_difference_metric.txt')
+    diffSer.name = 'intra_inter_group_MI_difference'
+    diffSer.index.name = 'group'
+    diffSer.to_csv(outF, sep='\t',header=True)
 
 
+
+def MI_pairwise_comp(MI_matrix,cliqFrm,anntFrm):
+    '''
+    -take loop through compound groups 
+    -sort median mutual information within group connections
+    -sort median mutual information of group members to non-members
+
+    Parameters
+    ----------
+    MI_matrix : pandas dataFrame
+        pairwise mutual information of signatures
+    cliqFrm : pandas dataFrame
+        drug class asignments
+    anntFrm : pandas dataFrame
+        signature annotation
+
+    returns
+    ----------
+    inSorted : pandas Series
+        -intra group pairwise mutual information scores
+        -sorted by intr-group MI median
+    outSorted : pandas Series
+        -group members to non-members pairwise mutual information
+        -sorted by intr-group MI median
+
+    ''' 
+    inList = {} # store intra-group mutual information
+    outList = {} # store inter-group mutual information
+    for r in cliqFrm.iterrows():
+        grp = r[1]['id']
+        brds = r[1]['sig']
+        anntMtch = anntFrm[anntFrm.pert_id.isin(brds)]
+        anntNonMtch = anntFrm[~anntFrm.pert_id.isin(brds)]
+        # within group comparisons
+        grpIn = MI_matrix.reindex(index=anntMtch.index, columns=anntMtch.index)
+        ilRand = np.triu_indices(len(grpIn),k=0)
+        upIn = grpIn.values.copy()
+        upIn[ilRand] = np.nan
+        vGI = upIn[~np.isnan(upIn)]
+        inList[grp] = vGI
+        # outside group comparisons 
+        grpOut = MI_matrix.reindex(index=anntNonMtch.index, columns=anntMtch.index)
+        vGO = grpOut.unstack()
+        outList[grp] = vGO.values
+    # inMedian = [np.median(x) for x in inList]
+    inSer = pd.Series(inList)
+    inMedian = inSer.apply(np.median)
+    inMedian.sort()
+    inMedian = inMedian[~np.isnan(inMedian)]
+    # inSorted = inSer[inMedian.index].values
+    inSorted = inSer[inMedian.index]
+    outSer = pd.Series(outList)
+    outSorted = outSer[inMedian.index]
+    return (inSorted, outSorted)

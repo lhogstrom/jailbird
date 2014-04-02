@@ -9,8 +9,8 @@
   
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
    # parse args
-   # path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/PC3_c9_LM"
-   # prefix1 <- "clique_compound_classes_n585x978"
+   # path1 <- "/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/A549_c9_lm_epsilon"
+   # prefix1 <- "clique_compound_classes_n612x978"
    args <- commandArgs(trailingOnly = TRUE)
    path1 <- args[1]
    prefix1 <- args[2]
@@ -26,7 +26,7 @@
       # annot.file   <- paste(path1,"/",cell1,"_top_intra_connecting_compound_classes.v2.txt",sep="")
       annot.file   <- paste(path1,"/clique_compound_classes.v2.txt",sep="")
       # Parameters
-      k.comp       <- 9    # Optimal number of components: 9, 20
+      k.comp       <- 20    # Optimal number of components: 9, 20
       name.column  <- 1     # Column # in annot.file containing the perturbation name
       class.column <- 7     # Column # in annot.file containing the class or category name
       use.prefix   <- F     # Use only prefix before "_" to find association between perturbation names in Input File vs. annot.file
@@ -75,7 +75,8 @@
 
    # Read annotation file
 
-   annot.table <- read.table(annot.file, header=F, sep="\t", skip=0, colClasses = "character")
+   # annot.table <- read.table(annot.file, header=F, sep="\t", skip=0, colClasses = "character")
+   annot.table <- read.table(annot.file, header=T, sep="\t", skip=0, colClasses = "character")
    gene.table <- annot.table[, name.column]
    pathway.table <- annot.table[, class.column]
    gene.set <- vector(length=ncol(m.2), mode="character")

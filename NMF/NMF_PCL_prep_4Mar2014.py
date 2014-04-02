@@ -5,14 +5,11 @@
 
 Larson Hogstrom, 01/2014
 '''
-import test_modules.pcla_svm_classifier as psc
 import numpy as np
 import pylab as pl
-from sklearn import svm, datasets
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import cmap.util.mongo_utils as mu
-import test_modules.load_TTD_drug_class as ldc
 import cmap.io.gct as gct
 import cmap.io.gmt as gmt
 import pandas as pd

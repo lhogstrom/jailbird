@@ -22,14 +22,34 @@ import subprocess
 # directory of NMF result prefix and matrix dimentions
 # dimDict = {'LINCS_core_c9_LM':'n4716x978',
 # 'LINCS_core_c9_bing':'n4713x10638',
-dimDict = { 'PC3_c20_LM':'n585x978',
-'PC3_c20_INF':'n585x10638',
-'MCF7_c20_INF':'n652x10638',
-'MCF7_c20_LM':'n652x978',
-'MCF7_c9_INF':'n652x10638',
-'MCF7_c9_LM':'n652x978',
-'PC3_c9_INF':'n585x10638',
-'PC3_c9_LM':'n585x978'}    
+# dimDict = { 'PC3_c20_LM':'n585x978',
+# 'PC3_c20_INF':'n585x10638',
+# 'MCF7_c20_INF':'n652x10638',
+# 'MCF7_c20_LM':'n652x978',
+# 'MCF7_c9_INF':'n652x10638',
+# 'MCF7_c9_LM':'n652x978',
+# 'PC3_c9_INF':'n585x10638',
+# 'PC3_c9_LM':'n585x978'}    
+
+# dimDict = {'A375_c9_lm_epsilon':'n473x978',
+# 'A549_c9_lm_epsilon':'n612x978', # 
+# 'HA1E_c9_lm_epsilon':'n578x978',
+# 'HCC515_c9_lm_epsilon':'n543x978',
+# 'HEPG2_c9_lm_epsilon':'n357x978',
+# 'HT29_c9_lm_epsilon':'n433x978',
+# 'MCF7_c9_lm_epsilon':'n652x978',
+# 'PC3_c9_lm_epsilon':'n585x978',
+# 'VCAP_c9_lm_epsilon':'n574x978'}
+
+dimDict = {'A375_c20_lm_epsilon':'n473x978',
+'A549_c20_lm_epsilon':'n612x978', # 
+'HA1E_c20_lm_epsilon':'n578x978',
+'HCC515_c20_lm_epsilon':'n543x978',
+'HEPG2_c20_lm_epsilon':'n357x978',
+'HT29_c20_lm_epsilon':'n433x978',
+'MCF7_c20_lm_epsilon':'n652x978',
+'PC3_c20_lm_epsilon':'n585x978',
+'VCAP_c20_lm_epsilon':'n574x978'}
 
 #move input files from one directory to another
 # wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation'
