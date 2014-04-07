@@ -7,23 +7,26 @@
    source("/xchip/cogs/projects/NMF/Comp_Annot/FS.library.v8.6.R")
    source("/xchip/cogs/projects/NMF/Comp_Annot/DISSECTOR_lib.v3.R")
 
-   # path1 <- "/xchip/cogs/projects/NMF/MCF7_7_PCLs_w_DMSO"
-   # prefix1 <- "MCF7_top_intra_connecting_compound_classes_n129x978"
-   # outpath <- "/xchip/cogs/projects/NMF/MCF7_comp_annot_to_CCLE_space2"
-   prefix1 <- "PC3_top_intra_connecting_compound_classes_n134x978"
-   outpath <- "/xchip/cogs/projects/NMF/PC3_comp_annot_to_CCLE_space"
+   # prefix1 <- "PC3_top_intra_connecting_compound_classes_n134x978"
+   # outpath <- "/xchip/cogs/projects/NMF/PC3_comp_annot_to_CCLE_space"
+   args <- commandArgs(trailingOnly = TRUE)
+   outpath <- args[1]
+   prefix1 <- args[2]
+   n_components <- args[3]
+   print(c('outpath ', outpath))
+   print(c('prefix1 ', prefix1))
 
    DISSECTOR_project_dataset.v1(     # Project a dataset in the space defined by a W matrix
       # input_dataset           = paste(path1,"/",prefix1,".gct",sep=""),  # Input dataset (GCT)
       input_dataset           = "/xchip/cogs/projects/NMF/Comp_Annot/rnaseq.v3.gct",  # Input dataset (GCT)      
       input_normalization     = "rank",     # Normalization for the input dataset: "rank"
       normalize_after_match   = T,        # Normalize input dataset after matching with rows of W
-      input_W_dataset         = paste(outpath,"/",prefix1,".W.k9.gct",sep=""),  # Input W matrix (GCT)
+      input_W_dataset         = paste(outpath,"/",prefix1,".W.k",n_components,".gct",sep=""),  # Input W matrix (GCT)
       W_normalization         = "none",         # Normalization for W                                            
       output_H_dataset        = paste(outpath,"/",prefix1,".H_proj.v1.gct",sep=""),   # Output dataset H (GCT)
       output_W_dataset        = paste(outpath,"/",prefix1,".W.v1.gct",sep=""))   # Output dataset normalized W (GCT) - 932 tissue types x components
 
-   source("/xchip/cogs/projects/NMF/Comp_Annot/DISSECTOR_lib.v3.R")
+   # source("/xchip/cogs/projects/NMF/Comp_Annot/DISSECTOR_lib.v3.R")
 
    DISSECTOR_make_heatmap_of_matrix.v1(
       input_dataset            = paste(outpath,"/",prefix1,".H_proj.v1.gct",sep=""), # Input dataset (GCT).
@@ -35,7 +38,7 @@
       output_plot_landscape    = paste(outpath,"/PC3.H_proj.v1_LPLOT.v1.pdf",sep=""),  # Output (PDF) file
       output_plot_portrait     = paste(outpath,"/PC3.H_proj.v1_PPLOT.v1.pdf",sep=""))    # Output (PDF) file
 
-   source("/xchip/cogs/projects/NMF/Comp_Annot/DISSECTOR_lib.v3.R")
+   # source("/xchip/cogs/projects/NMF/Comp_Annot/DISSECTOR_lib.v3.R")
 
    DISSECTOR_annotate_components.v1(  #  Match genomic features to each components profile
       input_dataset         = paste(outpath,"/",prefix1,".H_proj.v1.gct",sep=""), # Input dataset (GCT).

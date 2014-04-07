@@ -156,19 +156,7 @@ def intra_group_boxplot(inSorted,graphDir,space_name='input_space'):
     plt.title('intra-group connection - ' + space_name,fontweight='bold')
     outF = os.path.join(graphDir,'pairwise_comparison_boxplot_ ' + space_name + '.png')
     plt.savefig(outF, bbox_inches='tight',dpi=200)
-    plt.close()
-    ### input space - simple boxplot of intra-group connections
-    fig = plt.figure(figsize=(8, 10), dpi=50)
-    plt.boxplot(inMI,vert=0)
-    plt.xlim((-1,1))
-    tickList = [x for x in inMI.index]
-    plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
-    plt.tick_params(labelsize=8)
-    plt.xlabel('mutual information',fontweight='bold')
-    plt.title('intra-group connection - ' + space_name,fontweight='bold')
-    outF = os.path.join(graphDir,'pairwise_comparison_ ' + space_name + '.png')
-    plt.savefig(outF, bbox_inches='tight',dpi=200)
-    plt.close()    
+    plt.close() 
 
 def MI_pairwise_metric(inSorted,outSorted,graphDir,space_name='input_space'):
     '''
@@ -515,7 +503,7 @@ def group_rolling_density(cliqFrm,anntFrm,cluster_mtrx,window=10,group_min=4,spa
 ### set inputs ###
 ##################
 
-wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/NMF_benchmark_development'
+wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/NMF_benchmark_development2'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 sourceDir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2'
@@ -532,25 +520,27 @@ sourceDir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2'
 # 'PC3_c9_INF':'n585x10638',
 # 'PC3_c9_LM':'n585x978'}    
 
-# dimDict = {'A375_c9_lm_epsilon':'n473x978',
-# 'A549_c9_lm_epsilon':'n612x978', # 
-# 'HA1E_c9_lm_epsilon':'n578x978',
-# 'HCC515_c9_lm_epsilon':'n543x978',
-# 'HEPG2_c9_lm_epsilon':'n357x978',
-# 'HT29_c9_lm_epsilon':'n433x978',
-# 'MCF7_c9_lm_epsilon':'n652x978',
-# 'PC3_c9_lm_epsilon':'n585x978',
-# 'VCAP_c9_lm_epsilon':'n574x978'}
+nComponents = 9
+dimDict = {'A375_c9_lm_epsilon':'n473x978',
+'A549_c9_lm_epsilon':'n612x978', # 
+'HA1E_c9_lm_epsilon':'n578x978',
+'HCC515_c9_lm_epsilon':'n543x978',
+'HEPG2_c9_lm_epsilon':'n357x978',
+'HT29_c9_lm_epsilon':'n433x978',
+'MCF7_c9_lm_epsilon':'n652x978',
+'PC3_c9_lm_epsilon':'n585x978',
+'VCAP_c9_lm_epsilon':'n574x978'}
 
-dimDict = {'A375_c20_lm_epsilon':'n473x978',
-'A549_c20_lm_epsilon':'n612x978', # 
-'HA1E_c20_lm_epsilon':'n578x978',
-'HCC515_c20_lm_epsilon':'n543x978',
-'HEPG2_c20_lm_epsilon':'n357x978',
-'HT29_c20_lm_epsilon':'n433x978',
-'MCF7_c20_lm_epsilon':'n652x978',
-'PC3_c20_lm_epsilon':'n585x978',
-'VCAP_c20_lm_epsilon':'n574x978'}
+# nComponents = 20
+# dimDict = {'A375_c20_lm_epsilon':'n473x978',
+# 'A549_c20_lm_epsilon':'n612x978', # 
+# 'HA1E_c20_lm_epsilon':'n578x978',
+# 'HCC515_c20_lm_epsilon':'n543x978',
+# 'HEPG2_c20_lm_epsilon':'n357x978',
+# 'HT29_c20_lm_epsilon':'n433x978',
+# 'MCF7_c20_lm_epsilon':'n652x978',
+# 'PC3_c20_lm_epsilon':'n585x978',
+# 'VCAP_c20_lm_epsilon':'n574x978'}
 
 sigDict = {} # significance counts
 for prefix in dimDict:
@@ -561,7 +551,6 @@ for prefix in dimDict:
     if not os.path.exists(graphDir):
         os.mkdir(graphDir)
     ### Load W and H matrix ###
-    nComponents = 20
     Hfile = sourceDir + '/' + prefix + '/clique_compound_classes_' + dim + '.H.k' + str(nComponents) + '.gct'
     WFile = sourceDir + '/' + prefix + '/clique_compound_classes_' + dim + '.W.k' + str(nComponents) + '.gct'
     aFile = sourceDir + '/' + prefix + '/clique_compound_classes.v2.txt'
@@ -589,41 +578,40 @@ for prefix in dimDict:
     ### graph individual group components ###
     #########################################
     # group_component_maps(Hmtrx,cliqFrm,graphDir)
-    # # ##############################
-    # # ### top component analysis ###
-    # # ##############################
-    # # take the mean of the top 3 components for each group member
-    # topMeanFrm = combine_group_top_components(Hmtrx,cliqFrm,metric='mean')
-    # # ##############################
-    # # ### build null distribution ##
-    # # ##############################
-    # # repeate metric - but shuffle signatures from groups of equal size
-    # nullMean = build_combine_null(Hmtrx,cliqFrm,topMeanFrm,nTop=3,nPerm=4000)
     # ##############################
-    # ### calculate significance  ##
+    # ### top component analysis ###
     # ##############################
-    # pvalSer = top_components_combined_significance(topMeanFrm,nullMean,nPerm=4000)
-    # sigDict[grp] = sum(pvalSer < .05) # number of groups w/ p-value under .05
+    # take the mean of the top 3 components for each group member
+    topMeanFrm = combine_group_top_components(Hmtrx,cliqFrm,metric='mean')
     # ##############################
-    # ### mutual information heatmaps ##
+    # ### build null distribution ##
     # ##############################
-    # input space
-    # mi_heatmap(mi,graphDir,space_name='input_space')
-    # mi_heatmap(cmi,graphDir,space_name=str(nComponents) +'_NMF_components')
-    # ### reindex matrix by group
-    # grpSort = anntFrm.sort('group')
-    # # by input
-    # miGrp = mi.ix[grpSort.index, grpSort.index]
-    # # mi_heatmap(miGrp,graphDir,space_name='group_ordered_input_space')
-    # mi_heatmap_group(miGrp,graphDir,grpSort,space_name='group_ordered_input_space')
-    # # components
-    # cmiGrp = cmi.ix[grpSort.index, grpSort.index]
-    # # mi_heatmap(cmiGrp,graphDir,space_name=str(nComponents) +'_NMF_components_by_group')
-    # mi_heatmap_group(cmiGrp,graphDir,grpSort,space_name=str(nComponents) +'_NMF_components_by_group')
-    # ##############################
-    # ### pairwise sigature comparisons ##
-    # ##############################
-    # # pairwise connections from input space
+    # repeate metric - but shuffle signatures from groups of equal size
+    nullMean = build_combine_null(Hmtrx,cliqFrm,topMeanFrm,nTop=3,nPerm=4000)
+    ##############################
+    ### calculate significance  ##
+    ##############################
+    pvalSer = top_components_combined_significance(topMeanFrm,nullMean,nPerm=4000)
+    sigDict[prefix] = sum(pvalSer < .05) # number of groups w/ p-value under .05
+    ##############################
+    ### mutual information heatmaps ##
+    ##############################
+    mi_heatmap(mi,graphDir,space_name='input_space')
+    mi_heatmap(cmi,graphDir,space_name=str(nComponents) +'_NMF_components')
+    ### reindex matrix by group
+    grpSort = anntFrm.sort('group')
+    # by input
+    miGrp = mi.ix[grpSort.index, grpSort.index]
+    # mi_heatmap(miGrp,graphDir,space_name='group_ordered_input_space')
+    mi_heatmap_group(miGrp,graphDir,grpSort,space_name='group_ordered_input_space')
+    # components
+    cmiGrp = cmi.ix[grpSort.index, grpSort.index]
+    # mi_heatmap(cmiGrp,graphDir,space_name=str(nComponents) +'_NMF_components_by_group')
+    mi_heatmap_group(cmiGrp,graphDir,grpSort,space_name=str(nComponents) +'_NMF_components_by_group')
+    ##############################
+    ### pairwise sigature comparisons ##
+    ##############################
+    # pairwise connections from input space
     inMI, outMI = MI_pairwise_comp(mi,cliqFrm,anntFrm,graphDir)
     # pairwise connections from NMF component space
     inCMI, outCMI = MI_pairwise_comp(cmi,cliqFrm,anntFrm,graphDir)
@@ -631,30 +619,27 @@ for prefix in dimDict:
     # ### simple boxplot ##
     # ##############################
     # ### NMF components - simple boxplot of intra-group connections
-
+    intra_group_boxplot(inMI,graphDir,space_name='input_space')
+    intra_group_boxplot(inCMI,graphDir,space_name=str(nComponents) +'_NMF_components_by_group')
     ##############################
     ### boxplot with null ##
     ##############################
     # alternate in-out arrays in a list 
     boxplot_with_null(inMI,outMI,graphDir,space_name='input_space')
     boxplot_with_null(inCMI,outCMI,graphDir,space_name=str(nComponents) +'_NMF_components_by_group')
-    ##############################
-    ### internal-external connection metric ##
-    ##############################
+    #############################
+    ## internal-external connection metric ##
+    #############################
     # intra-connection mean - inter-connection mean
-    # diffSer = MI_pairwise_metric(inCMI,outCMI,graphDir,space_name='NMF_components')
-    # diffSer = MI_pairwise_metric(inMI,outMI,graphDir,space_name='input_space')
-    ##############################
-    ### rolling sum of group density in clustered matrix ##
-    ##############################
-    # cluster_density_max = group_rolling_density(cliqFrm,anntFrm,mi,window=10,group_min=7,space_name='input_space')
-    # cluster_density_max = group_rolling_density(cliqFrm,anntFrm,cmi,window=10,group_min=7,space_name=str(nComponents) +'_NMF_components_by_group')
-
-
+    diffSer = MI_pairwise_metric(inCMI,outCMI,graphDir,space_name='NMF_components')
+    diffSer = MI_pairwise_metric(inMI,outMI,graphDir,space_name='input_space')
+    #############################
+    ## rolling sum of group density in clustered matrix ##
+    #############################
+    cluster_density_max = group_rolling_density(cliqFrm,anntFrm,mi,window=10,group_min=7,space_name='input_space')
+    cluster_density_max = group_rolling_density(cliqFrm,anntFrm,cmi,window=10,group_min=7,space_name=str(nComponents) +'_NMF_components_by_group')
 
 # query benchmark 
 # - what percent of top 20 connections is a group-member
 # - what percent of the group's signatures are in the top 50?
 
-# clustering benchmark
-# - clustering density
