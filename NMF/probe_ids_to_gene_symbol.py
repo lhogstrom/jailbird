@@ -1,8 +1,6 @@
 '''
 convert probe ids to gene symbos
 '''
-
-
 import cmap.util.mongo_utils as mu
 import pandas as pd
 
