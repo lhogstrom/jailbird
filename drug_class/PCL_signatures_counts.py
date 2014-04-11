@@ -16,11 +16,14 @@ import cmap.io.gmt as gmt
 import cmap.util.progress as update
 
 # PCL annotation file
+# gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140402/cliques.gmt' # gene groupings
 # gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140221/cliques.gmt' #most up-to date drug groups
-gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140213/cliques.gmt'
-# gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140402/cliques.gmt'
+# gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140213/cliques.gmt'
+# gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140212/cliques.gmt'
+# gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140211/cliques.gmt'
+gFile = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
 
-wkdir = '/xchip/cogs/projects/pharm_class/lhwork/pcl_20140213_stats'
+wkdir = '/xchip/cogs/projects/pharm_class/lhwork/cpd_groups_n147.gmt_stats'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -38,13 +41,13 @@ summFrm = gt.frame
 
 ### get info on drug signatures
 MC = mu.CMapMongo()
-pertInfo = MC.find({'pert_id':{'$in':cliqMemb}},{'sig_id':True,'cell_id':True,'pert_id':True,'pert_iname':True},toDataFrame=True)
+pertInfo = MC.find({'pert_id':{'$in':cliqMemb}},{'sig_id':True,'cell_id':True,'pert_id':True,'pert_iname':True,'is_gold':True},toDataFrame=True)
 
 # tabulate signature stats
 pertGrped = pertInfo.groupby('pert_id')
 nDrugs = len(pertGrped.groups)
-Zs = np.zeros((nDrugs,5))
-sig_counts = pd.DataFrame(Zs,index=pertGrped.groups.keys(),columns=['pert_iname','n_cells','n_signatures','n_PCLs','PCLs'])
+Zs = np.zeros((nDrugs,7))
+sig_counts = pd.DataFrame(Zs,index=pertGrped.groups.keys(),columns=['pert_iname','n_cells','n_signatures','n_is_gold','fraction_gold','n_PCLs','PCLs'])
 sig_counts.index.name = 'pert_id'
 for xt in pertGrped:
     brd = xt[0]
@@ -53,6 +56,8 @@ for xt in pertGrped:
     cell_set = set(grp.cell_id)
     sig_counts.ix[brd,'n_cells'] = len(cell_set)
     sig_counts.ix[brd,'n_signatures'] = grp.shape[0]
+    sig_counts.ix[brd,'n_is_gold'] = sum(grp.is_gold)
+    sig_counts.ix[brd,'fraction_gold'] = sum(grp.is_gold)/float(grp.shape[0])
     # check which PCLS the compound belongs to
     def is_in(x):
         return brd in x
@@ -79,3 +84,15 @@ outF = os.path.join(wkdir, 'PCL_n_cell_lines.png')
 plt.savefig(outF, bbox_inches='tight',dpi=200)
 plt.close()
 
+plt.hist(sig_counts.fraction_gold,30)
+plt.ylabel('number of compounds',fontweight='bold')
+plt.xlabel('is_gold fraction',fontweight='bold')
+plt.title('is_gold signature fraction for PCL members')
+outF = os.path.join(wkdir, 'PCL_is_gold_fraction.png')
+plt.savefig(outF, bbox_inches='tight',dpi=200)
+plt.close()
+
+### write stats on non-summly signatures
+non_summly = sig_counts[~sig_counts.is_summly]
+outF = os.path.join(wkdir, 'non_summly_PCL_signature_counts.txt')
+non_summly.to_csv(outF, sep='\t')

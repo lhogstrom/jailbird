@@ -507,38 +507,56 @@ def group_rolling_density(cliqFrm,anntFrm,cluster_mtrx,window=10,group_min=4,spa
 ### set inputs ###
 ##################
 
-wkdir = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/shRNA_pilot'
+### shRNA
+# wkdir = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/shRNA_pilot'
+# prefix = 'NMF_projection_c20'
+# modzPrefix = 'TA.KD009_KD010_A549_96H_mod_sig_id'
+# anntFile = 'TA.KD009_KD010_A549_96H_annotations.txt'
+# nComponents = 20
+# cFile = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/shRNA_pilot/gene_shRNA_sig_id.gmt'
+
+### OE
+wkdir = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/oe_pilot'
+prefix = 'NMF_projection_c9'
+nComponents = 9
+modzPrefix = 'TA.OE006_A549_96H_mod_sig_id'
+anntFile = 'TA.OE006_A549_96H_mod_sig_id_annotations.txt'
+gmtFile = wkdir + '/core_lung_drivers_sig_id.gmt'
+
 sourceDir = wkdir
-prefix = 'NMF_projection_c20'
-nComponents = 20
 # local dir 
 graphDir = wkdir + '/' + prefix + '/test_benchmarks'
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
 ### Load W and H matrix ###
-Hfile = sourceDir + '/' + prefix + '/TA.KD009_KD010_A549_96H_mod_sig_id.H.k' + str(nComponents) + '.gct'
-WFile = sourceDir + '/' + prefix + '/TA.KD009_KD010_A549_96H_mod_sig_id.W.k' + str(nComponents) + '.gct'
-aFile = sourceDir + '/' + prefix + '/TA.KD009_KD010_A549_96H_annotations.txt'
+Hfile = sourceDir + '/' + prefix + '/' + modzPrefix + '.H.k' + str(nComponents) + '.gct'
+WFile = sourceDir + '/' + prefix + '/' + modzPrefix + '.W.k' + str(nComponents) + '.gct'
+aFile = sourceDir + '/' + prefix + '/' + anntFile
 Hmtrx = pd.read_csv(Hfile,sep='\t',skiprows=[0,1],index_col=0) #,header=True
 Hmtrx = Hmtrx.drop('Description',1)
 Hmtrx = Hmtrx.T
-anntFrm = pd.read_csv(aFile,sep='\t',index_col=1) #,header=True)
-anntFrm.index.name = 'sig1'
-headers= ['sig2','pert_id']
+### OE
+anntFrm = pd.read_csv(aFile,sep='\t') #,header=True)
+anntFrm.sig_id = anntFrm.sig_id.str.replace('-','.')
+anntFrm.index = anntFrm.sig_id
+headers= ['sig2','sig1','pert_id']
+### shRNA
+# anntFrm = pd.read_csv(aFile,sep='\t',index_col=1) #,header=True)
+# headers= ['sig2','pert_id']
 anntFrm.columns = headers
+anntFrm.index.name = 'sig1'
 # drop extra rows
 anntFrm = anntFrm[anntFrm.index.isin(Hmtrx.index)] # leave out annotations not in matrix
 ### read in mutual information matrices
-mFile = sourceDir + '/' + prefix + '/TA.KD009_KD010_A549_96H_mod_sig_id.MI.input_space.gct'
+mFile = sourceDir + '/' + prefix + '/' + modzPrefix + '.MI.input_space.gct'
 mi = pd.read_csv(mFile,sep='\t',skiprows=[0,1],index_col=0) #,header=True
 mi = mi.drop('Description',1)
-cFile = sourceDir + '/' + prefix + '/TA.KD009_KD010_A549_96H_mod_sig_id.MI.k' + str(nComponents) + '.gct'
+cFile = sourceDir + '/' + prefix + '/' + modzPrefix + '.MI.k' + str(nComponents) + '.gct'
 cmi = pd.read_csv(cFile,sep='\t',skiprows=[0,1],index_col=0) #,header=True
 cmi = cmi.drop('Description',1)
 ### load in clique annotations and matrix
-cFile = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/shRNA_pilot/gene_shRNA_sig_id.gmt'
-cliqueGMT = gmt.read(cFile)
-cliqFrm = pd.DataFrame(cliqueGMT)
+cliqueGMT = gmt.read(gmtFile)
+cliqFrm = pd.DataFrame([cliqueGMT])
 #########################################
 ### graph individual group components ###
 #########################################
@@ -580,9 +598,9 @@ mi_heatmap_group(cmiGrp,graphDir,grpSort,space_name=str(nComponents) +'_NMF_comp
 inMI, outMI = MI_pairwise_comp(mi,cliqFrm,anntFrm,graphDir)
 # pairwise connections from NMF component space
 inCMI, outCMI = MI_pairwise_comp(cmi,cliqFrm,anntFrm,graphDir)
-# ##############################
+# ######################
 # ### simple boxplot ##
-# ##############################
+# ######################
 # ### NMF components - simple boxplot of intra-group connections
 intra_group_boxplot(inMI,graphDir,space_name='input_space')
 intra_group_boxplot(inCMI,graphDir,space_name=str(nComponents) +'_NMF_components_by_group')
