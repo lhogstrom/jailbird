@@ -38,16 +38,26 @@ def line_pre_adder(filename,line_to_prepend):
 # annt = pd.read_csv(aFile,sep='\t')
 
 ### OE data
-wkdir = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/oe_pilot'
+# wkdir = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/oe_pilot'
 # load files
-mFile= wkdir + '/TA.OE006_A549_96H_mod_sig_id.txt'
+# mFile= wkdir + '/TA.OE006_A549_96H_mod_sig_id.txt'
+# mtrx = pd.read_csv(mFile,sep='\t',index_col=0)
+# aFile = wkdir + '/TA.OE006_A549_96H_mod_sig_id_annotations.txt'
+# annt = pd.read_csv(aFile,sep='\t')
+
+### OE data - w/ replicates
+wkdir = '/xchip/cogs/projects/NMF/TA_lung_cancer_genomic_perturbations/oe_pilot/oe_plate_reps'
+# load files
+mFile= wkdir + '/A549_mini_plate_reps_modHeader.txt'
 mtrx = pd.read_csv(mFile,sep='\t',index_col=0)
-aFile = wkdir + '/TA.OE006_A549_96H_mod_sig_id_annotations.txt'
+aFile = wkdir + '/A549_mini_plate_reps_annotations.txt'
 annt = pd.read_csv(aFile,sep='\t')
+
+
 
 ### prep matrix into gct form
 # outFile = wkdir + '/TA.KD009_KD010_A549_96H_mod_sig_id.gct'
-outFile= wkdir + '/TA.OE006_A549_96H_mod_sig_id.gct'
+outFile= wkdir + '/A549_mini_plate_reps_annotations.gct'
 mtrx.index.name = 'id'
 mtrx.to_csv(outFile,sep='\t')
 ### add lines for gct headers

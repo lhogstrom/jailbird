@@ -96,3 +96,75 @@ plt.close()
 non_summly = sig_counts[~sig_counts.is_summly]
 outF = os.path.join(wkdir, 'non_summly_PCL_signature_counts.txt')
 non_summly.to_csv(outF, sep='\t')
+
+
+### scratch
+# order by group size
+cliqFrm['group_size'] = cliqFrm.sig.apply(len)
+cliqFrm = cliqFrm.sort('group_size')
+
+for x in cliqFrm['group_size']:
+    print x 
+
+gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/CID-Synonym-filtered'
+cid = pd.read_csv(gFile,sep='\t',header=None,names=['CID','synonym'])
+cid[cid.CID == 33]
+
+synList = ['Alexidine dihydrochloride',
+'BVT 948',
+'NSC 87877',
+'Sodium orthovanadate',
+'TCS 401',
+'Nutlin-3',
+'NSC 207895',
+'Nutlin-3a',
+'Nutlin-3b',
+'Caylin-1',
+'HLI 373',
+'Caylin-2',
+'JNJ 26854165',
+'NSC 66811',
+'MDM2 Inhibitor',
+'AS 1892802',
+'Fasudil hydrochloride',
+'GSK 269962',
+'GSK 429286',
+'H 1152 dihydrochloride',
+'Glycyl-H 1152 dihydrochloride',
+'HA 1100 hydrochloride',
+'SB 772077B dihydrochloride',
+'SR 3677 dihydrochloride',
+'Y-27632 dihydrochloride',
+'STR1720',
+'EX 527',
+'Resveratol',
+'Sirtinol',
+'SIRT1/2 Inhibitor VII',
+'Bentamapimod',
+'AEG 3482',
+'Curcumin',
+'BI 78D3',
+'CC-401',
+'Piceatannol',
+'JNK Inhibitor VIII',
+'JNK Inhibitor V',
+'SP600125',
+'SU 3327',
+'4-Hydroxynonenal',
+'Aloisine A',
+'RWJ 67657',
+'PKR Inhibitor',
+'NU 7441',
+'NU 7026',
+'PI 103 hydrochloride',
+'Compound 401',
+'DMNB',
+'KU 0060648',
+'Doxercalciferol',
+'EB 1089',
+'Ercalcitriol']
+
+
+
+matched = cid[cid.synonym.isin(synList)]
+matched.sort('synonym')
