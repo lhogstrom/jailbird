@@ -8,12 +8,20 @@
    source("/xchip/cogs/hogstrom/analysis/pablos_NMF_analysis/TA/CNMF.4.R")
    # parse args
    # args <- commandArgs(trailingOnly = TRUE)
-   path2 <- '/xchip/cogs/projects/NMF/NMF_drug_shRNA/VCAP_shRNA_c9_lm_epsilon'
-   prefix2 <- 'shRNA_drug_target_genes_n448x978'
-   path1 <- '/xchip/cogs/projects/NMF/NMF_drug_shRNA/VCAP_drug_c9_lm_epsilon'
-   prefix1 <- 'clique_compound_classes_n380x978'
-   # nFolder <- 'shRNA_projections'
-   nFolder <- 'drug_projections'
+   # path2 <- '/xchip/cogs/projects/NMF/NMF_drug_shRNA/VCAP_shRNA_c9_lm_epsilon'
+   # prefix2 <- 'shRNA_drug_target_genes_n448x978'
+   # path1 <- '/xchip/cogs/projects/NMF/NMF_drug_shRNA/VCAP_drug_c9_lm_epsilon'
+   # prefix1 <- 'clique_compound_classes_n380x978'
+   # # nFolder <- 'shRNA_projections'
+   # nFolder <- 'drug_projections'
+
+   args <- commandArgs(trailingOnly = TRUE)
+   path1 <- args[1]
+   prefix1 <- args[2]
+   path2 <- args[3]
+   prefix2 <- args[4]
+   nFolder <- args[5]
+
 
    MSIG.Preprocess.Dataset(
       input.ds            = paste(path1,"/",prefix1,".gct",sep=""),

@@ -172,36 +172,36 @@ for cell in cellList:
     ### write to file ####
     outGCT = wkdir + '/shRNA_drug_target_genes'
     gt.write(outGCT,mode='gctx')
-
-# make GMT of shRNA sig_ids
-inameGrped = goldQuery.groupby('pert_iname')
-gmtList = []
-for x in inameGrped:
-    tmpDict = {}
-    tmpDict['desc'] = x[1].pert_iname[0]
-    tmpDict['id'] = x[1].pert_iname[0]
-    tmpDict['sig'] = list(x[1].index)
-    gmtList.append(tmpDict)
-outF = basedir + '/n69_shRNA_sig_ids.gmt'
-gmt.write(gmtList,outF)
+    # make GMT of shRNA sig_ids
+    inameGrped = goldQuery.groupby('pert_iname')
+    gmtList = []
+    for x in inameGrped:
+        tmpDict = {}
+        tmpDict['desc'] = x[1].pert_iname[0]
+        tmpDict['id'] = x[1].pert_iname[0]
+        tmpDict['sig'] = list(x[1].index)
+        gmtList.append(tmpDict)
+    outF = wkdir + '/n69_shRNA_sig_ids.gmt'
+    gmt.write(gmtList,outF)
 
 ### convert GCTX files to GCT ### 
 #use java-1.7
 probeSpace = 'lm_epsilon' # lm_epsilon or bing
 for cell in cellList:
     print(cell)
-    prefix = cell + '_c20_' + probeSpace
+    # prefix = cell + '_drug_c9_' + probeSpace
+    prefix = cell + '_shRNA_c9_' + probeSpace
     wkdir = basedir + '/' + prefix
-    os.chdir(wkdir)
     # cmd1 = 'use Java-1.7'
     # os.system(cmd1)
-    outGCT = wkdir + '/clique_compound_classes'
+    # outGCT = wkdir + '/clique_compound_classes'
+    outGCT = wkdir + '/shRNA_drug_target_genes'
     globRes = glob.glob(outGCT+'*.gctx')
     print(globRes[0])
     cmd2 = 'convert-dataset -i ' + globRes[0]
     os.system(cmd2)
-    dir1 = glob.glob(wkdir+'/*02')
-    dir2 = glob.glob(dir1[0]+'/*')
-    dir3 = glob.glob(dir2[0]+'/*')
-    gctFile = dir3[0]
-    shutil.copy(gctFile, wkdir)
+    # dir1 = glob.glob(wkdir+'/*02')
+    # dir2 = glob.glob(dir1[0]+'/*')
+    # dir3 = glob.glob(dir2[0]+'/*')
+    # gctFile = dir3[0]
+    # shutil.copy(gctFile, wkdir)
