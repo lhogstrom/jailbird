@@ -45,12 +45,13 @@ nKeep = 2 # number of signatures per drug
 for cell in cellList:
     print(cell)
     prefix = cell + '_c20_' + probeSpace
-    wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/' + prefix
+    wkdir = '/xchip/cogs/projects/NMF/cpd_groups_n147/' + prefix
     if not os.path.exists(wkdir):
         os.mkdir(wkdir)
     #load in clique annotations and matrix
     # cFile = '/xchip/cogs/sig_tools/sig_cliquescore_tool/sample/cp_clique_n69/clique.gmt'
-    cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140221/cliques.gmt'
+    # cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140221/cliques.gmt'
+    cFile = '/xchip/cogs/projects/pharm_class/rnwork/cliques/cpd_groups_n147.gmt'
     cliqueGMT = gmt.read(cFile)
     cliqFrm = pd.DataFrame(cliqueGMT)
     # set grouping structures 
@@ -131,7 +132,7 @@ probeSpace = 'lm_epsilon' # lm_epsilon or bing
 for cell in cellList:
     print(cell)
     prefix = cell + '_c20_' + probeSpace
-    wkdir = '/xchip/cogs/projects/NMF/NMF_parameter_evaluation2/' + prefix
+    wkdir = '/xchip/cogs/projects/NMF/cpd_groups_n147/' + prefix
     os.chdir(wkdir)
     # cmd1 = 'use Java-1.7'
     # os.system(cmd1)
@@ -140,8 +141,8 @@ for cell in cellList:
     print(globRes[0])
     cmd2 = 'convert-dataset -i ' + globRes[0]
     os.system(cmd2)
-    dir1 = glob.glob(wkdir+'/*02')
-    dir2 = glob.glob(dir1[0]+'/*')
-    dir3 = glob.glob(dir2[0]+'/*')
-    gctFile = dir3[0]
-    shutil.copy(gctFile, wkdir)
+#     dir1 = glob.glob(wkdir+'/*02')
+#     dir2 = glob.glob(dir1[0]+'/*')
+#     dir3 = glob.glob(dir2[0]+'/*')
+#     gctFile = dir3[0]
+#     shutil.copy(gctFile, wkdir)
