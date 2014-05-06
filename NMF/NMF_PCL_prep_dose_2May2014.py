@@ -148,7 +148,7 @@ for cell in cellList:
     #combine dmsos with drug perturbations
     nDMSOs = dmsoQuery.shape[0]
     iRandDmso = np.random.choice(nDMSOs-1,nDMSO,replace=False)
-    reducedSigFrm = pd.concat([reducedSigFrm,goldCell,dmsoQuery.ix[iRandDmso]],axis=0) 
+    reducedSigFrm = pd.concat([goldCell,dmsoQuery.ix[iRandDmso]],axis=0) 
     reducedSigFrm.index.name = 'mod_sig_id'
     outF = wkdir + '/clique_compound_classes.v2.txt'
     # reducedSigFrm.to_csv(outF,sep='\t',header=False) #without header
