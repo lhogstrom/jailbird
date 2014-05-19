@@ -24,40 +24,40 @@ import cmap.util.mongo_utils as mu
 # focal adhesion kinase
 # Src
 
-### gene symbols
-# RAC1
-# CDC42
-# RHOA
-# ROCK1
-# RICS
-# RHOA
-# PRKCA
-# PIK3CA
-# ARPC1A
-# MAPK
-# ERK
-# MAPK14
-# CAPN4
-# CAPN1
-# CAPN2
-# PTK2
-# SRC
-# # RHOA pathway
-# NgR1
-# LINGO1
-# p75
-# TROY
-# # myosin genes:
-# MYH3
-# MYH6
-# MYH7
-# MYH9
-# MYH11
-# MYO1A
-# MYO5A
-# MYO6 
-# MYO7A
-# MYO15A
+## gene symbols
+RAC1
+CDC42
+RHOA
+ROCK1
+RICS
+RHOA
+PRKCA
+PIK3CA
+ARPC1A
+MAPK
+ERK
+MAPK14
+CAPN4
+CAPN1
+CAPN2
+PTK2
+SRC
+# RHOA pathway
+NgR1
+LINGO1
+p75
+TROY
+# myosin genes:
+MYH3
+MYH6
+MYH7
+MYH9
+MYH11
+MYO1A
+MYO5A
+MYO6 
+MYO7A
+MYO15A
 
 ###
 GeneList = ['RAC1',
