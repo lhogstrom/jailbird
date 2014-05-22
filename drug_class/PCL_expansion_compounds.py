@@ -60,3 +60,31 @@ newPCL['SMILE'] = smileSer.values
 oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_SMILE.csv'
 newPCL.to_csv(oFile,sep=',',index=False)
 
+#########################
+### add inCHI strings ### 
+#########################
+
+#load older most recent version of doc
+oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_SMILE.csv'
+pclFrm = pd.read_csv(oFile,sep=',')
+#load and combine inchi keys from pubchem search
+sFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/pubchem_inchi_results.txt'
+inchFrm = pd.read_csv(sFile,sep='\t',names=['cid', 'InChI'])
+inchSer = inchFrm.InChI
+inchSer.index = inchFrm.cid
+inchSer = inchSer.reindex(pclFrm.first_CID)
+pclFrm['InChI'] = inchSer.values
+# write new sheet to file
+# oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_InChi.csv'
+# pclFrm.to_csv(oFile,sep=',',index=False)
+
+
+#########################
+### inCHI to BRD number ### 
+#########################
+
+pFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/pert_id_inchikey.csv'
+brdFrm = pd.read_csv(pFile)
+
+
+

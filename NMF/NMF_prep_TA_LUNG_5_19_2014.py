@@ -11,6 +11,8 @@ import glob
 import subprocess
 import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
+import cmap.io.gmt as gmt
+import cmap.analytics.NMF_benchmarks as nmfb
 
 wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_qnorm'
 
@@ -92,3 +94,70 @@ for cell in cell_grped.groups.keys():
         os.wait()
         processes.difference_update(
             p for p in processes if p.poll() is not None)
+
+#########################
+### load signature info ##
+#########################
+
+sFile = '/xchip/cogs/web/icmap/custom/TA/tnwork/datasets/for_jun10/inst.info'
+sigInfo = pd.read_csv(sFile,sep='\t')
+sigInfo.index = sigInfo.distil_id
+
+# important fileds in inst.info:
+# pert_mfc_desc
+# x_mutation_status
+# x_preferredgenename
+# x_tomconstructname
+
+# reindex acording to OE plates
+sigInfo = sigInfo.reindex(oe.sig_id)
+# sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
+cellGrped = sigInfo.groupby('cell_id')
+for cellTup in cellGrped:
+    cell = cellTup[0]
+    cellFrm = cellTup[1]
+    cellDir = wkdir + '/' + cell
+    outF = cellDir + '/OE_annotations.txt'
+    # reformat sig_id
+    cellFrm['mod_sig_id'] = cellFrm.distil_id.str.replace(':','.')
+    cellFrm.index = cellFrm.mod_sig_id
+    cellFrm.to_csv(outF,sep='\t')
+    ### make gene signature groups - gmt file
+    # geneGrped = cellFrm.groupby('pert_mfc_desc')
+    geneGrped = cellFrm.groupby('x_mutation_status')
+    gmtList = []
+    for grp in geneGrped:
+        gmtDictUp = {}
+        gmtDictUp['id'] = grp[0]
+        # gmtDictUp['desc'] = grp[0]
+        gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
+        gmtDictUp['sig'] = list(grp[1].index.values)
+        gmtList.append(gmtDictUp)
+    gmtOut = cellDir + '/mutation_status_oe_sig_id.gmt'
+    gmt.write(gmtList,gmtOut)
+
+#########################
+### run NMF benchmarks ##
+#########################
+
+for prefix in dimDict:
+    dim = dimDict[prefix]
+    path1 = wkdir + '/' + prefix
+    prefix1 = prefix + '_TA_JUN10_COMPZ.MODZ_SCORE_' + dim
+    outdir = path1 + '/mutation_status_benchmark_graphs'
+    source_dir = path1
+    Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
+    # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
+    # MI_file_component = prefix1 + '.MI.k' + str(nComponents) + '.gct'
+    # MI_file_inspace = prefix1 + '.MI.input_space.gct'
+    anntFile = 'OE_annotations.txt'
+    # groupFile = path1 + '/gene_oe_sig_id.gmt'
+    groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
+    # run NMF module 
+    reload(nmfb)
+    self = nmfb.NMFresult(source_dir)
+    self.set_output_dir(out=outdir)
+    self.load_NMF_H_matrix(Hfile)
+    self.load_annotations(anntFile,sig_col=0,drop_extra_signatures=True,signature_group_file=groupFile)
+    self.group_component_maps(match_field='signatures')
+
