@@ -1,4 +1,4 @@
-############################################################################################################
+ ############################################################################################################
 #  This script clusters/projects a set of L1000 samples using NMF
 #  in order to define "components" representing transcriptional responses.
 #  It also creates a 3D biplot of the H matrix and makes macthes of each perturbation vs. the rest.
