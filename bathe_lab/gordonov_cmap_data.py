@@ -92,11 +92,18 @@ GeneList = ['RAC1',
 'MYO7A',
 'MYO15A']
 
+# load kegg pathways
+file_kegg = '/xchip/cogs/hogstrom/bathe/gordonov/c2.cp.kegg.v4.0.symbols.gmt'
+gt = gmt.read(file_kegg)
+keggFrm = pd.DataFrame(gt)
+GeneList = keggFrm[keggFrm.id == 'KEGG_REGULATION_OF_ACTIN_CYTOSKELETON'].sig.values
+GeneList = list(GeneList[0])
+
 wkdir = '/xchip/cogs/hogstrom/bathe/gordonov'
-### genomic perturbations
+### genomic perturbation
 # shRNA
 mc = mu.MongoContainer()
-cgsFrm = mc.sig_info.find({'pert_type':'trt_sh.cgs','pert_iname':{'$in':GeneList}},
+cgsFrm = mc.sig_info.find({'pert_type':'trt_sh.cgs','pert_iname':{'$in':list(GeneList)}},
             {'dn100_full':False,'up100_full':False,'dn100_bing':False,'up100_bing':False,'dn50_lm':False,'up50_lm':False,'pert_idose':False,'pert_dose_unit':False},toDataFrame=True)
 cgsFrm.index = cgsFrm.sig_id
 outF = wkdir + '/cytoskeleton_shRNA_signatures.txt'
