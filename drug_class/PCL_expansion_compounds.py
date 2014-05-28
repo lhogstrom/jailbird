@@ -14,6 +14,7 @@ import os
 gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/CID-Synonym-filtered'
 cid = pd.read_csv(gFile,sep='\t',header=None,names=['CID','synonym'])
 
+
 # load synonyms of interest:
 sFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs.csv'
 # sFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs.txt'
@@ -80,11 +81,56 @@ pclFrm['InChI'] = inchSer.values
 
 
 #########################
-### inCHI to BRD number ### 
+### inCHI to InchiKey ### 
 #########################
+
+#load inchi key
+iFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/CID-InChI-Key'
+iKey = pd.read_csv(iFile,sep='\t',header=None,names=['CID','InChi-key'])
+
+#load older most recent version of doc
+oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_InChi.csv'
+pclFrm = pd.read_csv(oFile,sep=',')
+has_cid = ~np.isnan(pclFrm.first_CID)
+cid_list = pclFrm.ix[has_cid,'first_CID']
+iKey_match = iKey.reindex(cid_list.values)
+pclFrm.ix[has_cid,'InChiKey'] = iKey_match['InChi-key'].values
+oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_inChiKey.csv'
+# pclFrm.to_csv(oFile,sep=',',index=False)
+
+#############################
+### InChiKey to BRD number ### 
+#############################
+
+#load older most recent version of doc
+oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_inChiKey.csv'
+pclFrm = pd.read_csv(oFile,sep=',')
 
 pFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/pert_id_inchikey.csv'
 brdFrm = pd.read_csv(pFile)
+
+# check for inchikey and inchikey desalted
+brdFrm = brdFrm[~brdFrm.INCHIKEY.isnull()] # drop rows without inchikey
+key_match1 = brdFrm[brdFrm.INCHIKEY.isin(pclFrm.InChiKey)]
+key_match2 = brdFrm[brdFrm.INCHIKEY_DESALTED.isin(pclFrm.InChiKey)]
+iUnion = set.union(set(key_match1.index),set(key_match2.index))
+key_match = brdFrm.reindex(iUnion)
+
+# reindex to match summary sheet
+BRDser = key_match.BROADID
+BRDser.index = key_match.INCHIKEY
+BRDser = BRDser.reindex(pclFrm.InChiKey)
+
+### check if the BRDs are in CMAP ###
+brdSet = set(BRDser.values)
+mc = mu.MongoContainer()
+cmapFrm = mc.pert_info.find({'pert_id':{'$in':list(brdSet)}},{},toDataFrame=True)
+
+# add BRD IDs to summary sheet
+pclFrm['Broad_ID'] = BRDser.values
+pclFrm['in_cmap'] = BRDser.isin(cmapFrm.pert_id).values
+oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_BROADID.csv'
+pclFrm.to_csv(oFile,sep=',',index=False)
 
 
 
