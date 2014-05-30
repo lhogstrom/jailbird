@@ -60,8 +60,11 @@ cell_counts.to_csv(outF,sep='\t')
 
 
 # signature subset 
-file_lung_grp = '/cga/meyerson/brooks/TA/all_TA_for_jun10/all_TA_Lung_sig_ids.grp'
+# file_lung_grp = '/cga/meyerson/brooks/TA/all_TA_for_jun10/all_TA_Lung_sig_ids.grp'
+file_lung_grp = '/xchip/cga_home/brooks/TA/all_TA_for_jun10/all_TA_Lung_distil_ids.grp'
 lungSigs = pd.read_csv(file_lung_grp)
+
+
 
 # 
 sFile = '/xchip/cogs/web/icmap/custom/TA/tnwork/datasets/for_jun10/inst.info'

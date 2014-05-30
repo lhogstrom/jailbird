@@ -16,48 +16,48 @@ import numpy as np
 wkdir = '/xchip/cogs/hogstrom/bathe/gordonov'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
-# gene_list_name = 'kegg_actin_cytoskeleton'
-gene_list_name = 'apriori_actomyosin'
+gene_list_name = 'kegg_actin_cytoskeleton'
+# gene_list_name = 'apriori_actomyosin'
 
 # load kegg pathways
-# file_kegg = '/xchip/cogs/hogstrom/bathe/gordonov/c2.cp.kegg.v4.0.symbols.gmt'
-# gt = gmt.read(file_kegg)
-# keggFrm = pd.DataFrame(gt)
-# GeneList = keggFrm[keggFrm.id == 'KEGG_REGULATION_OF_ACTIN_CYTOSKELETON'].sig.values
-# GeneList = list(GeneList[0])
+file_kegg = '/xchip/cogs/hogstrom/bathe/gordonov/c2.cp.kegg.v4.0.symbols.gmt'
+gt = gmt.read(file_kegg)
+keggFrm = pd.DataFrame(gt)
+GeneList = keggFrm[keggFrm.id == 'KEGG_REGULATION_OF_ACTIN_CYTOSKELETON'].sig.values
+GeneList = list(GeneList[0])
 
 ###
-GeneList = ['RAC1',
-'CDC42', 
-'RHOA',
-'ROCK1',
-'RICS',
-'RHOA',
-'PRKCA',
-'PIK3CA',
-'ARPC1A',
-'MAPK',
-'ERK',
-'MAPK14',
-'CAPN4',
-'CAPN1',
-'CAPN2',
-'PTK2',
-'SRC',
-'NgR1',
-'LINGO1',
-'p75',
-'TROY',
-'MYH3',
-'MYH6',
-'MYH7',
-'MYH9',
-'MYH11',
-'MYO1A',
-'MYO5A',
-'MYO6 ',
-'MYO7A',
-'MYO15A']
+# GeneList = ['RAC1',
+# 'CDC42', 
+# 'RHOA',
+# 'ROCK1',
+# 'RICS',
+# 'RHOA',
+# 'PRKCA',
+# 'PIK3CA',
+# 'ARPC1A',
+# 'MAPK',
+# 'ERK',
+# 'MAPK14',
+# 'CAPN4',
+# 'CAPN1',
+# 'CAPN2',
+# 'PTK2',
+# 'SRC',
+# 'NgR1',
+# 'LINGO1',
+# 'p75',
+# 'TROY',
+# 'MYH3',
+# 'MYH6',
+# 'MYH7',
+# 'MYH9',
+# 'MYH11',
+# 'MYO1A',
+# 'MYO5A',
+# 'MYO6 ',
+# 'MYO7A',
+# 'MYO15A']
 
 
 ### genomic perturbation

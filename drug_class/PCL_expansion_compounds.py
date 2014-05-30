@@ -9,6 +9,7 @@ import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
 import pandas as pd
 import os
+import cmap.io.gmt as gmt
 
 ## load Pubchem synonyms and CIDs
 gFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/CID-Synonym-filtered'
@@ -128,11 +129,43 @@ cmapFrm = mc.pert_info.find({'pert_id':{'$in':list(brdSet)}},{},toDataFrame=True
 
 # add BRD IDs to summary sheet
 pclFrm['Broad_ID'] = BRDser.values
-pclFrm['in_cmap'] = BRDser.isin(cmapFrm.pert_id).values
+pclFrm['cmap_brd_match'] = BRDser.isin(cmapFrm.pert_id).values
+
+# pert_iname match to common name 
+mc = mu.MongoContainer()
+inameFrm = mc.pert_info.find({'pert_type':'trt_cp'},{'pert_iname':True,'pert_id':True},toDataFrame=True)
+inameGrped = inameFrm.groupby('pert_iname')
+inameSet = inameGrped.first()
+inameSet['pert_iname'] = inameSet.index
+inameLower = inameSet.copy()
+inameLower['pert_iname'] = inameSet.pert_iname.str.lower()
+#match to pcls
+pclLower = pclFrm['compound name'].str.lower()
+iname_match = pclLower.isin(inameLower['pert_iname'].values)
+pclFrm['cmap_pert_iname_match'] = iname_match
+
+### is_PCL (which compounds are already in a PCL)
+cFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/pcl_20140221/cliques.gmt'
+cliqueGMT = gmt.read(cFile)
+cliqFrm = pd.DataFrame(cliqueGMT)
+### list of compounds by cliques
+brdCliq = pd.Series()
+for icliq,cliq in enumerate(cliqFrm.desc):
+    cliqMod = cliqFrm.ix[icliq,'desc']
+    brds = cliqFrm.ix[icliq,'sig']
+    for brd in brds:
+        brdCliq[brd] = cliqMod
+
+# which of these compounds already belong to a PCL?
+pclBrds = pclFrm.Broad_ID[~pclFrm.Broad_ID.isnull()]
+pclBrds = pclFrm.Broad_ID
+is_pcl = pclBrds[pclBrds.isin(brdCliq.index)]
+cliq_match = brdCliq.reindex(is_pcl.values)
+cliq_match.index = is_pcl.index
+pclFrm['is_PCL'] = np.nan
+pclFrm.ix[cliq_match.index,'is_PCL'] = cliq_match.values
+
+# write output to file
 oFile = '/xchip/cogs/sig_tools/sig_cliqueselect_tool/sample/PCL_expansion_Apr2014/new_compounds_for_PCLs_BROADID.csv'
 pclFrm.to_csv(oFile,sep=',',index=False)
-
-
-
-
 
