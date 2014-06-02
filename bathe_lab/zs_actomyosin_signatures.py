@@ -27,43 +27,47 @@ GeneList = keggFrm[keggFrm.id == 'KEGG_REGULATION_OF_ACTIN_CYTOSKELETON'].sig.va
 GeneList = list(GeneList[0])
 
 ###
-# GeneList = ['RAC1',
-# 'CDC42', 
-# 'RHOA',
-# 'ROCK1',
-# 'RICS',
-# 'RHOA',
-# 'PRKCA',
-# 'PIK3CA',
-# 'ARPC1A',
-# 'MAPK',
-# 'ERK',
-# 'MAPK14',
-# 'CAPN4',
-# 'CAPN1',
-# 'CAPN2',
-# 'PTK2',
-# 'SRC',
-# 'NgR1',
-# 'LINGO1',
-# 'p75',
-# 'TROY',
-# 'MYH3',
-# 'MYH6',
-# 'MYH7',
-# 'MYH9',
-# 'MYH11',
-# 'MYO1A',
-# 'MYO5A',
-# 'MYO6 ',
-# 'MYO7A',
-# 'MYO15A']
-
+aprioriList = ['RAC1',
+'CDC42', 
+'RHOA',
+'ROCK1',
+'RICS',
+'RHOA',
+'PRKCA',
+'PIK3CA',
+'ARPC1A',
+'MAPK',
+'ERK',
+'MAPK14',
+'CAPN4',
+'CAPN1',
+'CAPN2',
+'PTK2',
+'SRC',
+'NgR1',
+'LINGO1',
+'p75',
+'TROY',
+'MYH3',
+'MYH6',
+'MYH7',
+'MYH9',
+'MYH11',
+'MYO1A',
+'MYO5A',
+'MYO6 ',
+'MYO7A',
+'MYO15A']
+GeneList.extend(aprioriList)
 
 ### genomic perturbation
 # shRNA
 mc = mu.MongoContainer()
-cgsFrm = mc.sig_info.find({'pert_type':'trt_sh','pert_iname':{'$in':list(GeneList)}},
+## KD
+# cgsFrm = mc.sig_info.find({'pert_type':'trt_sh','pert_iname':{'$in':list(GeneList)}},
+#             {'dn100_full':False,'up100_full':False,'dn100_bing':False,'up100_bing':False,'dn50_lm':False,'up50_lm':False,'pert_idose':False,'pert_dose_unit':False},toDataFrame=True)
+## OE
+cgsFrm = mc.sig_info.find({'pert_type':'trt_oe','pert_iname':{'$in':list(GeneList)}},
             {'dn100_full':False,'up100_full':False,'dn100_bing':False,'up100_bing':False,'dn50_lm':False,'up50_lm':False,'pert_idose':False,'pert_dose_unit':False},toDataFrame=True)
 cgsFrm.index = cgsFrm.sig_id
 iname_grp = cgsFrm.groupby('pert_iname')
@@ -77,7 +81,7 @@ idLst = [item for sublist in cgsFrm.distil_id for item in sublist]
 # lmList = lmGenes['pr_gene_symbol']
 
 # load raw replicate signatures
-sig1 = 'KDC006_A549_96H_X1_B6_DUO52HI53LO:O04'
+# sig1 = 'KDC006_A549_96H_X1_B6_DUO52HI53LO:O04'
 file_zs = '/xchip/cogs/data/build/a2y13q1/zspc_n1328098x22268.gctx'
 gt = gct.GCT()
 gt.read(src=file_zs,cid=idLst,rid='lm_epsilon')
@@ -87,8 +91,7 @@ ds = gt.frame
 corrMtrx = np.corrcoef(ds,rowvar=0)
 corrFrm = pd.DataFrame(corrMtrx, index=ds.columns,columns=ds.columns)
 
-
-graphDir = os.path.join(wkdir,gene_list_name + '_KD_replicates')
+graphDir = os.path.join(wkdir,gene_list_name + '_OE_replicates')
 if not os.path.exists(graphDir):
     os.mkdir(graphDir)
 pairwiseDict = {}
@@ -121,7 +124,7 @@ for cell in cell_lines:
     plt.tick_params(labelsize=8)
     plt.xlabel('Pearson corr',fontweight='bold')
     plt.title(cell + ' - pairwise hairpin correlations',fontweight='bold')
-    outF = os.path.join(graphDir,cell+'_pairwise_comparison_boxplot_cytoskeleton_KD.png')
+    outF = os.path.join(graphDir,cell+'_pairwise_comparison_boxplot_cytoskeleton_OE.png')
     plt.savefig(outF, bbox_inches='tight',dpi=200)
     plt.close() 
 

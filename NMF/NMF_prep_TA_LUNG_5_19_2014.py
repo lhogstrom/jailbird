@@ -15,8 +15,8 @@ import cmap.io.gmt as gmt
 import cmap.analytics.NMF_benchmarks as nmfb
 
 # wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_qnorm'
-wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_ZSPCINF'
-# wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_ZSPC_LM'
+# wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_ZSPCINF'
+wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_ZSPC_LM'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -32,12 +32,12 @@ gt = gct.GCT(src=file_zspcinf)
 gt.read()
 ds = gt.frame
 
-processesed_type = 'ZSPCINF' # 'COMPZ.MODZ_SCORE', 'ZSPC_LM'
+processesed_type = 'ZSPC_LM' # 'COMPZ.MODZ_SCORE', 'ZSPCINF'
 ### reduce to LM genes 
-# gLM = gct.GCT()
-# gLM.read_gctx_row_meta(src=file_qnorm) # load file with LM genes
-# lm_probes = gLM.get_rids()
-# ds = ds.ix[ds.index.isin(lm_probes),:]
+gLM = gct.GCT()
+gLM.read_gctx_row_meta(src=file_qnorm) # load file with LM genes
+lm_probes = gLM.get_rids()
+ds = ds.ix[ds.index.isin(lm_probes),:]
 
 #split columns
 colSer = pd.Series(ds.columns)
@@ -89,24 +89,24 @@ for cell in cell_grped.groups.keys():
 #########################
 
 # COMPZ.MODZ_SCORE
-# nComponents = 20
-# dimDict = {'A375':'n2245x978',
-# 'A549':'n5608x978', # 
-# 'AALE':'n3356x978',
-# 'H1299':'n2597x978',
-# 'HA1E':'n5371x978',
-# 'PC3':'n2246x978',
-# 'SALE':'n3215x978'}
+nComponents = 20
+dimDict = {'A375':'n2245x978',
+'A549':'n5608x978', # 
+'AALE':'n3356x978',
+'H1299':'n2597x978',
+'HA1E':'n5371x978',
+'PC3':'n2246x978',
+'SALE':'n3215x978'}
 
 # ZSPCINF
-nComponents = 20
-dimDict = {'A375':'n2245x22268',
-'A549':'n5608x22268', # 
-'AALE':'n3356x22268',
-'H1299':'n2597x22268',
-'HA1E':'n5371x22268',
-'PC3':'n2246x22268',
-'SALE':'n3215x22268'}
+# nComponents = 20
+# dimDict = {'A375':'n2245x22268',
+# 'A549':'n5608x22268', # 
+# 'AALE':'n3356x22268',
+# 'H1299':'n2597x22268',
+# 'HA1E':'n5371x22268',
+# 'PC3':'n2246x22268',
+# 'SALE':'n3215x22268'}
 
 #specifications for subprocess
 processes = set()
@@ -193,5 +193,22 @@ for prefix in dimDict:
     self.set_output_dir(out=outdir)
     self.load_NMF_H_matrix(Hfile)
     self.load_annotations(anntFile,sig_col=0,drop_extra_signatures=True,signature_group_file=groupFile)
-    self.group_component_maps(match_field='signatures')
+    self.load_input_matrix(prefix1+'.gct', modify_sig_id=True, reindex_by_H=True)
+    # pairwise comparisons of H-matrix 
+    self.calculate_corr_matrix(H_mtrx_corr=True) # pairwise corr on H-matrix
+    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
+    self.intra_group_boxplot(space_name='20_components',similarity_metric='Pearson correlation')
+    self.boxplot_with_null(space_name='20_components',similarity_metric='Pearson correlation')
+    # pairwise comparisons of LM space
+    self.calculate_corr_matrix(H_mtrx_corr=False) # pairwise corr on input matrix
+    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='Pearson correlation')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='Pearson correlation')
+    # component heatmaps
+    # self.group_component_maps(match_field='signatures')
+
+    ### make WT-MUT comparison 
+
+
+
 
