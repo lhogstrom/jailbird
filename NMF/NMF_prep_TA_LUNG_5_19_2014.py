@@ -196,7 +196,7 @@ for prefix in dimDict:
     self.load_input_matrix(prefix1+'.gct', modify_sig_id=True, reindex_by_H=True)
     # pairwise comparisons of H-matrix 
     self.calculate_corr_matrix(H_mtrx_corr=True) # pairwise corr on H-matrix
-    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
+    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures',out_table=True)
     self.intra_group_boxplot(space_name='20_components',similarity_metric='Pearson correlation')
     self.boxplot_with_null(space_name='20_components',similarity_metric='Pearson correlation')
     # pairwise comparisons of LM space
@@ -206,9 +206,27 @@ for prefix in dimDict:
     self.boxplot_with_null(space_name='LM_space',similarity_metric='Pearson correlation')
     # component heatmaps
     # self.group_component_maps(match_field='signatures')
-
-    ### make WT-MUT comparison 
-
-
-
+    #########################
+    ### WT vs MUT groupings ##
+    #########################
+    colSplit = self.groupFrm.id.str.split("_")
+    # annotate acording to sig_id fields
+    colFrame = pd.DataFrame(self.groupFrm.id)
+    colFrame['main_gene'] = colSplit.apply(lambda x: x[0])
+    colFrame.index = self.groupFrm.id
+    geneGrped = colFrame.groupby('main_gene')
+    mutDict = {}
+    for grp_tup in geneGrped:
+        gene = grp_tup[0]
+        grp = grp_tup[1]
+        grp_values = grp.id.values
+        has_WT = np.array(['WT' in x for x in grp_values])
+        # select groups that contain WT and MUT
+        if (sum(has_WT) > 0) & (sum(has_WT) < len(has_WT)):
+            WT = grp_values[has_WT]
+            MUT = grp_values[~has_WT]
+            mutDict[gene] = tuple([WT,MUT])
+            # mutDict[gene] = grp.id.values
+    self.MUT_WT_comparison(self.pairwise_corr,tup_dict,space_name='20_components',
+                        similarity_metric='mutual_information',out_table=True)
 
