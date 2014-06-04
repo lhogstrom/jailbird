@@ -103,6 +103,37 @@ for cell in cell_grped.groups.keys():
     cmd2 = 'convert-dataset -i ' + globRes[0]
     os.system(cmd2)
 
+################################
+### make gene signature gmt ###
+################################
+
+# # reindex acording to OE plates
+sigInfo = sigInfo.reindex(oe.sig_id)
+# sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
+cellGrped = sigInfo.groupby('cell_id')
+for cellTup in cellGrped:
+    cell = cellTup[0]
+    cellFrm = cellTup[1]
+    cellDir = wkdir + '/' + cell
+    outF = cellDir + '/OE_annotations.txt'
+    # reformat sig_id
+    cellFrm['mod_sig_id'] = cellFrm.distil_id.str.replace(':','.')
+    cellFrm.index = cellFrm.mod_sig_id
+    cellFrm.to_csv(outF,sep='\t')
+    ### make gene signature groups - gmt file
+    # geneGrped = cellFrm.groupby('pert_mfc_desc')
+    geneGrped = cellFrm.groupby('x_mutation_status')
+    gmtList = []
+    for grp in geneGrped:
+        gmtDictUp = {}
+        gmtDictUp['id'] = grp[0]
+        # gmtDictUp['desc'] = grp[0]
+        gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
+        gmtDictUp['sig'] = list(grp[1].index.values)
+        gmtList.append(gmtDictUp)
+    gmtOut = cellDir + '/mutation_status_oe_sig_id.gmt'
+    gmt.write(gmtList,gmtOut)
+
 #########################
 ### Run NMF projection ##
 #########################
@@ -145,9 +176,6 @@ for cell in cell_grped.groups.keys():
         processes.difference_update(
             p for p in processes if p.poll() is not None)
 
-
-
-
 ########################
 ### load annotations ###
 ########################
@@ -169,40 +197,96 @@ cell_counts = pd.DataFrame(count_dict)
 outF = os.path.join(wkdir,'mutation_category_counts.txt')
 cell_counts.to_csv(outF,sep='\t')
 
-
-
-
 # important fileds in inst.info:
 # pert_mfc_desc
 # x_mutation_status
 # x_preferredgenename
 # x_tomconstructname
 
-# # reindex acording to OE plates
-# sigInfo = sigInfo.reindex(oe.sig_id)
-# # sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
-# cellGrped = sigInfo.groupby('cell_id')
-# for cellTup in cellGrped:
-#     cell = cellTup[0]
-#     cellFrm = cellTup[1]
-#     cellDir = wkdir + '/' + cell
-#     outF = cellDir + '/OE_annotations.txt'
-#     # reformat sig_id
-#     cellFrm['mod_sig_id'] = cellFrm.distil_id.str.replace(':','.')
-#     cellFrm.index = cellFrm.mod_sig_id
-#     cellFrm.to_csv(outF,sep='\t')
-#     ### make gene signature groups - gmt file
-#     # geneGrped = cellFrm.groupby('pert_mfc_desc')
-#     geneGrped = cellFrm.groupby('x_mutation_status')
-#     gmtList = []
-#     for grp in geneGrped:
-#         gmtDictUp = {}
-#         gmtDictUp['id'] = grp[0]
-#         # gmtDictUp['desc'] = grp[0]
-#         gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
-#         gmtDictUp['sig'] = list(grp[1].index.values)
-#         gmtList.append(gmtDictUp)
-#     gmtOut = cellDir + '/mutation_status_oe_sig_id.gmt'
-#     gmt.write(gmtList,gmtOut)
+#########################
+### run NMF benchmarks ##
+#########################
 
+for prefix in dimDict:
+    dim = dimDict[prefix]
+    path1 = wkdir + '/' + prefix
+    prefix1 = prefix + '_TA_JUN10_'+ processesed_type + '_' + dim
+    outdir = path1 + '/mutation_status_benchmark_graphs'
+    source_dir = path1
+    Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
+    # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
+    MI_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.k' + str(nComponents) + '.gct'
+    MI_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.input_space.gct'
+    anntFile = 'OE_annotations.txt'
+    # groupFile = path1 + '/gene_oe_sig_id.gmt'
+    groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
+    # run NMF module 
+    reload(nmfb)
+    self = nmfb.NMFresult(source_dir)
+    self.set_output_dir(out=outdir)
+    self.load_NMF_H_matrix(Hfile)
+    self.load_annotations(anntFile,sig_col=0,drop_extra_signatures=True,signature_group_file=groupFile)
+    self.load_input_matrix(prefix1+'.gct', modify_sig_id=True, reindex_by_H=True)
+    #########################
+    ### WT vs MUT groupings ##
+    #########################
+    colSplit = self.groupFrm.id.str.split("_")
+    # annotate acording to sig_id fields
+    colFrame = pd.DataFrame(self.groupFrm.id)
+    colFrame['main_gene'] = colSplit.apply(lambda x: x[0])
+    colFrame.index = self.groupFrm.id
+    geneGrped = colFrame.groupby('main_gene')
+    mutDict = {}
+    for grp_tup in geneGrped:
+        gene = grp_tup[0]
+        grp = grp_tup[1]
+        grp_values = grp.id.values
+        has_WT = np.array(['WT' in x for x in grp_values])
+        # select groups that contain WT and MUT
+        if (sum(has_WT) > 0) & (sum(has_WT) < len(has_WT)):
+            WT = grp_values[has_WT]
+            MUT = grp_values[~has_WT]
+            mutDict[gene] = tuple([WT,MUT])
+    ###################################
+    ### pairwise comparisons of H space
+    ###################################
+    # Pearson Corr 
+    self.calculate_corr_matrix(H_mtrx_corr=True) # pairwise corr on H-matrix
+    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures',out_table=True)
+    # self.intra_group_boxplot(space_name='20_components',similarity_metric='Pearson correlation')
+    # self.boxplot_with_null(space_name='20_components',similarity_metric='Pearson correlation')
+    self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='20_components',
+                        similarity_metric='Pearson_correlation',out_table=True)
+    self.MUT_WT_graph(mutDict,space_name='input_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_c20')
+    # Mutual information
+    self.load_MI_matrix(MI_file_component)
+    self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
+    self.intra_group_boxplot(space_name='20_components',similarity_metric='mutual_information')
+    self.boxplot_with_null(space_name='20_components',similarity_metric='mutual_information')
+    self.MUT_WT_comparison(self.mi,mutDict,space_name='20_components',
+                        similarity_metric='mutual_information',out_table=True)
+    self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',out_graph_dir='WT_MUT_graphs_MI_c20')
+    ###################################
+    ### pairwise comparisons of LM space
+    ###################################
+    self.calculate_corr_matrix(H_mtrx_corr=False) # pairwise corr on input matrix
+    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='Pearson_correlation')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='Pearson_correlation')
+    # component heatmaps
+    # self.group_component_maps(match_field='signatures')
+    self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='LM_space',
+                        similarity_metric='Pearson_correlation',out_table=True)
+    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_LM')
+    # Mutual information
+    self.load_MI_matrix(MI_file_inspace)
+    self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
+    self.MUT_WT_comparison(self.mi,mutDict,space_name='LM_space',
+                        similarity_metric='mutual_information',out_table=True)
+    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+        out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=True,wt_median_thresh=.3)
+    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+        out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=False,wt_median_thresh=.3)
 
