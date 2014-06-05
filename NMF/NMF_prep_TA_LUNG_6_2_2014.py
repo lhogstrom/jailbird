@@ -247,46 +247,51 @@ for prefix in dimDict:
             WT = grp_values[has_WT]
             MUT = grp_values[~has_WT]
             mutDict[gene] = tuple([WT,MUT])
+    # # component heatmaps
+    # self.group_component_maps(match_field='signatures')
     ###################################
     ### pairwise comparisons of H space
     ###################################
     # Pearson Corr 
-    self.calculate_corr_matrix(H_mtrx_corr=True) # pairwise corr on H-matrix
-    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures',out_table=True)
-    # self.intra_group_boxplot(space_name='20_components',similarity_metric='Pearson correlation')
-    # self.boxplot_with_null(space_name='20_components',similarity_metric='Pearson correlation')
-    self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='20_components',
-                        similarity_metric='Pearson_correlation',out_table=True)
-    self.MUT_WT_graph(mutDict,space_name='input_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_c20')
+    # self.calculate_corr_matrix(H_mtrx_corr=True) # pairwise corr on H-matrix
+    # self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures',out_table=True)
+    # # self.intra_group_boxplot(space_name='20_components',similarity_metric='Pearson correlation')
+    # # self.boxplot_with_null(space_name='20_components',similarity_metric='Pearson correlation')
+    # self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='20_components',
+    #                     similarity_metric='Pearson_correlation',out_table=True)
+    # self.MUT_WT_graph(mutDict,space_name='input_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_c20')
     # Mutual information
-    self.load_MI_matrix(MI_file_component)
-    self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
-    self.intra_group_boxplot(space_name='20_components',similarity_metric='mutual_information')
-    self.boxplot_with_null(space_name='20_components',similarity_metric='mutual_information')
-    self.MUT_WT_comparison(self.mi,mutDict,space_name='20_components',
-                        similarity_metric='mutual_information',out_table=True)
-    self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',out_graph_dir='WT_MUT_graphs_MI_c20')
+    # self.load_MI_matrix(MI_file_component)
+    # self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
+    # self.intra_group_boxplot(space_name='20_components',similarity_metric='mutual_information')
+    # self.boxplot_with_null(space_name='20_components',similarity_metric='mutual_information')
+    # self.MUT_WT_comparison(self.mi,mutDict,space_name='20_components',
+    #                     similarity_metric='mutual_information',out_table=True)
+    # self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_graphs_MI_c20',WT_MUT_comparison=True,wt_median_thresh=.4)
+    # self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_graphs_MI_c20',WT_MUT_comparison=False,wt_median_thresh=.4)
     ###################################
     ### pairwise comparisons of LM space
     ###################################
-    self.calculate_corr_matrix(H_mtrx_corr=False) # pairwise corr on input matrix
-    self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
-    self.intra_group_boxplot(space_name='LM_space',similarity_metric='Pearson_correlation')
-    self.boxplot_with_null(space_name='LM_space',similarity_metric='Pearson_correlation')
-    # component heatmaps
-    # self.group_component_maps(match_field='signatures')
-    self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='LM_space',
-                        similarity_metric='Pearson_correlation',out_table=True)
-    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_LM')
+    # self.calculate_corr_matrix(H_mtrx_corr=False) # pairwise corr on input matrix
+    # self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
+    # self.intra_group_boxplot(space_name='LM_space',similarity_metric='Pearson_correlation')
+    # self.boxplot_with_null(space_name='LM_space',similarity_metric='Pearson_correlation')
+    # self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='LM_space',
+    #                     similarity_metric='Pearson_correlation',out_table=True)
+    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_LM')
     # Mutual information
     self.load_MI_matrix(MI_file_inspace)
     self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
-    self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
-    self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
+    # self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
+    # self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
     self.MUT_WT_comparison(self.mi,mutDict,space_name='LM_space',
                         similarity_metric='mutual_information',out_table=True)
-    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
-        out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=True,wt_median_thresh=.3)
-    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
-        out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=False,wt_median_thresh=.3)
-
+    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=True,wt_median_thresh=.4)
+    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=False,wt_median_thresh=.4)
+    self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+        out_graph_dir='WT_MUT_boxplot_MI_LM_space',graph_title_str=prefix + ' - ')
+    
