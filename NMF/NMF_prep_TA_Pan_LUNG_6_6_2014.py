@@ -19,8 +19,8 @@ import cmap.analytics.NMF_benchmarks as nmfb
 ######################
 
 # wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_qnorm'
-wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_June_2014/TA_OE_ZSPCINF'
-# wkdir = '/xchip/cogs/projects/NMF/TA_lung_OE_May_2014/TA_OE_ZSPC_LM'
+# wkdir = '/xchip/cogs/projects/NMF/TA_pan_cancer_OE_June_2014/TA_OE_ZSPCINF'
+wkdir = '/xchip/cogs/projects/NMF/TA_pan_cancer_OE_May_2014/TA_OE_ZSPC_LM'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 
@@ -36,12 +36,6 @@ gt = gct.GCT(src=file_zspcinf)
 gt.read()
 ds = gt.frame
 
-# signature subset 
-# file_lung_grp = '/cga/meyerson/brooks/TA/all_TA_for_jun10/all_TA_Lung_sig_ids.grp'
-file_lung_grp = '/xchip/cga_home/brooks/TA/all_TA_for_jun10/all_TA_Lung_distil_ids.grp'
-lungSigs = pd.read_csv(file_lung_grp,header=None, names=['sig_id'])
-ds_lung = ds.reindex(columns=lungSigs.sig_id.values)
-
 # signature annotations
 sFile = '/xchip/cogs/web/icmap/custom/TA/tnwork/datasets/for_jun10/inst.info'
 sigInfo = pd.read_csv(sFile,sep='\t')
@@ -56,10 +50,10 @@ processesed_type = 'ZSPC_LM' # 'COMPZ.MODZ_SCORE', , 'ZSPCINF'
 gLM = gct.GCT()
 gLM.read_gctx_row_meta(src=file_qnorm) # load file with LM genes
 lm_probes = gLM.get_rids()
-ds_lung = ds_lung.ix[ds_lung.index.isin(lm_probes),:]
+ds_pan = ds.ix[ds.index.isin(lm_probes),:]
 
 #split columns
-colSer = pd.Series(ds_lung.columns)
+colSer = pd.Series(ds_pan.columns)
 colSer.name = 'sig_id'
 colSplit = colSer.str.split('_')
 
@@ -76,7 +70,8 @@ colFrame['well'] = colSplit.apply(lambda x: x[4])
 ################################
 
 # save matrix for each cell line in OE experiments
-is_oe = colFrame.plate.str.match('TA.OE0')
+plate_list = ['TA.OE009', 'TA.OE010', 'TA.OE011']
+is_oe = colFrame.plate.isin(plate_list)
 oe = colFrame[is_oe]
 cell_grped = oe.groupby('cell_line')
 for grpT in cell_grped:
@@ -86,7 +81,7 @@ for grpT in cell_grped:
         os.mkdir(cellDir)
     grp = grpT[1]
     sigs = grp.sig_id
-    cellFrm = ds_lung.ix[:,sigs.values]
+    cellFrm = ds_pan.ix[:,sigs.values]
     nGt = gct.GCT()
     nGt.build_from_DataFrame(cellFrm)
     outF = cellDir + '/' + cell + '_TA_JUN10_' + processesed_type
@@ -107,6 +102,10 @@ for cell in cell_grped.groups.keys():
 ### make gene signature gmt ###
 ################################
 
+#x_allpancancermutations_ys
+#x_annotgenesymbol
+#x_template_gene_ys
+
 # # reindex acording to OE plates
 sigInfo = sigInfo.reindex(oe.sig_id)
 # sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
@@ -122,13 +121,14 @@ for cellTup in cellGrped:
     cellFrm.to_csv(outF,sep='\t')
     ### make gene signature groups - gmt file
     # geneGrped = cellFrm.groupby('pert_mfc_desc')
-    geneGrped = cellFrm.groupby('x_mutation_status')
+    # geneGrped = cellFrm.groupby('x_mutation_status')
+    geneGrped = cellFrm.groupby('x_allpancancermutations_ys')
     gmtList = []
     for grp in geneGrped:
         gmtDictUp = {}
         gmtDictUp['id'] = grp[0]
         # gmtDictUp['desc'] = grp[0]
-        gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
+        gmtDictUp['desc'] = str(list(set(grp[1].x_allpancancermutations_ys)))
         gmtDictUp['sig'] = list(grp[1].index.values)
         gmtList.append(gmtDictUp)
     gmtOut = cellDir + '/mutation_status_oe_sig_id.gmt'
@@ -140,20 +140,7 @@ for cellTup in cellGrped:
 
 # COMPZ.MODZ_SCORE
 nComponents = 20
-dimDict = {'A549':'n4487x978', # 
-'AALE':'n2235x978',
-'H1299':'n1503x978',
-'SALE':'n2128x978'}
-
-# ZSPCINF
-# nComponents = 20
-# dimDict = {'A375':'n2245x22268',
-# 'A549':'n5608x22268', # 
-# 'AALE':'n3356x22268',
-# 'H1299':'n2597x22268',
-# 'HA1E':'n5371x22268',
-# 'PC3':'n2246x22268',
-# 'SALE':'n3215x22268'}
+dimDict = {'HA1E':'n3148x978'}
 
 #specifications for subprocess
 processes = set()
@@ -197,12 +184,6 @@ cell_counts = pd.DataFrame(count_dict)
 outF = os.path.join(wkdir,'mutation_category_counts.txt')
 cell_counts.to_csv(outF,sep='\t')
 
-# important fileds in inst.info:
-# pert_mfc_desc
-# x_mutation_status
-# x_preferredgenename
-# x_tomconstructname
-
 #########################
 ### run NMF benchmarks ##
 #########################
@@ -241,7 +222,7 @@ for prefix in dimDict:
         gene = grp_tup[0]
         grp = grp_tup[1]
         grp_values = grp.id.values
-        has_WT = np.array(['WT' in x for x in grp_values])
+        has_WT = np.array(['>' not in x for x in grp_values])
         # select groups that contain WT and MUT
         if (sum(has_WT) > 0) & (sum(has_WT) < len(has_WT)):
             WT = grp_values[has_WT]
@@ -284,8 +265,8 @@ for prefix in dimDict:
     # Mutual information
     self.load_MI_matrix(MI_file_inspace)
     self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
-    # self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
-    # self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
     self.MUT_WT_comparison(self.mi,mutDict,space_name='LM_space',
                         similarity_metric='mutual_information',out_table=True)
     # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
@@ -294,6 +275,4 @@ for prefix in dimDict:
     #     out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=False,wt_median_thresh=.4)
     self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='mutual_information',
         out_graph_dir='WT_MUT_boxplot_MI_LM_space',graph_title_str=prefix + ' - ')
-
-
-
+    

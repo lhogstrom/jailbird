@@ -13,7 +13,7 @@ import cmap.util.mongo_utils as mu
 import matplotlib.pyplot as plt
 import numpy as np
 
-wkdir = '/xchip/cogs/hogstrom/bathe/gordonov'
+wkdir = '/xchip/cogs/hogstrom/bathe/gordonov/KD_NMF_Jun10'
 if not os.path.exists(wkdir):
     os.mkdir(wkdir)
 gene_list_name = 'kegg_actin_cytoskeleton'
@@ -79,48 +79,14 @@ file_zs = '/xchip/cogs/data/build/a2y13q1/zspc_n1328098x22268.gctx'
 gt = gct.GCT()
 gt.read(src=file_zs,cid=idLst,rid='lm_epsilon')
 ds = gt.frame
+processesed_type = 'ZSPC_LM'
 
 # calculate pairwise correlations
-corrMtrx = np.corrcoef(ds,rowvar=0)
-corrFrm = pd.DataFrame(corrMtrx, index=ds.columns,columns=ds.columns)
-
-graphDir = os.path.join(wkdir,gene_list_name + '_OE_replicates')
-if not os.path.exists(graphDir):
-    os.mkdir(graphDir)
-pairwiseDict = {}
-cell_grped = cgsFrm.groupby(['pert_iname','cell_id'])
-cell_lines = set(cgsFrm.cell_id)
-for cell in cell_lines:
-    for grp in cell_grped:
-        if grp[0][1] == cell:
-            frm = grp[1]
-            frm.shape
-            id_list = [item for sublist in frm.distil_id for item in sublist]
-            mtch_corr = corrFrm.reindex(index=id_list,columns=id_list)
-            il = np.triu_indices(len(mtch_corr),k=0)
-            upMeans = mtch_corr.values.copy()
-            upMeans[il] = np.nan
-            randFlat = upMeans.flatten()
-            uniqRand = upMeans[~np.isnan(upMeans)]
-            pairwiseDict[grp[0][0]] = uniqRand
-    # sort by median
-    inSer = pd.Series(pairwiseDict)
-    inMedian = inSer.apply(np.median)
-    inMedian.sort()
-    inMedian = inMedian[~np.isnan(inMedian)]
-    inSorted = inSer[inMedian.index]
-    ### make boxplot
-    fig = plt.figure(figsize=(8, 14), dpi=50)
-    plt.boxplot(inSorted,vert=0)
-    plt.xlim((-1,1))
-    tickList = [x for x in inSorted.index]
-    plt.yticks(np.arange(1,len(tickList)+1),tickList,rotation=0)
-    plt.tick_params(labelsize=8)
-    plt.xlabel('Pearson corr',fontweight='bold')
-    plt.title(cell + ' - pairwise hairpin correlations',fontweight='bold')
-    outF = os.path.join(graphDir,cell+'_pairwise_comparison_boxplot_cytoskeleton_OE.png')
-    plt.savefig(outF, bbox_inches='tight',dpi=200)
-    plt.close() 
+# corrMtrx = np.corrcoef(ds,rowvar=0)
+# corrFrm = pd.DataFrame(corrMtrx, index=ds.columns,columns=ds.columns)
+# graphDir = os.path.join(wkdir,gene_list_name + '_OE_replicates')
+# if not os.path.exists(graphDir):
+#     os.mkdir(graphDir)
 
 ## split up columns for counting
 colSer = pd.Series(ds.columns)
@@ -147,10 +113,10 @@ for grpT in cell_grped:
         os.mkdir(cellDir)
     grp = grpT[1]
     sigs = grp.sig_id
-    cellFrm = ds_lung.ix[:,sigs.values]
+    cellFrm = ds.ix[:,sigs.values]
     nGt = gct.GCT()
     nGt.build_from_DataFrame(cellFrm)
-    outF = cellDir + '/' + cell + '_TA_JUN10_' + processesed_type
+    outF = cellDir + '/' + cell + '_actomyosin_' + processesed_type
     nGt.write(outF,mode='gctx')
 
 # convert gctx to gct
@@ -163,6 +129,39 @@ for cell in cell_grped.groups.keys():
     print(globRes[0])
     cmd2 = 'convert-dataset -i ' + globRes[0]
     os.system(cmd2)
+
+################################
+### make gene signature gmt ###
+################################
+
+# sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
+cellGrped = sigInfo.groupby('cell_id')
+for cellTup in cellGrped:
+    cell = cellTup[0]
+    cellFrm = cellTup[1]
+    cellDir = wkdir + '/' + cell
+    outF = cellDir + '/OE_annotations.txt'
+    # reformat sig_id
+    cellFrm['mod_sig_id'] = cellFrm.distil_id.str.replace(':','.')
+    cellFrm.index = cellFrm.mod_sig_id
+    cellFrm.to_csv(outF,sep='\t')
+    ### make gene signature groups - gmt file
+    # geneGrped = cellFrm.groupby('pert_mfc_desc')
+    geneGrped = cellFrm.groupby('x_mutation_status')
+    gmtList = []
+    for grp in geneGrped:
+        gmtDictUp = {}
+        gmtDictUp['id'] = grp[0]
+        # gmtDictUp['desc'] = grp[0]
+        gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
+        gmtDictUp['sig'] = list(grp[1].index.values)
+        gmtList.append(gmtDictUp)
+    gmtOut = cellDir + '/mutation_status_oe_sig_id.gmt'
+    gmt.write(gmtList,gmtOut)
+
+
+
+
 
 
 
