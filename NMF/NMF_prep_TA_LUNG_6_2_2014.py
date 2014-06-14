@@ -208,6 +208,7 @@ cell_counts.to_csv(outF,sep='\t')
 #########################
 
 for prefix in dimDict:
+    print prefix
     dim = dimDict[prefix]
     path1 = wkdir + '/' + prefix
     prefix1 = prefix + '_TA_JUN10_'+ processesed_type + '_' + dim
@@ -248,7 +249,7 @@ for prefix in dimDict:
             MUT = grp_values[~has_WT]
             mutDict[gene] = tuple([WT,MUT])
     # # component heatmaps
-    self.group_component_maps(match_field='signatures')
+    # self.group_component_maps(match_field='signatures')
     ###################################
     ### pairwise comparisons of H space
     ###################################
@@ -261,14 +262,14 @@ for prefix in dimDict:
     #                     similarity_metric='Pearson_correlation',out_table=True)
     # self.MUT_WT_graph(mutDict,space_name='input_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_c20')
     # Mutual information
-    # self.load_MI_matrix(MI_file_component)
-    # self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
+    self.load_MI_matrix(MI_file_component,gctx_out_file=prefix+'_TA_JUN10_ZSPC_LM_n.MI.k20')
+    self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
     # self.intra_group_boxplot(space_name='20_components',similarity_metric='mutual_information')
     # self.boxplot_with_null(space_name='20_components',similarity_metric='mutual_information')
-    # self.MUT_WT_comparison(self.mi,mutDict,space_name='20_components',
-    #                     similarity_metric='mutual_information',out_table=True)
-    # self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',
-    #     out_graph_dir='WT_MUT_graphs_MI_c20',WT_MUT_comparison=True,wt_median_thresh=.4)
+    self.MUT_WT_comparison(self.mi,mutDict,space_name='20_components',
+                        similarity_metric='mutual_information',out_table=True)
+    self.MUT_WT_graph_scatter(mutDict,space_name='20_components', similarity_metric='mutual_information',
+        out_graph_dir='WT_MUT_diff_graphs_MI_c20',wt_median_thresh=None,graph_title_str=prefix + ' - ')
     # self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',
     #     out_graph_dir='WT_MUT_graphs_MI_c20',WT_MUT_comparison=False,wt_median_thresh=.4)
     ###################################
@@ -282,18 +283,15 @@ for prefix in dimDict:
     #                     similarity_metric='Pearson_correlation',out_table=True)
     # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_LM')
     # Mutual information
-    self.load_MI_matrix(MI_file_inspace)
+    self.load_MI_matrix(MI_file_inspace,gctx_out_file=prefix+'_TA_JUN10_ZSPC_LM_n.MI.input_space')
     self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
     # self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
     # self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
     self.MUT_WT_comparison(self.mi,mutDict,space_name='LM_space',
                         similarity_metric='mutual_information',out_table=True)
     # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
-    #     out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=True,wt_median_thresh=.4)
-    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
-    #     out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=False,wt_median_thresh=.4)
-    self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='mutual_information',
-        out_graph_dir='WT_MUT_boxplot_MI_LM_space',graph_title_str=prefix + ' - ')
-
-
-
+    #     out_graph_dir='WT_MUT_diff_graphs_MI_LM_space',wt_median_thresh=None,graph_title_str=prefix + ' - ')
+    self.MUT_WT_graph_scatter(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+        out_graph_dir='WT_MUT_diff_graphs_MI_LM_space',wt_median_thresh=None,graph_title_str=prefix + ' - ')
+    # self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_boxplot_MI_LM_space',graph_title_str=prefix + ' - ')

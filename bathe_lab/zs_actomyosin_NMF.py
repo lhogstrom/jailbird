@@ -12,6 +12,7 @@ import shutil
 import cmap.util.mongo_utils as mu
 import matplotlib.pyplot as plt
 import numpy as np
+import subprocess
 
 wkdir = '/xchip/cogs/hogstrom/bathe/gordonov/KD_NMF_Jun10'
 if not os.path.exists(wkdir):
@@ -81,6 +82,16 @@ gt.read(src=file_zs,cid=idLst,rid='lm_epsilon')
 ds = gt.frame
 processesed_type = 'ZSPC_LM'
 
+## expand nested distil_ids
+rowDict = {}
+for x in cgsFrm.iterrows():
+    rowSer = x[1]
+    d_ids = rowSer.distil_id
+    for d_id in d_ids:
+        rowDict[d_id] = rowSer
+distilAnnt = pd.DataFrame(rowDict)
+distilAnnt = distilAnnt.T
+
 # calculate pairwise correlations
 # corrMtrx = np.corrcoef(ds,rowvar=0)
 # corrFrm = pd.DataFrame(corrMtrx, index=ds.columns,columns=ds.columns)
@@ -134,30 +145,77 @@ for cell in cell_grped.groups.keys():
 ### make gene signature gmt ###
 ################################
 
-# sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
-cellGrped = sigInfo.groupby('cell_id')
+cellGrped = distilAnnt.groupby('cell_id')
 for cellTup in cellGrped:
     cell = cellTup[0]
     cellFrm = cellTup[1]
     cellDir = wkdir + '/' + cell
-    outF = cellDir + '/OE_annotations.txt'
+    outF = cellDir + '/KD_annotations.txt'
     # reformat sig_id
-    cellFrm['mod_sig_id'] = cellFrm.distil_id.str.replace(':','.')
+    cellFrm['distil_id_original'] = cellFrm.index
+    cellFrm['mod_sig_id'] = cellFrm.distil_id_original.str.replace(':','.')
     cellFrm.index = cellFrm.mod_sig_id
     cellFrm.to_csv(outF,sep='\t')
     ### make gene signature groups - gmt file
-    # geneGrped = cellFrm.groupby('pert_mfc_desc')
-    geneGrped = cellFrm.groupby('x_mutation_status')
+    mtch_field = 'pert_iname'
+    geneGrped = cellFrm.groupby(mtch_field)
     gmtList = []
     for grp in geneGrped:
         gmtDictUp = {}
         gmtDictUp['id'] = grp[0]
-        # gmtDictUp['desc'] = grp[0]
-        gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
+        gmtDictUp['desc'] = grp[0]
+        # gmtDictUp['desc'] = str(list(set(grp[1][mtch_field])))
         gmtDictUp['sig'] = list(grp[1].index.values)
         gmtList.append(gmtDictUp)
-    gmtOut = cellDir + '/mutation_status_oe_sig_id.gmt'
+    gmtOut = cellDir + '/actomyosin_kd_distil_id.gmt'
     gmt.write(gmtList,gmtOut)
+
+#########################
+### Run NMF projection ##
+#########################
+
+# COMPZ.MODZ_SCORE
+nComponents = 20
+# dimDict = {}
+# for grp in cell_grped:
+#     dimDict[grp[0]] = 'n'+str(grp[1].shape[0])+'x978'
+dimDict = {'A375': 'n1684x978',
+ 'A549': 'n1410x978',
+ 'ASC': 'n260x978',
+ 'HA1E': 'n1445x978',
+ 'HCC515': 'n1163x978',
+ 'HEK293T': 'n39x978',
+ 'HEKTE': 'n222x978',
+ 'HEPG2': 'n1287x978',
+ 'HT29': 'n1679x978',
+ 'JURKAT': 'n15x978',
+ 'MCF7': 'n2042x978',
+ 'NPC': 'n312x978',
+ 'PC3': 'n2292x978',
+ 'SHSY5Y': 'n30x978',
+ 'SKL': 'n48x978',
+ 'SW480': 'n168x978',
+ 'U2OS': 'n112x978',
+ 'VCAP': 'n2883x978'}
+
+#specifications for subprocess
+processes = set()
+max_processes = 9 
+### run jobs
+for cell in cell_grped.groups.keys():
+    print cell
+    dim = dimDict[cell]
+    arg1 = wkdir + '/' + cell # working directory
+    arg2 = cell + '_actomyosin_' + processesed_type + '_' + dim
+    cmd = ' '.join(['Rscript /xchip/cogs/hogstrom/scripts/jailbird/NMF/NMF_code_no_viz.v2.R', # 
+         arg1,
+         arg2])
+    # os.system(cmd)
+    processes.add(subprocess.Popen(cmd,shell=True))
+    if len(processes) >= max_processes:
+        os.wait()
+        processes.difference_update(
+            p for p in processes if p.poll() is not None)
 
 
 
