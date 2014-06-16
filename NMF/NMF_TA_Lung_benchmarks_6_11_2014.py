@@ -69,6 +69,15 @@ dimDict = {'A549':'n4487x978', #
 #########################
 ### reindex by plate ##
 #########################
+# 'TA.OE012','TA.OE013' plates
+# plate_match = ['TA.OE012','TA.OE013']
+# plate_dir_name = 'Plate_12_13_analysis'
+# grouping_file = 'mutation_status_plate_12_13_oe_sig_id.gmt'
+# 'TA.OE006' plates
+plate_match = ['TA.OE006']
+plate_dir_name = 'Plate_006_analysis'
+grouping_file = 'mutation_status_plate_006_oe_sig_id.gmt'
+dimDict = {'A549':'n4487x978'}
 
 # signatures without enough replicates
 old_lung_grp = '/xchip/cga_home/brooks/TA/all_TA_for_jun10/depracated/all_TA_Lung_distil_ids.grp'
@@ -91,7 +100,6 @@ colFrame['tp'] = colSplit.apply(lambda x: x[2])
 colFrame['rep'] = colSplit.apply(lambda x: x[3])
 colFrame['well'] = colSplit.apply(lambda x: x[4])
 # select plates
-plate_match = ['TA.OE012','TA.OE013']
 matchFrm = colFrame[colFrame.plate.isin(plate_match)]
 matchGrp = matchFrm.groupby('cell_line')
 
@@ -123,7 +131,7 @@ for cellTup in cellGrped:
         gmtDictUp['desc'] = str(list(set(grp[1].x_mutation_status)))
         gmtDictUp['sig'] = list(grp[1].index.values)
         gmtList.append(gmtDictUp)
-    gmtOut = cellDir + '/mutation_status_plate_12_13_oe_sig_id.gmt'
+    gmtOut = cellDir + '/' + grouping_file
     gmt.write(gmtList,gmtOut)
 
 #########################
@@ -136,7 +144,7 @@ for prefix in dimDict:
     path1 = wkdir + '/' + prefix
     prefix1 = prefix + '_TA_JUN10_'+ processesed_type + '_' + dim
     # outdir = path1 + '/mutation_status_benchmark_graphs'
-    outdir = path1 + '/Plate_12_13_analysis'
+    outdir = path1 + '/' + plate_dir_name
     source_dir = path1
     Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
     # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
@@ -147,7 +155,7 @@ for prefix in dimDict:
     anntFile = 'OE_annotations.txt'
     # groupFile = path1 + '/gene_oe_sig_id.gmt'
     # groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
-    groupFile = path1 + '/mutation_status_plate_12_13_oe_sig_id.gmt'
+    groupFile = path1 + '/' + grouping_file
     # run NMF module 
     reload(nmfb)
     self = nmfb.NMFresult(source_dir)
@@ -245,23 +253,23 @@ for prefix in dimDict:
     # Mutual information - rankpoint 
     self.load_similarity_matrix(MI_rnkpt_inspace, similarity_metric='rnkpt_MI',reindex_ids=None)
     self.MI_pairwise_comp(self.pairwise_similarity_mtrx,match_field='signatures',out_table=True)
-    # self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
-    # self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
     self.MUT_WT_comparison(self.pairwise_similarity_mtrx,mutDict,space_name='LM_space',
                         similarity_metric='rnkpt_MI',out_table=True)
-    # self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
-    #     out_graph_dir='WT_MUT_boxplot_rnkpt_MI_LM_space',xlim_range=(-100,100),graph_title_str=prefix + ' - ')
+    self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_boxplot_rnkpt_MI_LM_space',xlim_range=(-100,100),graph_title_str=prefix + ' - ')
     self.MUT_WT_graph_scatter(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
         out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
         graph_title_str=prefix + ' - ')
-    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
-    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
-    #     graph_title_str=prefix + ' - ')
+    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
+        graph_title_str=prefix + ' - ')
     self.ONC_TSG_mapping(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
         out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',score_thresh=90)
-    # self.ONC_TSG_plot(space_name='LM_space', similarity_metric='rnkpt_MI',
-    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,
-    #     graph_title_str=prefix + ' - ')
+    self.ONC_TSG_plot(space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,
+        graph_title_str=prefix + ' - ')
     self.ONC_TSG_ordered_plots(space_name='LM_space', similarity_metric='rnkpt_MI',
         out_graph_dir='connection_bins',xlim_range=(-100,100),axis_scale=100,
         graph_title_str=prefix + ' - ')
