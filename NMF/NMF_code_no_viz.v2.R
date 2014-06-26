@@ -37,8 +37,10 @@
       pdf.file     <- paste(path1,"/",prefix1, ".k", k.comp, ".pdf", sep="")
       W.file       <- paste(path1,"/",prefix1, ".W.k", k.comp, ".gct", sep="")
       H.file       <- paste(path1,"/",prefix1, ".H.k", k.comp, ".gct", sep="")
-      MI.in.file       <- paste(path1,"/",substr(prefix1,1,23), ".MI.input_space.gct", sep="")
-      MI.k.file       <- paste(path1,"/",substr(prefix1,1,23), ".MI.k", k.comp, ".gct", sep="")
+      # MI.in.file       <- paste(path1,"/",substr(prefix1,1,23), ".MI.input_space.gct", sep="")
+      # MI.k.file       <- paste(path1,"/",substr(prefix1,1,23), ".MI.k", k.comp, ".gct", sep="")
+      MI.in.file       <- paste(path1,"/",prefix1, ".MI.input_space.gct", sep="")
+      MI.k.file       <- paste(path1,"/",prefix1, ".MI.k", k.comp, ".gct", sep="")
       movie.file   <- paste(path1,"/",prefix1, ".Biplot.Movie.k", k.comp, ".gct", sep="")
    ##  --------------------------------------------------------------------------------------------------------------------------------------------
 

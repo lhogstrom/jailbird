@@ -217,14 +217,125 @@ for cell in cell_grped.groups.keys():
         processes.difference_update(
             p for p in processes if p.poll() is not None)
 
+#########################
+### run NMF benchmarks ##
+#########################
 
-
-
-
+for prefix in dimDict:
+    print prefix
+    dim = dimDict[prefix]
+    path1 = wkdir + '/' + prefix
+    prefix1 = prefix + '_actomyosin_'+ processesed_type + '_' + dim
+    outdir = path1 + '/NMF_benchmark_analysis'
+    # outdir = path1 + '/' + plate_dir_name
+    source_dir = path1
+    Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
+    # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
+    MI_file_component = prefix + '_actomyosin_'+ processesed_type + '.MI.k' + str(nComponents) + '.gct'
+    MI_file_inspace = prefix + '_actomyosin_'+ processesed_type + '.MI.input_space.gct'
+    MI_rnkpt_component = prefix + '_actomyosin_'+ processesed_type + '.MI.rnkpt.k' + str(nComponents) + '.gctx'
+    MI_rnkpt_inspace = prefix + '_actomyosin_'+ processesed_type + '.MI.rnkpt.input_space.gctx'
+    anntFile = 'KD_annotations.txt'
+    groupFile = path1 + '/actomyosin_kd_distil_id.gmt'
+    # run NMF module 
+    reload(nmfb)
+    self = nmfb.NMFresult(source_dir)
+    self.set_output_dir(out=outdir)
+    self.load_NMF_H_matrix(Hfile)
+    self.load_annotations(anntFile,sig_col=0,drop_extra_signatures=True,signature_group_file=groupFile)
+    self.load_input_matrix(prefix1+'.gct', modify_sig_id=True, reindex_by_H=True)
+    # # component heatmaps
+    self.group_component_maps(match_field='signatures')
+    ###################################
+    ### pairwise comparisons of H space
+    ###################################
+    # Pearson Corr 
+    # self.calculate_corr_matrix(H_mtrx_corr=True) # pairwise corr on H-matrix
+    # self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures',out_table=True)
+    # # self.intra_group_boxplot(space_name='20_components',similarity_metric='Pearson correlation')
+    # # self.boxplot_with_null(space_name='20_components',similarity_metric='Pearson correlation')
+    # self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='20_components',
+    #                     similarity_metric='Pearson_correlation',out_table=True)
+    # self.MUT_WT_graph(mutDict,space_name='input_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_c20')
+    # Mutual information
+    # self.load_MI_matrix(MI_file_component)
+    # self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
+    # self.intra_group_boxplot(space_name='20_components',similarity_metric='mutual_information')
+    # self.boxplot_with_null(space_name='20_components',similarity_metric='mutual_information')
+    # self.MUT_WT_comparison(self.mi,mutDict,space_name='20_components',
+    #                     similarity_metric='mutual_information',out_table=True)
+    # self.MUT_WT_graph_scatter(mutDict,space_name='20_components', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_diff_graphs_MI_c20',wt_median_thresh=None,graph_title_str=prefix + ' - ')
+    # self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_graphs_MI_c20',WT_MUT_comparison=False,wt_median_thresh=.4)
+    # Mutual information - rankpoint 
+    # self.load_similarity_matrix(MI_rnkpt_component, similarity_metric='rnkpt_MI')
+    # self.MI_pairwise_comp(self.pairwise_similarity_mtrx,match_field='signatures',out_table=True)
+    # self.intra_group_boxplot(space_name='20_components',similarity_metric='rnkpt_MI',
+    #         xlim_range=(-100,100))
+    # self.boxplot_with_null(space_name='20_components',similarity_metric='rnkpt_MI')
+    # self.MUT_WT_comparison(self.pairwise_similarity_mtrx,mutDict,space_name='20_components',
+    #                     similarity_metric='rnkpt_MI',out_table=True)
+    # self.MUT_WT_boxplot(mutDict,space_name='20_components', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_boxplot_rnkpt_MI_c20',xlim_range=(-100,100),graph_title_str=prefix + ' - ')
+    # self.MUT_WT_graph_scatter(mutDict,space_name='20_components', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_c20',axis_scale=100,wt_median_thresh=None,
+    #     graph_title_str=prefix + ' - ')
+    # self.MUT_WT_graph(mutDict,space_name='20_components', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_c20',axis_scale=100,wt_median_thresh=None,
+    #     graph_title_str=prefix + ' - ')
+    ###################################
+    ### pairwise comparisons of LM space
+    ###################################
+    # Pearson Corr 
+    # self.calculate_corr_matrix(H_mtrx_corr=False) # pairwise corr on input matrix
+    # self.MI_pairwise_comp(self.pairwise_corr,match_field='signatures')
+    # self.intra_group_boxplot(space_name='LM_space',similarity_metric='Pearson_correlation')
+    # self.boxplot_with_null(space_name='LM_space',similarity_metric='Pearson_correlation')
+    # self.MUT_WT_comparison(self.pairwise_corr,mutDict,space_name='LM_space',
+    #                     similarity_metric='Pearson_correlation',out_table=True)
+    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='Pearson_correlation',out_graph_dir='WT_MUT_graphs_Pearson_LM')
+    # Mutual information
+    self.load_MI_matrix(MI_file_inspace)
+    self.MI_pairwise_comp(self.mi,match_field='signatures',out_table=True)
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
+    # self.MUT_WT_comparison(self.mi,mutDict,space_name='LM_space',
+    #                     similarity_metric='mutual_information',out_table=True)
+    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_diff_graphs_MI_LM_space',wt_median_thresh=None,graph_title_str=prefix + ' - ')
+    # self.MUT_WT_graph_scatter(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_diff_graphs_MI_LM_space',wt_median_thresh=None,graph_title_str=prefix + ' - ')
+    # self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='mutual_information',
+    #     out_graph_dir='WT_MUT_boxplot_MI_LM_space',graph_title_str=prefix + ' - ')
+    # Mutual information - rankpoint 
+    # self.load_similarity_matrix(MI_rnkpt_inspace, similarity_metric='rnkpt_MI',reindex_ids=None)
+    # self.MI_pairwise_comp(self.pairwise_similarity_mtrx,match_field='signatures',out_table=True)
+    # self.intra_group_boxplot(space_name='LM_space',similarity_metric='mutual_information')
+    # self.boxplot_with_null(space_name='LM_space',similarity_metric='mutual_information')
+    # self.MUT_WT_comparison(self.pairwise_similarity_mtrx,mutDict,space_name='LM_space',
+    #                     similarity_metric='rnkpt_MI',out_table=True)
+    # self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_boxplot_rnkpt_MI_LM_space',xlim_range=(-100,100),graph_title_str=prefix + ' - ')
+    # self.MUT_WT_graph_scatter(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
+    #     graph_title_str=prefix + ' - ')
+    # self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
+    #     graph_title_str=prefix + ' - ')
+    # self.ONC_TSG_mapping(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',score_thresh=90)
+    # self.ONC_TSG_plot(space_name='LM_space', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,
+    #     graph_title_str=prefix + ' - ')
+    # self.ONC_TSG_ordered_plots(space_name='LM_space', similarity_metric='rnkpt_MI',
+    #     out_graph_dir='connection_bins',xlim_range=(-100,100),axis_scale=100,
+    #     graph_title_str=prefix + ' - ')
 
 
 # create ranked lists (connections)
 # rnkpt, mutual information
+
 
 
 

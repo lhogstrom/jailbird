@@ -184,6 +184,36 @@ cell_counts = pd.DataFrame(count_dict)
 outF = os.path.join(wkdir,'mutation_category_counts.txt')
 cell_counts.to_csv(outF,sep='\t')
 
+#############################
+### MI to rnkpt conversion ##
+#############################
+
+for prefix in dimDict:
+    print prefix
+    dim = dimDict[prefix]
+    path1 = wkdir + '/' + prefix
+    prefix1 = prefix + '_TA_JUN10_'+ processesed_type + '_' + dim
+    source_dir = path1
+    Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
+    # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
+    MI_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.k' + str(nComponents) + '.gct'
+    MI_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.input_space.gct'
+    ### convert gct v.2 to gctx
+    reload(nmfb)
+    self = nmfb.NMFresult(source_dir)
+    self.load_MI_matrix(MI_file_component,gctx_out_file=prefix+'_TA_JUN10_ZSPC_LM_n.MI.k20')
+    self.load_MI_matrix(MI_file_inspace,gctx_out_file=prefix+'_TA_JUN10_ZSPC_LM_n.MI.input_space')
+    ### convert MI matrix to MI_rnkpt
+    MI_gctx_inspace = glob.glob(path1 + '/*MI.input_space*.gctx')[0]
+    MI_gctx_component = glob.glob(path1 + '/*MI.k*.gctx')[0]
+    rnkpt_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.k' + str(nComponents) + '.gctx'
+    rnkpt_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.input_space.gctx'
+    cmd_pre = 'python /xchip/cogs/hogstrom/scripts/jailbird/NMF/transform2rankpoint.py -i '
+    cmd_str_1 = cmd_pre + os.path.join(path1, MI_gctx_inspace) + ' -o ' + os.path.join(path1, rnkpt_file_inspace)
+    cmd_str_2 = cmd_pre + os.path.join(path1, MI_gctx_component) + ' -o ' + os.path.join(path1, rnkpt_file_component)
+    os.system(cmd_str_1)
+    os.system(cmd_str_2)
+
 #########################
 ### run NMF benchmarks ##
 #########################
@@ -198,6 +228,8 @@ for prefix in dimDict:
     # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
     MI_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.k' + str(nComponents) + '.gct'
     MI_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.input_space.gct'
+    MI_rnkpt_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.k' + str(nComponents) + '.gctx'
+    MI_rnkpt_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.input_space.gctx'    
     anntFile = 'OE_annotations.txt'
     # groupFile = path1 + '/gene_oe_sig_id.gmt'
     groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
@@ -275,4 +307,26 @@ for prefix in dimDict:
     #     out_graph_dir='WT_MUT_graphs_MI_LM_space',WT_MUT_comparison=False,wt_median_thresh=.4)
     self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='mutual_information',
         out_graph_dir='WT_MUT_boxplot_MI_LM_space',graph_title_str=prefix + ' - ')
-    
+    # Mutual information - rankpoint 
+    self.load_similarity_matrix(MI_rnkpt_inspace, similarity_metric='rnkpt_MI',reindex_ids=None)
+    self.MI_pairwise_comp(self.pairwise_similarity_mtrx,match_field='signatures',out_table=True)
+    self.intra_group_boxplot(space_name='LM_space',similarity_metric='rnkpt_MI')
+    self.boxplot_with_null(space_name='LM_space',similarity_metric='rnkpt_MI')
+    self.MUT_WT_comparison(self.pairwise_similarity_mtrx,mutDict,space_name='LM_space',
+                        similarity_metric='rnkpt_MI',out_table=True)
+    self.MUT_WT_boxplot(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_boxplot_rnkpt_MI_LM_space',xlim_range=(-100,100),graph_title_str=prefix + ' - ')
+    self.MUT_WT_graph_scatter(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
+        graph_title_str=prefix + ' - ')
+    self.MUT_WT_graph(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,wt_median_thresh=None,
+        graph_title_str=prefix + ' - ')
+    self.ONC_TSG_mapping(mutDict,space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',score_thresh=90)
+    self.ONC_TSG_plot(space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='WT_MUT_diff_graphs_rnkpt_MI_LM_space',axis_scale=100,
+        graph_title_str=prefix + ' - ')
+    self.ONC_TSG_ordered_plots(space_name='LM_space', similarity_metric='rnkpt_MI',
+        out_graph_dir='connection_bins',xlim_range=(-100,100),axis_scale=100,
+        graph_title_str=prefix + ' - ')    
