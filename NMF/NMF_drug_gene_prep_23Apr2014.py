@@ -19,7 +19,6 @@ import cmap.plot.colors as colors
 import glob
 import shutil
 
-
 def set_class_labels(test_groups,sigInfoFrm,pclDict):
     '''
     set known labels for test data

@@ -69,6 +69,7 @@ dimDict = {'A549':'n4487x978', #
 #########################
 ### reindex by plate ##
 #########################
+
 ## 'TA.OE012','TA.OE013' plates
 plate_match = ['TA.OE012','TA.OE013']
 plate_dir_name = 'Plate_12_13_analysis'
@@ -274,3 +275,42 @@ for prefix in dimDict:
     # self.ONC_TSG_ordered_plots(space_name='LM_space', similarity_metric='rnkpt_MI',
     #     out_graph_dir='connection_bins',xlim_range=(-100,100),axis_scale=100,
     #     graph_title_str=prefix + ' - ')
+    ###################################
+    ### perform CMAP queries with W space
+    ###################################
+    self.write_W_weights(n_probes_up=100,n_probes_dn=1,W_weight_dir='W_components')
+    self.cmap_W_weight_query(W_weight_dir='W_components',up_file='W_component_high_weighted_probes.gmt',dn_file='W_component_low_weighted_probes.gmt')
+    self.cmap_W_weight_summly(W_weight_dir='W_components')
+
+for prefix in dimDict:
+    print prefix
+    dim = dimDict[prefix]
+    path1 = wkdir + '/' + prefix
+    prefix1 = prefix + '_TA_JUN10_'+ processesed_type + '_' + dim
+    # outdir = path1 + '/mutation_status_benchmark_graphs'
+    outdir = path1 + '/' + plate_dir_name
+    source_dir = path1
+    Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
+    WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
+    MI_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.k' + str(nComponents) + '.gct'
+    MI_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.input_space.gct'
+    MI_rnkpt_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.k' + str(nComponents) + '.gctx'
+    MI_rnkpt_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.input_space.gctx'
+    anntFile = 'OE_annotations.txt'
+    # groupFile = path1 + '/gene_oe_sig_id.gmt'
+    # groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
+    groupFile = path1 + '/' + grouping_file
+    # run NMF module 
+    reload(nmfb)
+    self = nmfb.NMFresult(source_dir)
+    self.set_output_dir(out=outdir)
+    self.load_NMF_H_matrix(Hfile)
+    self.load_NMF_W_matrix(WFile)
+    ###################################
+    ### perform CMAP queries with W space
+    ###################################
+    self.write_W_weights(n_probes_up=100,n_probes_dn=1,W_weight_dir='W_components')
+    self.cmap_W_weight_query(W_weight_dir='W_components',up_file='W_component_high_weighted_probes.gmt',dn_file='W_component_low_weighted_probes.gmt')
+    self.cmap_W_weight_summly(W_weight_dir='W_components')
+
+
