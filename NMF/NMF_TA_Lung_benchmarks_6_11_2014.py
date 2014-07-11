@@ -165,6 +165,9 @@ for prefix in dimDict:
     self.load_NMF_W_matrix(WFile)
     self.load_annotations(anntFile,sig_col=0,drop_extra_signatures=True,signature_group_file=groupFile)
     self.load_input_matrix(prefix1+'.gct', modify_sig_id=True, reindex_by_H=True)
+    # re-write W matrix with gene symbols 
+    W_symbol_out = prefix + '_TA_JUN10_'+ processesed_type + '.gene_symbols.W.k' + str(nComponents)
+    self.probe_id_to_gene_symbol(self.Wmtrx,outfile=W_symbol_out)
     #########################
     ### WT vs MUT groupings ##
     #########################
@@ -282,35 +285,18 @@ for prefix in dimDict:
     self.cmap_W_weight_query(W_weight_dir='W_components',up_file='W_component_high_weighted_probes.gmt',dn_file='W_component_low_weighted_probes.gmt')
     self.cmap_W_weight_summly(W_weight_dir='W_components')
 
+### make hyperlinks for query results
 for prefix in dimDict:
     print prefix
     dim = dimDict[prefix]
     path1 = wkdir + '/' + prefix
     prefix1 = prefix + '_TA_JUN10_'+ processesed_type + '_' + dim
     # outdir = path1 + '/mutation_status_benchmark_graphs'
-    outdir = path1 + '/' + plate_dir_name
-    source_dir = path1
-    Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
-    WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
-    MI_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.k' + str(nComponents) + '.gct'
-    MI_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.input_space.gct'
-    MI_rnkpt_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.k' + str(nComponents) + '.gctx'
-    MI_rnkpt_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.input_space.gctx'
-    anntFile = 'OE_annotations.txt'
-    # groupFile = path1 + '/gene_oe_sig_id.gmt'
-    # groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
-    groupFile = path1 + '/' + grouping_file
-    # run NMF module 
-    reload(nmfb)
-    self = nmfb.NMFresult(source_dir)
-    self.set_output_dir(out=outdir)
-    self.load_NMF_H_matrix(Hfile)
-    self.load_NMF_W_matrix(WFile)
-    ###################################
-    ### perform CMAP queries with W space
-    ###################################
-    self.write_W_weights(n_probes_up=100,n_probes_dn=1,W_weight_dir='W_components')
-    self.cmap_W_weight_query(W_weight_dir='W_components',up_file='W_component_high_weighted_probes.gmt',dn_file='W_component_low_weighted_probes.gmt')
-    self.cmap_W_weight_summly(W_weight_dir='W_components')
-
+    outdir = path1 + '/' + plate_dir_name + '/W_components'
+    outpath = glob.glob('/'.join([outdir,'jul02/*']))[0]
+    hyperLnkPath = '/xchip/cogs/web/icmap/hogstrom/TA_Lung_component_annotation/Plate_12_13_analysis/' + prefix
+    cmd = ' '.join(['ln -s',
+             outpath,
+             hyperLnkPath])
+    os.system(cmd)
 
