@@ -166,8 +166,8 @@ for prefix in dimDict:
     self.load_annotations(anntFile,sig_col=0,drop_extra_signatures=True,signature_group_file=groupFile)
     self.load_input_matrix(prefix1+'.gct', modify_sig_id=True, reindex_by_H=True)
     # re-write W matrix with gene symbols 
-    W_symbol_out = prefix + '_TA_JUN10_'+ processesed_type + '.gene_symbols.W.k' + str(nComponents)
-    self.probe_id_to_gene_symbol(self.Wmtrx,outfile=W_symbol_out)
+    # W_symbol_out = prefix + '_TA_JUN10_'+ processesed_type + '.gene_symbols.W.k' + str(nComponents)
+    # self.probe_id_to_gene_symbol(self.Wmtrx,outfile=W_symbol_out)
     #########################
     ### WT vs MUT groupings ##
     #########################

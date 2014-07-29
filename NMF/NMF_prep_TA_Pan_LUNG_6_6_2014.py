@@ -225,7 +225,7 @@ for prefix in dimDict:
     outdir = path1 + '/mutation_status_benchmark_graphs'
     source_dir = path1
     Hfile = prefix1 + '.H.k' + str(nComponents) + '.gct'
-    # WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
+    WFile = prefix1 + '.W.k' + str(nComponents) + '.gct'
     MI_file_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.k' + str(nComponents) + '.gct'
     MI_file_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.input_space.gct'
     MI_rnkpt_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.k' + str(nComponents) + '.gctx'
@@ -330,3 +330,9 @@ for prefix in dimDict:
     self.ONC_TSG_ordered_plots(space_name='LM_space', similarity_metric='rnkpt_MI',
         out_graph_dir='connection_bins',xlim_range=(-100,100),axis_scale=100,
         graph_title_str=prefix + ' - ')    
+
+
+# self.load_NMF_W_matrix(WFile)
+# # re-write W matrix with gene symbols 
+# W_symbol_out = prefix + '_TA_JUN10_'+ processesed_type + '.gene_symbols.W.k' + str(nComponents)
+# self.probe_id_to_gene_symbol(self.Wmtrx,outfile=W_symbol_out)    

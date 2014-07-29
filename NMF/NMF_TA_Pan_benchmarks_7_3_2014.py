@@ -77,16 +77,38 @@ plate_list = ['TA.OE009', 'TA.OE010', 'TA.OE011']
 is_oe = colFrame.plate.isin(plate_list)
 oe = colFrame[is_oe]
 
+#####################
+### WT update list ###
+#####################
+
+sheet_wt = '/xchip/cogs/projects/NMF/TA_pan_cancer_OE_May_2014/TA_OE_ZSPC_LM/HA1E/WT_update_analysis_Jul2014/PanCancerTemplateInfopDONR_partial.txt'
+wtFrame = pd.read_csv(sheet_wt, sep='\t')
+# filter out 'laters'
+wtFrame = wtFrame[~(wtFrame['DerivedFrom(WTpDONR)'] == 'later')]
+# annotate main gene 
+splitSer = wtFrame.x_AllPanCancerMutations_YS.str.split("_")
+mainGene = [x[0] for x in splitSer]
+wtFrame['main_gene'] = mainGene
+mainGrped = wtFrame.groupby('main_gene')
+### get single DerivedFrom(WTpDONR) status for each gene
+is_MUT = np.array(['>' in x for x in wtFrame.x_AllPanCancerMutations_YS])
+mutFrm = wtFrame[is_MUT] 
+formSet = set(mutFrm['DerivedFrom(WTpDONR)'])
+# keep only WTs that match MUT open/closed form
+is_match = wtFrame['DerivedFrom(WTpDONR)'].isin(list(formSet))
+matchFrm = wtFrame[is_match]
+matchFrm = matchFrm.sort('main_gene')
+
 ################################
 ### make gene signature gmt ###
 ################################
-
 #x_allpancancermutations_ys
 #x_annotgenesymbol
 #x_template_gene_ys
 
 # # reindex acording to OE plates
 sigInfo = sigInfo.reindex(oe.sig_id)
+sigInfo = sigInfo[sigInfo.pert_id.isin(matchFrm.pert_id)]
 # sigGrped = sigInfo.groupby(['cell_id','pert_mfc_desc'])
 cellGrped = sigInfo.groupby('cell_id')
 for cellTup in cellGrped:
@@ -117,14 +139,16 @@ for cellTup in cellGrped:
             # gmtDictUp['desc'] = list(set(grp[1].x_allpancancermutations_ys))[0]
             gmtDictUp['sig'] = list(grp[1].index.values)
             gmtList.append(gmtDictUp)
-    gmtOut = cellDir + '/pert_id_oe_sig_id.gmt'
+    # gmtOut = cellDir + '/pert_id_oe_sig_id.gmt'
+    gmtOut = cellDir + '/pert_id_open_closed_match.gmt'
     gmt.write(gmtList,gmtOut)
 
 #########################
 ### run NMF benchmarks ##
 #########################
 
-plate_dir_name = 'pert_id_grouped_analysis'
+# plate_dir_name = 'pert_id_grouped_analysis'
+plate_dir_name = 'WT_update_analysis_Jul2014'
 for prefix in dimDict:
     print prefix
     dim = dimDict[prefix]
@@ -140,7 +164,8 @@ for prefix in dimDict:
     MI_rnkpt_component = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.k' + str(nComponents) + '.gctx'
     MI_rnkpt_inspace = prefix + '_TA_JUN10_'+ processesed_type + '_n.MI.rnkpt.input_space.gctx'
     anntFile = 'OE_annotations.txt'
-    groupFile = path1 + '/pert_id_oe_sig_id.gmt'
+    groupFile = path1 + '/pert_id_open_closed_match.gmt'
+    # groupFile = path1 + '/pert_id_oe_sig_id.gmt'
     # groupFile = path1 + '/mutation_status_oe_sig_id.gmt'
     # groupFile = path1 + '/' + grouping_file
     # run NMF module 

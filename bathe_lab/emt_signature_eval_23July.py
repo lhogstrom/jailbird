@@ -16,9 +16,16 @@ import cmap.util.mongo_utils as mu
 import cmap.io.gct as gct
 import cmap.io.gmt as gmt
 
-### load gene expression signatures from Wai Leong's study (GSE43495)
-signature_list = ['EMT_TFs','slug','snail','twist']
-sig_path = '/xchip/cogs/hogstrom/bathe/emt_signature/GEO2R_signatures'
+# set path
+wkdir = '/xchip/cogs/hogstrom/bathe/emt_signature'
+# geo ID plus differential expression prefix:
+signature_dict = {'GSE23952_Sartor':'TGFb_vs_cntrl',
+    'GSE17708_Keshamouni':'16h_and_24h_TGBFb_vs_cntrl',
+    'GSE43495_Tam': 'TWIST_vs_ctrl_vec',
+    'GSE52327_Birnbaum': 'ALDH_plus_vs_ALDH_minus',
+    'GSE16838_Vintonenko';'INV_subpopulation_vs_REF',
+    'GSE38310_Zhang':'erlotinib_resistant3_DMSO_vs_cntrl_DMSO',
+    'GSE38121_Zhang':'erlotonib_resistant_1_2_vs_cntrl'}
 
 ### gene symbols --> probes (one-to-many)
 ### does this artificially inflate genes with more probe ids?
@@ -39,19 +46,21 @@ def gene_symb_to_probe_id(symbol_list):
 
 gmtListUp = []
 gmtListDn = []
-for sig in signature_list:
-    eFile = os.path.join(sig_path,sig+'_vs_empty_vec.txt')
+for sig in signature_dict:
+    sig_path = os.path.join(wkdir,sig)
+    sigPrefix = signature_dict[sig]
+    eFile = os.path.join(sig_path,sigPrefix+'.txt')
     ds = pd.read_csv(eFile,sep='\t')
     ds = ds[~ds['Gene.symbol'].isnull()] # remove rows w/out gene symbols
     ds = ds.sort('t',ascending=False) # sort by t value (positive is up-regulated)
     ds.index = ds['Gene.symbol']
     ds['t_rank'] = ds.t.rank(ascending=False)
     # write up symbols
-    outUp = os.path.join(sig_path,sig+'_100_up_regulated_genes.txt')
+    outUp = os.path.join(sig_path,sigPrefix+'_100_up_regulated_genes.txt')
     upGenes = ds.ix[:100,'Gene.symbol']
     upGenes.to_csv(outUp,index=False)
     # write dn symbols
-    outDn = os.path.join(sig_path,sig+'_100_dn_regulated_genes.txt')
+    outDn = os.path.join(sig_path,sigPrefix+'_100_dn_regulated_genes.txt')
     dnGenes = ds.ix[-100:,'Gene.symbol']
     dnGenes.to_csv(outDn,index=False)
     # convert to probe ids 
@@ -61,43 +70,42 @@ for sig in signature_list:
     # UP
     gmtDictUp = {}
     gmtDictUp['id'] = sig
-    gmtDictUp['desc'] = sig
+    gmtDictUp['desc'] = sigPrefix
     gmtDictUp['sig'] = upProbes
     gmtListUp.append(gmtDictUp)
     # Dn
     gmtDictDn = {}
     gmtDictDn['id'] = sig
-    gmtDictDn['desc'] = sig
+    gmtDictDn['desc'] = sigPrefix
     gmtDictDn['sig'] = dnProbes
     gmtListDn.append(gmtDictDn)
-# make query directory
-queryDir = os.path.join(sig_path,'cmap_query')
-if not os.path.exists(queryDir):
-    os.mkdir(queryDir)
-# write gmt file
-gmtOutUp = queryDir + '/EMT_signatures_up.gmt'
-gmt.write(gmtListUp,gmtOutUp)
-gmtOutDn = queryDir + '/EMT_signatures_dn.gmt'
-gmt.write(gmtListDn,gmtOutDn)
-
-### run cmap query
-metric = 'wtcs'
-cmd = ' '.join(['rum -q local -f sig_query_tool',
-         '--uptag ' + gmtOutUp,
-         '--dntag ' + gmtOutDn,
-         '--metric ' + metric,
-         '--row_space full',
-         '--column_space gold',
-         '--out ' + queryDir,
-         '--mkdir false',
-         '--save_tail false'])
-os.system(cmd)
-### run summly
-cmd = ' '.join(['rum -q local -f sig_summly_tool',
-         queryDir,
-         '--group_query false',
-         '--out ' + queryDir])
-os.system(cmd)
+    # make query directory
+    queryDir = os.path.join(sig_path,'cmap_query')
+    if not os.path.exists(queryDir):
+        os.mkdir(queryDir)
+    # write gmt file
+    gmtOutUp = os.path.join(queryDir,sig + '_up.gmt')
+    gmt.write(gmtListUp,gmtOutUp)
+    gmtOutDn = os.path.join(queryDir,sig + '_dn.gmt')
+    gmt.write(gmtListDn,gmtOutDn)
+    ### run cmap query
+    metric = 'wtcs'
+    cmd = ' '.join(['rum -q local -f sig_query_tool',
+             '--uptag ' + gmtOutUp,
+             '--dntag ' + gmtOutDn,
+             '--metric ' + metric,
+             '--row_space full',
+             '--column_space gold',
+             '--out ' + queryDir,
+             '--mkdir false',
+             '--save_tail false'])
+    os.system(cmd)
+    ### run summly
+    # cmd = ' '.join(['rum -q local -f sig_summly_tool',
+    #          queryDir,
+    #          '--group_query false',
+    #          '--out ' + queryDir])
+    # os.system(cmd)
 
 
 
